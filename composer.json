@@ -1,0 +1,35 @@
+{
+  "name": "whitedigital/entity-dto-mapper",
+  "description": "Package to convert entity to resource DTO and back",
+  "type": "project",
+  "license": "MIT",
+  "version": "0.1.0",
+  "authors": [
+    {
+      "name": "Vladislavs Pone",
+      "email": "vladisalvs.pone@whitedigital.eu"
+    },
+    {
+      "name": "Andis Cirulis",
+      "email": "andis.cirulis@whitedigital.eu"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "WhiteDigital\\EntityDtoMapper\\": "src/"
+    }
+  },
+  "minimum-stability": "stable",
+  "require": {
+    "php": ">=8.1",
+    "api-platform/core": "^2.6",
+    "doctrine/annotations": "^1.0",
+    "doctrine/orm": "^2.10",
+    "symfony/serializer": "6.0.*",
+    "symfony/security-http": "6.0.*",
+    "symfony/validator": "6.0.*"
+  },
+  "require-dev": {
+    "roave/security-advisories": "dev-latest"
+  }
+}
