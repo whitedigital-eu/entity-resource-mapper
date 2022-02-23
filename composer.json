@@ -1,9 +1,9 @@
 {
-  "name": "whitedigital/entity-dto-mapper",
-  "description": "Package to convert entity to resource DTO and back",
-  "type": "project",
+  "name": "whitedigital/entity-dto-mapper-bundle",
+  "description": "Bundle to convert Doctrine entity to resource DTO and back",
+  "type": "symfony-bundle",
   "license": "MIT",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "authors": [
     {
       "name": "Vladislavs Pone",
@@ -25,11 +25,15 @@
     "api-platform/core": "^2.6",
     "doctrine/annotations": "^1.0",
     "doctrine/orm": "^2.10",
-    "symfony/serializer": "6.0.*",
+    "symfony/serializer": "^6.0",
     "symfony/security-http": "6.0.*",
-    "symfony/validator": "6.0.*"
+    "symfony/validator": "6.0.*",
+    "symfony/dependency-injection": "6.0.x",
+    "symfony/config": "6.0.x"
   },
   "require-dev": {
-    "roave/security-advisories": "dev-latest"
+    "roave/security-advisories": "dev-latest",
+    "phpunit/phpunit": "9.*",
+    "symfony/test-pack": "dev-main"
   }
 }

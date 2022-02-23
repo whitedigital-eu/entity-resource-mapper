@@ -1,0 +1,7 @@
+services:
+  WhiteDigital\EntityDtoMapper\Mapper\ClassMapper:
+    autowire: true
+  WhiteDigital\EntityDtoMapper\Serializer\DtoNormalizer:
+    autowire: true
+  WhiteDigital\EntityDtoMapper\Serializer\EntityNormalizer:
+    autowire: true
