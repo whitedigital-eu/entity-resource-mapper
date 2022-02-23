@@ -1,6 +1,6 @@
 # Entity Dto Mapper Bundle
 
-Extends Symfony / Api Platform functionality by helpign to map Doctrine entity with Api Platform resource classes.
+Extends Symfony / Api Platform functionality by helping to map Doctrine entity with Api Platform resource classes and offer usefull functionality (Filters, etc)
 
 ## Configuration
 
@@ -55,3 +55,4 @@ Doctrine configuration should be updated with mappings:
 - how to call normalizer from static function from BaseEntity/Dto
 - datetimenormalizer dependancy?
 - Move Filters & other extensions
+- What about pagination?
