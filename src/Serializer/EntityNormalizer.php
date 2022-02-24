@@ -33,12 +33,10 @@ class EntityNormalizer
      * 2) automatically handles circular references by skipping elements if they are already listed in parent classes:
      * (in_array($target_class, $context[self::PARENT_CLASSES], true))
      *
-     * @param mixed $object
+     * @param BaseEntity $object
      * @param array $context
      * @return array
      * @throws ExceptionInterface
-     * @throws \ReflectionException
-     * @throws \Exception
      */
     public function normalize(BaseEntity $object, array $context = []): array
     {

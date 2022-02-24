@@ -28,7 +28,6 @@ class BaseDto
 
     /**
      * @param array $normalized
-     * @param array $context
      * @return static
      * @throws \Exception
      */

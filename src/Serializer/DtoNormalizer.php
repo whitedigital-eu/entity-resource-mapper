@@ -52,7 +52,8 @@ class DtoNormalizer
                         continue;
                     }
                     /** @var BaseEntity $target_class */
-                    $output[$propertyName]->add($target_class::createFromNormalizedDto($value));
+                    $normalized = $this->normalize($value);
+                    $output[$propertyName]->add($target_class::createFromNormalizedDto($normalized));
                 }
                 continue;
             }
@@ -67,7 +68,8 @@ class DtoNormalizer
                 }
                 if (null !== $propertyValue) { // Null property will be set in step 2.
                     /** @var BaseEntity $target_class */
-                    $output[$propertyName] = $target_class::createFromNormalizedDto($propertyValue);
+                    $normalized = $this->normalize($propertyValue);
+                    $output[$propertyName] = $target_class::createFromNormalizedDto($normalized);
                     continue;
                 }
             }
