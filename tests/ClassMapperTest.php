@@ -1,7 +1,12 @@
 <?php
 
-use Fixtures\DtoClass;
-use Fixtures\EntityClass;
+namespace WhiteDigital\Tests;
+
+use WhiteDigital\Tests\Fixtures\DtoClass;
+use WhiteDigital\Tests\Fixtures\DtoClass2;
+use WhiteDigital\Tests\Fixtures\DtoClass3;
+use WhiteDigital\Tests\Fixtures\EntityClass;
+use WhiteDigital\Tests\Fixtures\EntityClass2;
 use PHPUnit\Framework\TestCase;
 use WhiteDigital\EntityDtoMapper\Mapper\ClassMapper;
 
@@ -36,5 +41,15 @@ class ClassMapperTest extends TestCase
         $classMapper->registerMapping(DtoClass::class, EntityClass::class);
         $this->expectException(\RuntimeException::class);
         $classMapper->byEntity('AnyClass');
+    }
+
+    public function testClassMapperCondition(): void
+    {
+        $classMapper = new ClassMapper();
+        $classMapper->registerMapping(DtoClass::class, EntityClass::class, DtoClass2::class);
+        $classMapper->registerMapping(DtoClass::class, EntityClass2::class, DtoClass3::class);
+
+        $result = $classMapper->byDto(DtoClass::class, DtoClass3::class);
+        $this->assertEquals(EntityClass2::class, $result);
     }
 }

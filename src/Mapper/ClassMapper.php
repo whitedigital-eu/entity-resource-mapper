@@ -73,6 +73,9 @@ class ClassMapper
                 return $mapping[$returnKey];
             }
         }
+        if (count($potentialMatches) > 1) {
+            throw new \RuntimeException("Mapping found but condition not matched for {$className}.");
+        }
         throw new \RuntimeException("Mapping for class {$className} not found.");
     }
 }
