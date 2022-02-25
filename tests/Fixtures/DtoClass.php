@@ -1,6 +1,6 @@
 <?php
 
-namespace Fixtures;
+namespace WhiteDigital\Tests\Fixtures;
 
 use WhiteDigital\EntityDtoMapper\Dto\BaseDto;
 
