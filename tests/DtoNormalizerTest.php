@@ -2,12 +2,15 @@
 
 namespace WhiteDigital\Tests;
 
-use WhiteDigital\Tests\Fixtures\DtoClass;
-use WhiteDigital\Tests\Fixtures\EntityClass;
+use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use WhiteDigital\EntityDtoMapper\Mapper\ClassMapper;
 use WhiteDigital\EntityDtoMapper\Serializer\DtoNormalizer;
-use WhiteDigital\Tests\AppKernel;
+use WhiteDigital\Tests\Fixtures\DtoClass;
+use WhiteDigital\Tests\Fixtures\DtoClass2;
+use WhiteDigital\Tests\Fixtures\EntityClass;
+use WhiteDigital\Tests\Fixtures\EntityClass2;
+use WhiteDigital\Tests\Fixtures\RepositoryClass;
 
 class DtoNormalizerTest extends TestCase
 {
@@ -15,17 +18,36 @@ class DtoNormalizerTest extends TestCase
 
     public function setUp(): void
     {
-        $kernel = new AppKernel('test',false);
-        $kernel->boot();
-        $container = $kernel->getContainer();
-        $classMapper = $container->get(ClassMapper::class);
-        $this->dtoNormalizer = $container->get(DtoNormalizer::class);
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('getRepository')->willReturn(new RepositoryClass());
+
+        $classMapper = new ClassMapper();
+        $this->dtoNormalizer = new DtoNormalizer(
+            $entityManager,
+            $classMapper,
+        );
         $classMapper->registerMapping(DtoClass::class, EntityClass::class);
+        $classMapper->registerMapping(DtoClass2::class, EntityClass2::class);
     }
 
-    public function testDtoNormalizer()
+    /** @covers \WhiteDigital\EntityDtoMapper\Serializer\DtoNormalizer */
+    public function testDtoNormalizer(): void
     {
         $dtoObject = new DtoClass();
-        $this->dtoNormalizer->normalize($dtoObject);
+        $dtoObject->text = 'testText1';
+        $dtoObject->created = new \DateTimeImmutable();
+        $dtoObject->number = 2;
+
+        $dtoObject2 = new DtoClass2();
+        $dtoObject2->id = 2;
+        $dtoObject2->text = 'testText2';
+
+        $dtoObject->dtoClass2 = $dtoObject2;
+
+        $result = $this->dtoNormalizer->normalize($dtoObject);
+        $this->assertCount(5, $result);
+        $this->assertArrayHasKey('created', $result);
+        $this->assertEquals('testText2', $result['dtoClass2']->text);
+        $this->assertEquals(EntityClass2::class, get_class($result['dtoClass2']));
     }
 }
