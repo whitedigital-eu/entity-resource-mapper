@@ -5,3 +5,4 @@ phpunit.xml
 .idea
 .vscode
 var
+.phpunit.cache
