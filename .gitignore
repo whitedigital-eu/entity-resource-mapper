@@ -1,7 +1,6 @@
 composer.phar
 /vendor/
 /composer.lock
-phpunit.xml
 .idea
 .vscode
 var
