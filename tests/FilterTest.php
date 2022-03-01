@@ -1,5 +1,7 @@
 <?php
 
+namespace WhiteDigital\Tests;
+
 use PHPUnit\Framework\TestCase;
 use WhiteDigital\EntityDtoMapper\Filters\DtoTestFilter;
 

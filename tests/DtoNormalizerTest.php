@@ -37,6 +37,13 @@ class DtoNormalizerTest extends TestCase
         $dtoObject->text = 'testText1';
         $dtoObject->created = new \DateTimeImmutable();
         $dtoObject->number = 2;
+        $ch1 = new DtoClass2();
+        $ch1->id = null;
+        $ch1->text = 'child1';
+        $ch2 = new DtoClass2();
+        $ch2->id = null;
+        $ch2->text = 'child2';
+        $dtoObject->children = [$ch1, $ch2];
 
         $dtoObject2 = new DtoClass2();
         $dtoObject2->id = 2;
@@ -45,7 +52,7 @@ class DtoNormalizerTest extends TestCase
         $dtoObject->dtoClass2 = $dtoObject2;
 
         $result = $this->dtoNormalizer->normalize($dtoObject);
-        $this->assertCount(5, $result);
+        $this->assertCount(6, $result);
         $this->assertArrayHasKey('created', $result);
         $this->assertEquals('testText2', $result['dtoClass2']->text);
         $this->assertEquals(EntityClass2::class, get_class($result['dtoClass2']));
