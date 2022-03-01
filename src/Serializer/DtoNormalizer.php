@@ -4,6 +4,9 @@ namespace WhiteDigital\EntityDtoMapper\Serializer;
 
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Mapping\ManyToMany;
+use Doctrine\ORM\Mapping\ManyToOne;
+use Doctrine\ORM\Mapping\OneToMany;
 use WhiteDigital\EntityDtoMapper\Dto\BaseDto;
 use WhiteDigital\EntityDtoMapper\Entity\BaseEntity;
 use WhiteDigital\EntityDtoMapper\Mapper\ClassMapper;
@@ -37,9 +40,7 @@ class DtoNormalizer
             }
 
             // 1A. Normalize relations for Array<BaseDto> properties
-            //TODO How to distinguish between Dto relation (array) and regular array value? Currently we will use isset($propertyValue[0])
-            $nonRelationArray = ('array' === $propertyType) && (null !== $propertyValue) && count($propertyValue) > 0 && !array_key_exists(0, $propertyValue);
-            if ('array' === $propertyType && !$nonRelationArray) { //array of entities
+            if ('array' === $propertyType && $this->isRelationProperty($property)) { //array of entities
                 $output[$propertyName] = new ArrayCollection();
                 if (null === $propertyValue || 0 === count($propertyValue)) {
                     continue;
@@ -95,6 +96,21 @@ class DtoNormalizer
         }
         while ($reflection = $reflection->getParentClass()) {
             if ($reflection->getName() === BaseDto::class) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @param \ReflectionProperty $property
+     * @return bool
+     */
+    private function isRelationProperty(\ReflectionProperty $property): bool
+    {
+        $relationAttributes = [ManyToMany::class, ManyToOne::class, OneToMany::class];
+        foreach ($property->getAttributes() as $attribute) {
+            if (in_array($attribute->getName(), $relationAttributes, true)) {
                 return true;
             }
         }
