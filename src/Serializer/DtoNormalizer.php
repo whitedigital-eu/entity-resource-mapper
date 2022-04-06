@@ -7,6 +7,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ManyToMany;
 use Doctrine\ORM\Mapping\ManyToOne;
 use Doctrine\ORM\Mapping\OneToMany;
+use Symfony\Component\Serializer\Exception\ExceptionInterface;
 use WhiteDigital\EntityDtoMapper\Dto\BaseDto;
 use WhiteDigital\EntityDtoMapper\Entity\BaseEntity;
 use WhiteDigital\EntityDtoMapper\Mapper\ClassMapper;
@@ -14,8 +15,8 @@ use WhiteDigital\EntityDtoMapper\Mapper\ClassMapper;
 class DtoNormalizer
 {
     public function __construct(
-        private EntityManagerInterface $entityManager,
-        private ClassMapper            $classMapper,
+        private readonly EntityManagerInterface $entityManager,
+        private readonly ClassMapper $classMapper,
     )
     {
     }
@@ -23,7 +24,8 @@ class DtoNormalizer
     /**
      * Custom Dto normalizer to convert Dto to array for Doctrine entity creation by createFromDto
      * @throws \ReflectionException
-     * @throws \Symfony\Component\Serializer\Exception\ExceptionInterface
+     * @throws ExceptionInterface
+     * @throws  \RuntimeException
      */
     public function normalize(BaseDto $object, array $context = []): array
     {
@@ -49,7 +51,11 @@ class DtoNormalizer
                 foreach ($propertyValue as $value) {
                     if (isset($value->id)) { //entity already exists, lets fetch it from DB
                         $repository = $this->entityManager->getRepository($target_class);
-                        $output[$propertyName]->add($repository->find($value->id));
+                        $entity = $repository->find($value->id);
+                        if (null === $entity) {
+                            throw new \RuntimeException("{$target_class} entity with id {$value->id} not found!");
+                        }
+                        $output[$propertyName]->add($entity);
                         continue;
                     }
                     /** @var BaseEntity $target_class */
@@ -64,7 +70,11 @@ class DtoNormalizer
                 $target_class = $this->classMapper->byDto($propertyType);
                 if (isset($propertyValue->id)) { //entity already exists, lets fetch it from DB
                     $repository = $this->entityManager->getRepository($target_class);
-                    $output[$propertyName] = $repository->find($propertyValue->id);
+                    $entity = $repository->find($propertyValue->id);
+                    if (null === $entity) {
+                        throw new \RuntimeException("{$target_class} entity with id {$value->id} not found!");
+                    }
+                    $output[$propertyName] = $entity;
                     continue;
                 }
                 if (null !== $propertyValue) { // Null property will be set in step 2.

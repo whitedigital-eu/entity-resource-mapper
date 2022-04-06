@@ -49,6 +49,12 @@ Doctrine configuration should be updated with mappings:
                         prefix: 'WhiteDigital\EntityDtoMapper\Entity'
                         alias: EntityDtoMapper
 ```
+## Tests
+
+Run tests by:
+```bash
+$ vendor/bin/phpunit
+```
 
 ## TODO ##
 - doctrine autoconfiguration
