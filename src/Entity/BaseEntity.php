@@ -6,6 +6,7 @@ namespace WhiteDigital\EntityDtoMapper\Entity;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\ORM\Mapping\MappedSuperclass;
+use Doctrine\ORM\PersistentCollection;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
 use Symfony\Component\String\Inflector\EnglishInflector;
 
@@ -94,7 +95,10 @@ class BaseEntity
         $propertySingular = (new EnglishInflector())->singularize($property)[0];
         try {
             return $this->{"{$method}{$propertySingular}"}($value);
-        } catch (\Error $e) {
+        } catch (\Error $e) { // Catch only one type of errors
+            if (!str_contains($e->getMessage(), 'Call to undefined method')) {
+                throw $e;
+            }
             return $this->{"{$method}{$property}"}($value);
         }
     }
@@ -118,6 +122,25 @@ class BaseEntity
         // Doctrine Collection and array, both empty
         if ($value1 instanceof \Countable && (0 === count($value1) && count($value1) === count($value2))) {
             return true;
+        }
+        // Doctrine collection and array, both identical
+        if ($value1 instanceof  PersistentCollection && $value2 instanceof ArrayCollection && count($value1) === count($value2)) {
+            /** @var BaseEntity[] $firstSet */
+            $firstSet = $value1->getValues();
+            /** @var BaseEntity[] $secondSet */
+            $secondSet = $value2->getValues();
+            $equal = true;
+            for($i = 0; $i < count($firstSet); $i++) {
+                $classesAreEqual = get_class($firstSet[$i]) === get_class($secondSet[$i]);
+                $idsAreEqual = $firstSet[$i]->getId() === $secondSet[$i]->getId();
+                $equal = $equal && $classesAreEqual && $idsAreEqual;
+                if (!$equal) {
+                    break;
+                }
+            }
+            if ($equal) {
+                return true;
+            }
         }
         return false;
     }
