@@ -2,13 +2,14 @@
 
 namespace WhiteDigital\EntityDtoMapper\Serializer;
 
+use ApiPlatform\Core\Exception\ResourceClassNotFoundException;
+use ApiPlatform\Core\Metadata\Resource\Factory\ResourceMetadataFactoryInterface;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\PersistentCollection;
 use Doctrine\Persistence\Proxy;
 use Symfony\Component\Serializer\Annotation\Ignore;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
 use Symfony\Component\Serializer\Normalizer\DateTimeNormalizer;
-use Symfony\Component\Validator\Constraints\Date;
 use WhiteDigital\EntityDtoMapper\Dto\BaseDto;
 use WhiteDigital\EntityDtoMapper\Entity\BaseEntity;
 use WhiteDigital\EntityDtoMapper\Mapper\ClassMapper;
@@ -20,7 +21,8 @@ class EntityNormalizer
     private DateTimeNormalizer $dateTimeNormalizer;
 
     public function __construct(
-        private ClassMapper        $classMapper,
+        private readonly ClassMapper $classMapper,
+        private readonly ResourceMetadataFactoryInterface $resourceMetadataFactory,
     )
     {
         //TODO is this correct approach?
@@ -31,18 +33,23 @@ class EntityNormalizer
      * Custom Entity normalizer to convert Entity to array for creating BaseDto class via createFromEntity
      * 1) uses $context[self::MAPPED_CLASSES] to identify respective DTO class
      * 2) automatically handles circular references by skipping elements if they are already listed in parent classes:
-     * (in_array($target_class, $context[self::PARENT_CLASSES], true))
+     * (in_array($targetClass, $context[self::PARENT_CLASSES], true))
+     * 3) Loads child elements only if required by normalization_groups
      *
      * @param BaseEntity $object
      * @param array $context
      * @return array
      * @throws ExceptionInterface
+     * @throws ResourceClassNotFoundException
+     * @throws \Exception
      */
     public function normalize(BaseEntity $object, array $context = []): array
     {
         $reflection = $this->loadReflection($object);
 
-        $this->addElementIfNotExists($context[self::PARENT_CLASSES], $this->classMapper->byEntity($reflection->getName()));
+        $dtoClassCurrent = $this->classMapper->byEntity($reflection->getName());
+        $this->addElementIfNotExists($context[self::PARENT_CLASSES], $dtoClassCurrent);
+        $currentNormalizationGroups = $this->getNormalizationGroups($dtoClassCurrent);
 
         $properties = $reflection->getProperties();
         $output = [];
@@ -75,27 +82,39 @@ class EntityNormalizer
                 // Do not initialize lazy relation (with $propertyValue->getValues()) if not needed
                 /** @var  PersistentCollection $propertyValue */
                 $collectionElementType = $propertyValue->getTypeClass()->getName();
-                $target_class = $this->classMapper->byEntity($collectionElementType);
-                if (in_array($target_class, $context[self::PARENT_CLASSES], true)) {
+                $targetClass = $this->classMapper->byEntity($collectionElementType);
+                $targetNormalizationGroups = $this->getNormalizationGroups($targetClass);
+                if (array_key_exists('groups', $context)
+                    && !in_array($currentNormalizationGroups[0], $context['groups'], true)
+                    && !in_array($targetNormalizationGroups[0], $context['groups'], true)) {
+                    continue;
+                }
+                if (in_array($targetClass, $context[self::PARENT_CLASSES], true)) {
                     continue;
                 }
                 foreach ($propertyValue->getValues() as $value) {
-                    /** @var BaseDto $target_class */
+                    /** @var BaseDto $targetClass */
                     $normalized = $this->normalize($value, $context);
-                    $output[$propertyName][] = $target_class::createFromNormalizedEntity($normalized);
+                    $output[$propertyName][] = $targetClass::createFromNormalizedEntity($normalized);
                 }
                 continue;
             }
 
             // 3B. Normalize relations for Entity property
             if ($this->isPropertyBaseEntity($propertyType)) {
-                $target_class = $this->classMapper->byEntity($propertyType);
-                if (in_array($target_class, $context[self::PARENT_CLASSES], true)) {
+                $targetClass = $this->classMapper->byEntity($propertyType);
+                $targetNormalizationGroups = $this->getNormalizationGroups($targetClass);
+                if (array_key_exists('groups', $context)
+                    && !in_array($currentNormalizationGroups[0], $context['groups'], true)
+                    && !in_array($targetNormalizationGroups[0], $context['groups'], true)) {
                     continue;
                 }
-                /** @var BaseDto $target_class */
+                if (in_array($targetClass, $context[self::PARENT_CLASSES], true)) {
+                    continue;
+                }
+                /** @var BaseDto $targetClass */
                 $normalized = $this->normalize($propertyValue, $context);
-                $output[$propertyName] = $target_class::createFromNormalizedEntity($normalized);
+                $output[$propertyName] = $targetClass::createFromNormalizedEntity($normalized);
                 continue;
             }
 
@@ -158,5 +177,22 @@ class EntityNormalizer
         if (!in_array($element, $array, true)) {
             $array[] = $element;
         }
+    }
+
+    /**
+     * @throws ResourceClassNotFoundException
+     */
+    private function getNormalizationGroups(string $dtoClass): array
+    {
+        $resourceMetadata = $this->resourceMetadataFactory->create($dtoClass);
+        $normalizationContext = $resourceMetadata->getAttribute('normalization_context');
+        if (null === $normalizationContext) {
+            return [];
+        }
+        $groups = $normalizationContext['groups'];
+        if (1 < count($groups)) {
+            throw new \RuntimeException("DEBUG: more than 1 normalization group on {$dtoClass} resource. EntityNormalizer may need update.");
+        }
+        return $groups;
     }
 }
