@@ -14,11 +14,15 @@ use WhiteDigital\EntityDtoMapper\Mapper\ClassMapper;
 
 class DtoNormalizer
 {
+    private \DateTimeZone $timeZone;
+
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly ClassMapper $classMapper,
     )
     {
+        // We are using PHP configured timezone (Europe/Riga)
+        $this->timeZone = new \DateTimeZone(date_default_timezone_get());
     }
 
     /**
@@ -39,6 +43,13 @@ class DtoNormalizer
                 $propertyValue = $property->getValue($object);
             } catch (\Error $e) {
                 $propertyValue = null;
+            }
+
+            //  0. Set correct Timezone, as database does not store TZ info
+            if ($propertyType === \DateTimeInterface::class) {
+                /** @var \DateTime $propertyValue */
+                $output[$propertyName] = $propertyValue->setTimezone($this->timeZone);
+                continue;
             }
 
             // 1A. Normalize relations for Array<BaseDto> properties
