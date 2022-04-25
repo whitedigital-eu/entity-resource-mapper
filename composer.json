@@ -3,7 +3,7 @@
   "description": "Bundle to convert Doctrine entity to resource DTO and back",
   "type": "symfony-bundle",
   "license": "MIT",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "authors": [
     {
       "name": "Vladislavs Pone",

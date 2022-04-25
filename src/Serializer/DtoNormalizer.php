@@ -46,7 +46,8 @@ class DtoNormalizer
             }
 
             //  0. Set correct Timezone, as database does not store TZ info
-            if ($propertyType === \DateTimeInterface::class) {
+            if ($propertyType === \DateTimeInterface::class
+                && null !== $propertyValue) {
                 /** @var \DateTime $propertyValue */
                 $output[$propertyName] = $propertyValue->setTimezone($this->timeZone);
                 continue;
