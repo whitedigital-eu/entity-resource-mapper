@@ -85,8 +85,9 @@ class EntityNormalizer
                 $targetClass = $this->classMapper->byEntity($collectionElementType);
                 $targetNormalizationGroups = $this->getNormalizationGroups($targetClass);
                 if (array_key_exists('groups', $context)
-                    && !in_array($currentNormalizationGroups[0], $context['groups'], true)
-                    && !in_array($targetNormalizationGroups[0], $context['groups'], true)) {
+                    && !$this->haveCommonElements($currentNormalizationGroups, $context['groups'])
+                    && !$this->haveCommonElements($targetNormalizationGroups, $context['groups'])
+                ) {
                     continue;
                 }
                 if (in_array($targetClass, $context[self::PARENT_CLASSES], true)) {
@@ -105,8 +106,9 @@ class EntityNormalizer
                 $targetClass = $this->classMapper->byEntity($propertyType);
                 $targetNormalizationGroups = $this->getNormalizationGroups($targetClass);
                 if (array_key_exists('groups', $context)
-                    && !in_array($currentNormalizationGroups[0], $context['groups'], true)
-                    && !in_array($targetNormalizationGroups[0], $context['groups'], true)) {
+                    && !$this->haveCommonElements($currentNormalizationGroups, $context['groups'])
+                    && !$this->haveCommonElements($targetNormalizationGroups, $context['groups'])
+                ) {
                     continue;
                 }
                 if (in_array($targetClass, $context[self::PARENT_CLASSES], true)) {
@@ -189,10 +191,18 @@ class EntityNormalizer
         if (null === $normalizationContext) {
             return [];
         }
-        $groups = $normalizationContext['groups'];
-        if (1 < count($groups)) {
-            throw new \RuntimeException("DEBUG: more than 1 normalization group on {$dtoClass} resource. EntityNormalizer may need update.");
-        }
-        return $groups;
+        return $normalizationContext['groups'];
     }
+
+    /**
+     * Check if two arrays have common elements
+     * @param array $array1
+     * @param $array2
+     * @return bool
+     */
+    private function haveCommonElements(array $array1, $array2): bool
+    {
+        return count(array_intersect($array1, $array2)) > 0;
+    }
+
 }
