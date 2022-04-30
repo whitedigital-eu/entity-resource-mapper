@@ -1,6 +1,6 @@
 <?php
 
-namespace WhiteDigital\EntityDtoMapper\Serializer;
+namespace WhiteDigital\EntityDtoMapper\Mapper;
 
 use ApiPlatform\Core\Exception\ResourceClassNotFoundException;
 use ApiPlatform\Core\Metadata\Resource\Factory\ResourceMetadataFactoryInterface;
@@ -9,28 +9,23 @@ use Doctrine\ORM\PersistentCollection;
 use Doctrine\Persistence\Proxy;
 use Symfony\Component\Serializer\Annotation\Ignore;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
-use Symfony\Component\Serializer\Normalizer\DateTimeNormalizer;
-use WhiteDigital\EntityDtoMapper\Dto\BaseDto;
 use WhiteDigital\EntityDtoMapper\Entity\BaseEntity;
-use WhiteDigital\EntityDtoMapper\Mapper\ClassMapper;
+use WhiteDigital\EntityDtoMapper\Resource\BaseResource;
 
-class EntityNormalizer
+class EntityToResourceMapper
 {
     public const PARENT_CLASSES = 'parent_classes';
-
-    private DateTimeNormalizer $dateTimeNormalizer;
 
     public function __construct(
         private readonly ClassMapper $classMapper,
         private readonly ResourceMetadataFactoryInterface $resourceMetadataFactory,
     )
     {
-        //TODO is this correct approach?
-        $this->dateTimeNormalizer = new DateTimeNormalizer();
+        BaseResource::setEntityToResourceMapper($this);
     }
 
     /**
-     * Custom Entity normalizer to convert Entity to array for creating BaseDto class via createFromEntity
+     * Entity to ApiResource mapper
      * 1) uses $context[self::MAPPED_CLASSES] to identify respective DTO class
      * 2) automatically handles circular references by skipping elements if they are already listed in parent classes:
      * (in_array($targetClass, $context[self::PARENT_CLASSES], true))
@@ -38,12 +33,11 @@ class EntityNormalizer
      *
      * @param BaseEntity $object
      * @param array $context
-     * @return array
+     * @return BaseResource
      * @throws ExceptionInterface
      * @throws ResourceClassNotFoundException
-     * @throws \Exception
      */
-    public function normalize(BaseEntity $object, array $context = []): array
+    public function map(BaseEntity $object, array $context = []): BaseResource
     {
         $reflection = $this->loadReflection($object);
 
@@ -52,7 +46,7 @@ class EntityNormalizer
         $currentNormalizationGroups = $this->getNormalizationGroups($dtoClassCurrent);
 
         $properties = $reflection->getProperties();
-        $output = [];
+        $output = new $dtoClassCurrent();
         foreach ($properties as $property) {
             $propertyName = $property->getName();
             $propertyType = $property->getType()?->getName();
@@ -70,15 +64,9 @@ class EntityNormalizer
                 continue;
             }
 
-            // 2. Normalize Datetime
-            if ($propertyType === \DateTimeInterface::class) {
-                $output[$propertyName] = $this->dateTimeNormalizer->normalize($propertyValue);
-                continue;
-            }
-
-            // 3A. Normalize relations for Collection<Entity> property
+            // 2A. Normalize relations for Collection<Entity> property
             if ($propertyType === Collection::class) {
-                $output[$propertyName] = [];
+                $this->setResourceProperty($output, $propertyName, []);
                 // Do not initialize lazy relation (with $propertyValue->getValues()) if not needed
                 /** @var  PersistentCollection $propertyValue */
                 $collectionElementType = $propertyValue->getTypeClass()->getName();
@@ -93,15 +81,13 @@ class EntityNormalizer
                 if (in_array($targetClass, $context[self::PARENT_CLASSES], true)) {
                     continue;
                 }
-                foreach ($propertyValue->getValues() as $value) {
-                    /** @var BaseDto $targetClass */
-                    $normalized = $this->normalize($value, $context);
-                    $output[$propertyName][] = $targetClass::createFromNormalizedEntity($normalized);
+                foreach ($propertyValue->getValues() as $value) { // Doctrine lazy loading happens here
+                    $this->setResourceProperty($output, $propertyName, $this->map($value, $context), true);
                 }
                 continue;
             }
 
-            // 3B. Normalize relations for Entity property
+            // 2B. Normalize relations for Entity property
             if ($this->isPropertyBaseEntity($propertyType)) {
                 $targetClass = $this->classMapper->byEntity($propertyType);
                 $targetNormalizationGroups = $this->getNormalizationGroups($targetClass);
@@ -114,14 +100,12 @@ class EntityNormalizer
                 if (in_array($targetClass, $context[self::PARENT_CLASSES], true)) {
                     continue;
                 }
-                /** @var BaseDto $targetClass */
-                $normalized = $this->normalize($propertyValue, $context);
-                $output[$propertyName] = $targetClass::createFromNormalizedEntity($normalized);
+                $this->setResourceProperty($output, $propertyName, $this->map($propertyValue, $context));
                 continue;
             }
 
-            // 4. Finally, map output value to input
-            $output[$propertyName] = $propertyValue;
+            // 3. Finally, map output value to input
+            $this->setResourceProperty($output, $propertyName, $propertyValue);
 
         }
         return $output;
@@ -152,6 +136,7 @@ class EntityNormalizer
      */
     private function isPropertyBaseEntity(string $class): bool
     {
+        // TODO Can we use is_subclass_of instead?
         try {
             $reflection = new \ReflectionClass($class);
         } catch (\ReflectionException) {
@@ -197,12 +182,34 @@ class EntityNormalizer
     /**
      * Check if two arrays have common elements
      * @param array $array1
-     * @param $array2
+     * @param array $array2
      * @return bool
      */
-    private function haveCommonElements(array $array1, $array2): bool
+    private function haveCommonElements(array $array1, array $array2): bool
     {
         return count(array_intersect($array1, $array2)) > 0;
+    }
+
+    /**
+     * @param BaseResource $resource
+     * @param string $propertyName
+     * @param mixed $propertyValue
+     * @param bool $appendArray
+     * @return void
+     */
+    private function setResourceProperty(BaseResource $resource, string $propertyName, mixed $propertyValue, bool $appendArray = false): void
+    {
+        if (!property_exists($resource::class, $propertyName)) {
+            throw new \RuntimeException(sprintf('Property %s does not exist in class %s', $propertyName, $resource::class));
+        }
+        if (null === $propertyValue) {
+            return;
+        }
+        if ($appendArray) {
+            $resource->{$propertyName}[] = $propertyValue;
+        } else {
+            $resource->{$propertyName} = $propertyValue;
+        }
     }
 
 }

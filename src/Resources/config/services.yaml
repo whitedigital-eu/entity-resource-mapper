@@ -1,7 +1,7 @@
 services:
   WhiteDigital\EntityDtoMapper\Mapper\ClassMapper:
     autowire: true
-  WhiteDigital\EntityDtoMapper\Serializer\DtoNormalizer:
+  WhiteDigital\EntityDtoMapper\Mapper\EntityToResourceMapper:
     autowire: true
-  WhiteDigital\EntityDtoMapper\Serializer\EntityNormalizer:
+  WhiteDigital\EntityDtoMapper\Mapper\ResourceToEntityMapper:
     autowire: true
