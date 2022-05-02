@@ -1,9 +1,9 @@
 {
   "name": "whitedigital-eu/entity-resource-mapper-bundle",
-  "description": "Bundle to convert Doctrine entity to resource DTO and back",
+  "description": "Bundle to map Doctrine entity object to and from API resource object.",
   "type": "symfony-bundle",
   "license": "MIT",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "authors": [
     {
       "name": "Raitis Rasmanis",

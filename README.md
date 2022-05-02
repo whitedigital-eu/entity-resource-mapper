@@ -1,6 +1,6 @@
 # Entity Resource Mapper Bundle
 
-Extends Symfony / Api Platform functionality by helping to map Doctrine entity with Api Platform resource classes and offer usefull functionality (Filters, etc)
+Extends Symfony / Api Platform functionality by helping to map Doctrine entity objects with Api Platform resource objects and offers other helpers such as filters, etc.
 
 ## Configuration
 
@@ -19,7 +19,7 @@ class ClassMapperConfigurator
 {
     public function __invoke(ClassMapper $classMapper)
     {
-        $classMapper->registerMapping(CustomerDto::class, Customer::class);
+        $classMapper->registerMapping(CustomerResource::class, Customer::class);
     }
 }
 
