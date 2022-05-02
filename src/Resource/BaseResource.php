@@ -1,12 +1,12 @@
 <?php
 
-namespace WhiteDigital\EntityDtoMapper\Resource;
+namespace WhiteDigital\EntityResourceMapper\Resource;
 
 
 use ApiPlatform\Core\Exception\ResourceClassNotFoundException;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
-use WhiteDigital\EntityDtoMapper\Entity\BaseEntity;
-use WhiteDigital\EntityDtoMapper\Mapper\EntityToResourceMapper;
+use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
+use WhiteDigital\EntityResourceMapper\Mapper\EntityToResourceMapper;
 
 abstract class BaseResource
 {

@@ -1,4 +1,4 @@
-# Entity Dto Mapper Bundle
+# Entity Resource Mapper Bundle
 
 Extends Symfony / Api Platform functionality by helping to map Doctrine entity with Api Platform resource classes and offer usefull functionality (Filters, etc)
 
@@ -13,7 +13,7 @@ namespace App\Service;
 use App\Dto\CustumerDto;
 use App\Entity\Customer;
 
-use WhiteDigital\EntityDtoMapperBundle\Mapper\ClassMapper;
+use WhiteDigital\EntityResourceMapperBundle\Mapper\ClassMapper;
 
 class ClassMapperConfigurator
 {
@@ -26,7 +26,7 @@ class ClassMapperConfigurator
 ```
 and register it as configurator for ClassMapper service in your services.yaml file:
 ```yaml
-    WhiteDigital\EntityDtoMapper\Mapper\ClassMapper:
+    WhiteDigital\EntityResourceMapper\Mapper\ClassMapper:
         configurator: '@App\Service\ClassMapperConfigurator'
 ```
 ### Doctrine ###
@@ -43,11 +43,11 @@ Doctrine configuration should be updated with mappings:
                         dir: '%kernel.project_dir%/src/Entity'
                         prefix: 'App\Entity'
                         alias: App
-                    EntityDtoMapperBundle:
+                    EntityResourceMapperBundle:
                         is_bundle: true
                         type: attribute
-                        prefix: 'WhiteDigital\EntityDtoMapper\Entity'
-                        alias: EntityDtoMapper
+                        prefix: 'WhiteDigital\EntityResourceMapper\Entity'
+                        alias: EntityResourceMapper
 ```
 ## Tests
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace WhiteDigital\EntityDtoMapper\Mapper;
+namespace WhiteDigital\EntityResourceMapper\Mapper;
 
 use ApiPlatform\Core\Exception\ResourceClassNotFoundException;
 use ApiPlatform\Core\Metadata\Resource\Factory\ResourceMetadataFactoryInterface;
@@ -9,8 +9,8 @@ use Doctrine\ORM\PersistentCollection;
 use Doctrine\Persistence\Proxy;
 use Symfony\Component\Serializer\Annotation\Ignore;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
-use WhiteDigital\EntityDtoMapper\Entity\BaseEntity;
-use WhiteDigital\EntityDtoMapper\Resource\BaseResource;
+use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
+use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 
 class EntityToResourceMapper
 {

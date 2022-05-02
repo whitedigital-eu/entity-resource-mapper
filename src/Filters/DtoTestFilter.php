@@ -1,6 +1,6 @@
 <?php
 
-namespace WhiteDigital\EntityDtoMapper\Filters;
+namespace WhiteDigital\EntityResourceMapper\Filters;
 
 class DtoTestFilter
 {

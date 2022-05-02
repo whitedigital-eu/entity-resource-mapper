@@ -3,7 +3,7 @@
 namespace WhiteDigital\Tests;
 
 use PHPUnit\Framework\TestCase;
-use WhiteDigital\EntityDtoMapper\Filters\DtoTestFilter;
+use WhiteDigital\EntityResourceMapper\Filters\DtoTestFilter;
 
 class FilterTest extends TestCase
 {

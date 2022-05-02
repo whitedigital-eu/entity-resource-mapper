@@ -3,10 +3,18 @@
 namespace WhiteDigital\Tests\Fixtures;
 
 use Doctrine\ORM\Mapping as ORM;
-use WhiteDigital\EntityDtoMapper\Entity\BaseEntity;
+use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 
 class EntityClass2 extends BaseEntity
 {
+    /**
+     * @return string
+     */
+    public function getText(): string
+    {
+        return $this->text;
+    }
+
     public ?int $id = null;
     public string $text;
 
@@ -28,4 +36,9 @@ class EntityClass2 extends BaseEntity
 
     #[ORM\ManyToOne(targetEntity: EntityClass::class, inversedBy: 'children')]
     public ?EntityClass $parent;
+
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
 }

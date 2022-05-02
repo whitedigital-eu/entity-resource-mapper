@@ -1,9 +1,9 @@
 <?php
 
-namespace WhiteDigital\EntityDtoMapper\Mapper;
+namespace WhiteDigital\EntityResourceMapper\Mapper;
 
-use WhiteDigital\EntityDtoMapper\Resource\BaseResource;
-use WhiteDigital\EntityDtoMapper\Entity\BaseEntity;
+use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
+use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 
 class ClassMapper
 {
@@ -36,12 +36,12 @@ class ClassMapper
      * @param string|null $condition
      * @return class-string<BaseEntity>
      */
-    public function byResource(string $dtoClass, string $condition = null): string
+    public function byResource(string $resourceClass, string $condition = null): string
     {
         if (empty($this->map)) {
             throw new \RuntimeException(sprintf('%s not configured for Resource mapping. Please set up Configurator service or map classes manually.', __CLASS__));
         }
-        return $this->lookup($dtoClass, 'dto', 'entity', $condition);
+        return $this->lookup($resourceClass, 'dto', 'entity', $condition);
     }
 
     /**

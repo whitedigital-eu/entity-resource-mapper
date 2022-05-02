@@ -1,13 +1,13 @@
 <?php
 
-namespace WhiteDigital\EntityDtoMapper\Entity;
+namespace WhiteDigital\EntityResourceMapper\Entity;
 
 
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\ORM\Mapping\MappedSuperclass;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
-use WhiteDigital\EntityDtoMapper\Mapper\ResourceToEntityMapper;
-use WhiteDigital\EntityDtoMapper\Resource\BaseResource;
+use WhiteDigital\EntityResourceMapper\Mapper\ResourceToEntityMapper;
+use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 
 #[ORM\HasLifecycleCallbacks]
 #[MappedSuperclass]

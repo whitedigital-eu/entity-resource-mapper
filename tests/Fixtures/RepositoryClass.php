@@ -2,7 +2,7 @@
 
 namespace WhiteDigital\Tests\Fixtures;
 
-use WhiteDigital\EntityDtoMapper\Entity\BaseEntity;
+use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 
 class RepositoryClass
 {
@@ -21,10 +21,9 @@ class RepositoryClass
         $ec2->text = 'testText2';
 
         $entity = new EntityClass();
-        $entity->id = null;
-        $entity->number = 2;
-        $entity->text = 'testText1';
-        $entity->dtoClass2 = $ec2;
+        $entity->setNumber(2);
+        $entity->setText('testText1');
+        $entity->setDtoClass2($ec2);
         return $entity;
     }
 

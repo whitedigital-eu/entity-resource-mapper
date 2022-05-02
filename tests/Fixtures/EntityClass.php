@@ -2,12 +2,19 @@
 
 namespace WhiteDigital\Tests\Fixtures;
 
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
-use WhiteDigital\EntityDtoMapper\Entity\BaseEntity;
+use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use Doctrine\ORM\Mapping as ORM;
 
 class EntityClass extends BaseEntity
 {
+
+    public function __construct()
+    {
+        $this->children = new ArrayCollection();
+    }
+
     /**
      * @return int
      */
@@ -65,18 +72,23 @@ class EntityClass extends BaseEntity
     }
 
     /**
-     * @param Collection|null $children
+     * @param EntityClass2|null $children
      */
-    public function addChildren(?Collection $children): void
+    public function addChildren(?EntityClass2 $children): void
     {
-        $this->children = $children;
+        $this->children[] = $children;
     }
 
-    public ?int $id = null;
-    public int $number;
-    public string $text;
-    public ?EntityClass2 $dtoClass2;
+    protected ?int $id = null;
+    protected int $number;
+    protected string $text;
+    protected ?EntityClass2 $dtoClass2;
 
     #[ORM\OneToMany(mappedBy: 'parent', targetEntity: EntityClass2::class)]
     public ?Collection $children;
+
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
 }

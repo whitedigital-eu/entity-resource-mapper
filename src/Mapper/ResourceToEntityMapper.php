@@ -1,6 +1,6 @@
 <?php
 
-namespace WhiteDigital\EntityDtoMapper\Mapper;
+namespace WhiteDigital\EntityResourceMapper\Mapper;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ManyToMany;
@@ -9,8 +9,8 @@ use Doctrine\ORM\Mapping\OneToMany;
 use Doctrine\ORM\PersistentCollection;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
 use Symfony\Component\String\Inflector\EnglishInflector;
-use WhiteDigital\EntityDtoMapper\Resource\BaseResource;
-use WhiteDigital\EntityDtoMapper\Entity\BaseEntity;
+use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
+use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 
 class ResourceToEntityMapper
 {
@@ -37,7 +37,7 @@ class ResourceToEntityMapper
     public function map(BaseResource $object, array $context, BaseEntity $existingEntity = null): BaseEntity
     {
         $reflection = new \ReflectionClass($object);
-        $targetEntityClass = $this->classMapper->byResource($reflection->getName(), $context[self::CONDITION_CONTEXT]);
+        $targetEntityClass = $this->classMapper->byResource($reflection->getName(), $context[self::CONDITION_CONTEXT] ?? null);
 
         $properties = $reflection->getProperties();
         $output = $existingEntity ?? new $targetEntityClass();
