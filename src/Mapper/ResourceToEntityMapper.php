@@ -208,7 +208,7 @@ class ResourceToEntityMapper
             $secondSet = $value2;
             $equal = true;
             for ($i = 0, $iMax = count($firstSet); $i < $iMax; $i++) {
-                $classesAreEqual = get_class($firstSet[$i]) === $this->classMapper->byResource(get_class($secondSet[$i]));
+                $classesAreEqual = get_class($firstSet[$i]) === $this->classMapper->byResource(get_class($secondSet[$i]), get_class($firstSet[$i]));
                 $idsAreEqual = $firstSet[$i]->getId() === $secondSet[$i]->id;
                 $equal = $equal && $classesAreEqual && $idsAreEqual;
                 if (!$equal) {
