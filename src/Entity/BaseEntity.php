@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace WhiteDigital\EntityResourceMapper\Entity;
 
 
@@ -29,7 +31,7 @@ abstract class BaseEntity
     {
         return $this->updated;
     }
-    
+
 
     #[ORM\PrePersist]
     public function onPrePersist(): void

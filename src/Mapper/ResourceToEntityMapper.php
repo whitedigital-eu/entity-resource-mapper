@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace WhiteDigital\EntityResourceMapper\Mapper;
 
 use Doctrine\ORM\EntityManagerInterface;

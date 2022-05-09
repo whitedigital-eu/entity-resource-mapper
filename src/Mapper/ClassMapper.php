@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace WhiteDigital\EntityResourceMapper\Mapper;
 
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
@@ -32,7 +34,7 @@ class ClassMapper
     }
 
     /**
-     * @param string $dtoClass
+     * @param string $resourceClass
      * @param string|null $condition
      * @return class-string<BaseEntity>
      */
