@@ -34,7 +34,7 @@ class EntityToResourceMapper
      * 3) Loads child elements only if required by normalization_groups
      *
      * @param BaseEntity $object
-     * @param array $context
+     * @param array<string, mixed> $context
      * @return BaseResource
      * @throws ExceptionInterface
      * @throws ResourceClassNotFoundException
@@ -51,7 +51,11 @@ class EntityToResourceMapper
         $output = new $dtoClassCurrent();
         foreach ($properties as $property) {
             $propertyName = $property->getName();
+            /** @phpstan-ignore-next-line */
             $propertyType = $property->getType()?->getName();
+            if (null === $propertyType) {
+                throw new \RuntimeException("Type for property $propertyName on class {$reflection->getName()} cannot be detected. Forgot to add it?");
+            }
             try {
                 $propertyValue = $property->getValue($object);
             } catch (\Error $e) {
@@ -116,7 +120,7 @@ class EntityToResourceMapper
     /**
      * Instantiate PHP reflection and initialize lazy relations behind Doctrine Proxy objects
      * @param object $object
-     * @return \ReflectionClass
+     * @return \ReflectionClass<BaseEntity>
      */
     private function loadReflection(object $object): \ReflectionClass
     {
@@ -154,7 +158,7 @@ class EntityToResourceMapper
 
     /**
      * Add element to array by reference, if value doesn't exist
-     * @param array|null $array
+     * @param array<string, mixed>|null $array
      * @param mixed $element
      * @return void
      */
@@ -168,7 +172,10 @@ class EntityToResourceMapper
         }
     }
 
+
     /**
+     * @param string $dtoClass
+     * @return array<string, mixed>
      * @throws ResourceClassNotFoundException
      */
     private function getNormalizationGroups(string $dtoClass): array
@@ -183,8 +190,8 @@ class EntityToResourceMapper
 
     /**
      * Check if two arrays have common elements
-     * @param array $array1
-     * @param array $array2
+     * @param array<string, mixed> $array1
+     * @param array<string, mixed> $array2
      * @return bool
      */
     private function haveCommonElements(array $array1, array $array2): bool
