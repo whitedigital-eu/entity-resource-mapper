@@ -57,7 +57,9 @@ class EntityToResourceMapper
                 throw new \RuntimeException("Type for property $propertyName on class {$reflection->getName()} cannot be detected. Forgot to add it?");
             }
             try {
-                $propertyValue = $property->getValue($object);
+                // Use getter instead of reflection
+                $getterName = 'get'.ucfirst($propertyName);
+                $propertyValue = $object->{$getterName}();
             } catch (\Error $e) {
                 $propertyValue = null;
             }
