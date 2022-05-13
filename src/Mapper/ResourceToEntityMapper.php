@@ -5,14 +5,11 @@ declare(strict_types=1);
 namespace WhiteDigital\EntityResourceMapper\Mapper;
 
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\Mapping\ManyToMany;
-use Doctrine\ORM\Mapping\ManyToOne;
-use Doctrine\ORM\Mapping\OneToMany;
 use Doctrine\ORM\PersistentCollection;
-use Symfony\Component\Serializer\Exception\ExceptionInterface;
+use Symfony\Component\PropertyInfo\Extractor\PhpDocExtractor;
 use Symfony\Component\String\Inflector\EnglishInflector;
-use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
+use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 
 class ResourceToEntityMapper
 {
@@ -22,7 +19,7 @@ class ResourceToEntityMapper
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly ClassMapper $classMapper,
+        private readonly ClassMapper            $classMapper,
     )
     {
         BaseEntity::setResourceToEntityMapper($this);
@@ -32,9 +29,10 @@ class ResourceToEntityMapper
 
     /**
      * Api Resource mapper to convert Api Resource to Entity (existing or new)
-     * @throws \ReflectionException
-     * @throws ExceptionInterface
-     * @throws  \RuntimeException
+     * @param BaseResource $object
+     * @param array<string, mixed> $context
+     * @param BaseEntity|null $existingEntity
+     * @return BaseEntity
      */
     public function map(BaseResource $object, array $context, BaseEntity $existingEntity = null): BaseEntity
     {
@@ -49,6 +47,7 @@ class ResourceToEntityMapper
             if (!property_exists($output, $propertyName)) {
                 continue; // Silently skip properties which do no exist on target class.
             }
+            /** @phpstan-ignore-next-line */
             $propertyType = $property->getType()?->getName();
             try {
                 $propertyValue = $property->getValue($object);
@@ -69,7 +68,7 @@ class ResourceToEntityMapper
             }
 
             // 1A. Normalize relations for Array<BaseResource> properties
-            if ('array' === $propertyType && $this->isRelationProperty($property)) { //array of entities
+            if ('array' === $propertyType && $this->isRelationProperty($object, $propertyName)) { //array of entities
                 // First, remove all of existing collection values, then add new ones
                 foreach ($this->callMethod($output, 'get', $propertyName) as $valueToRemove) {
                     $this->callMethod($output, 'remove', $propertyName, $valueToRemove);
@@ -142,19 +141,29 @@ class ResourceToEntityMapper
         return false;
     }
 
+
     /**
-     * @param \ReflectionProperty $property
+     * Checks DocBlock if property is child of Collection<mixed, BaseResource>
+     *
+     * @param BaseResource $object
+     * @param string $propertyName
      * @return bool
      */
-    private function isRelationProperty(\ReflectionProperty $property): bool
+    private function isRelationProperty(BaseResource $object, string $propertyName): bool
     {
-        $relationAttributes = [ManyToMany::class, ManyToOne::class, OneToMany::class];
-        foreach ($property->getAttributes() as $attribute) {
-            if (in_array($attribute->getName(), $relationAttributes, true)) {
-                return true;
-            }
+        $phpDocExtractor = new PhpDocExtractor();
+        $types = $phpDocExtractor->getTypes($object::class, $propertyName);
+        if (null === $types) {
+            return false;
         }
+        $type = $types[0];
+        if ($type->isCollection()) {
+            $collectionValueType = $type->getCollectionValueTypes()[0];
+            return is_subclass_of($collectionValueType->getClassName(), BaseResource::class);
+        }
+
         return false;
+
     }
 
     /**
@@ -168,7 +177,12 @@ class ResourceToEntityMapper
     private function callMethod(BaseEntity $object, string $method, string $property, mixed $value = null): mixed
     {
         $property = ucfirst($property);
-        $propertySingular = (new EnglishInflector())->singularize($property)[0];
+        $propertySingular = '';
+        foreach ((new EnglishInflector())->singularize($property) as $singularValue) {
+            if (strlen($singularValue) > strlen($propertySingular)) {
+                $propertySingular = $singularValue;
+            }
+        }
         try {
             return $object->{"{$method}{$propertySingular}"}($value);
         } catch (\Error $e) { // Catch only one type of errors
