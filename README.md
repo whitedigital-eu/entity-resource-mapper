@@ -49,6 +49,18 @@ Doctrine configuration should be updated with mappings:
                         prefix: 'WhiteDigital\EntityResourceMapper\Entity'
                         alias: EntityResourceMapper
 ```
+### Filters ###
+Following filters are currently available (filters works as described in Api Platform docs, except for comments below): 
+- ResourceBooleanFilter
+- ResourceDateFilter _(throws exception, if value is not a valid DateTime object)_
+- ResourceEnumFilter _(same as SearchFilter but with explicit documentation)_
+- ResourceExistsFilter
+- ResourceJsonFilter _(new filter, TODO - register JSON functions...)_
+- ResourceNumericFilter
+- ResourceOrderFilter _(allows ordering by json values)_
+- ResourceRangeFilter
+- ResourceSearchFilter
+
 ## Tests
 
 Run tests by:
@@ -57,8 +69,8 @@ $ vendor/bin/phpunit
 ```
 
 ## TODO ##
-- doctrine autoconfiguration
-- how to call normalizer from static function from BaseEntity/Dto
-- datetimenormalizer dependancy?
-- Move Filters & other extensions
-- What about pagination?
+- Doctrine autoconfiguration
+- JSON functions registration
+- performance improvements
+- explicit joins on dataprovider
+- computed properties as querybuilder methods
