@@ -2,8 +2,14 @@
 
 namespace WhiteDigital\Tests\Fixtures;
 
+use ApiPlatform\Core\Annotation\ApiFilter;
+use ApiPlatform\Core\Annotation\ApiResource;
+use WhiteDigital\EntityResourceMapper\Filters\ResourceSearchFilter;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 
+#[ApiResource(
+)]
+#[ApiFilter(ResourceSearchFilter::class, properties: ['number'])]
 class ResourceClass extends BaseResource
 {
     public ?int $id = null;
