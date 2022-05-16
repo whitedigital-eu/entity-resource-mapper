@@ -23,7 +23,7 @@ class ClassMapper
      * @param string|null $condition
      * @return void
      */
-    public function registerMapping(string $dtoClass, string $entityClass, string $condition = null): void
+    public function registerMapping(string $dtoClass, string $entityClass, ?string $condition = null): void
     {
         //TODO validate if dto class is based on BaseResource and entity class based on BaseEntity
         $this->map[] = [
@@ -38,7 +38,7 @@ class ClassMapper
      * @param string|null $condition
      * @return class-string<BaseEntity>
      */
-    public function byResource(string $resourceClass, string $condition = null): string
+    public function byResource(string $resourceClass, ?string $condition = null): string
     {
         if (empty($this->map)) {
             throw new \RuntimeException(sprintf('%s not configured for Resource mapping. Please set up Configurator service or map classes manually.', __CLASS__));
@@ -51,7 +51,7 @@ class ClassMapper
      * @param string|null $condition
      * @return class-string<BaseResource>
      */
-    public function byEntity(string $entityClass, string $condition = null): string
+    public function byEntity(string $entityClass, ?string $condition = null): string
     {
         if (empty($this->map)) {
             throw new \RuntimeException(sprintf('%s not configured for Entity mapping. Please set up Configurator service or map classes manually.', __CLASS__));
@@ -59,7 +59,7 @@ class ClassMapper
         return $this->lookup($entityClass, 'entity', 'dto', $condition);
     }
 
-    private function lookup(string $className, string $searchKey, string $returnKey, $condition): string
+    private function lookup(string $className, string $searchKey, string $returnKey, ?string $condition): string
     {
         $potentialMatches = [];
         foreach ($this->map as $mapping) {
