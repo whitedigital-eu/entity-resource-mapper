@@ -21,14 +21,12 @@ final class ResourceNumericFilter implements FilterInterface
 
     /**
      * @param ManagerRegistry $managerRegistry
-     * @param RequestStack|null $requestStack
      * @param LoggerInterface|null $logger
      * @param array<string, mixed>|null $properties
      * @param NameConverterInterface|null $nameConverter
      */
     public function __construct(
         private readonly ManagerRegistry         $managerRegistry,
-        private readonly ?RequestStack           $requestStack = null,
         private readonly ?LoggerInterface        $logger = null,
         private ?array                           $properties = null,
         private readonly ?NameConverterInterface $nameConverter = null
@@ -54,7 +52,7 @@ final class ResourceNumericFilter implements FilterInterface
         $resourceClass = $this->classMapper->byResource($resourceClass);
         $numericFilter = new NumericFilter(
             $this->managerRegistry,
-            $this->requestStack,
+            null,
             $this->logger,
             $this->properties,
             $this->nameConverter

@@ -27,7 +27,6 @@ final class ResourceSearchFilter implements SearchFilterInterface, FilterInterfa
 
     /**
      * @param ManagerRegistry $managerRegistry
-     * @param RequestStack|null $requestStack
      * @param IriConverterInterface $iriConverter
      * @param PropertyAccessorInterface|null $propertyAccessor
      * @param LoggerInterface|null $logger
@@ -37,7 +36,6 @@ final class ResourceSearchFilter implements SearchFilterInterface, FilterInterfa
      */
     public function __construct(
         private readonly ManagerRegistry                $managerRegistry,
-        private readonly ?RequestStack                  $requestStack,
         private readonly IriConverterInterface          $iriConverter,
         private readonly ?PropertyAccessorInterface     $propertyAccessor = null,
         private readonly ?LoggerInterface               $logger = null,
@@ -122,7 +120,7 @@ final class ResourceSearchFilter implements SearchFilterInterface, FilterInterfa
         
         $searchFilter = new SearchFilter(
             $this->managerRegistry,
-            $this->requestStack,
+            null,
             $this->iriConverter,
             $this->propertyAccessor,
             $this->logger,

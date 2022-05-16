@@ -26,7 +26,6 @@ final class ResourceEnumFilter implements SearchFilterInterface, FilterInterface
 
     /**
      * @param ManagerRegistry $managerRegistry
-     * @param RequestStack|null $requestStack
      * @param IriConverterInterface $iriConverter
      * @param PropertyAccessorInterface|null $propertyAccessor
      * @param LoggerInterface|null $logger
@@ -36,7 +35,6 @@ final class ResourceEnumFilter implements SearchFilterInterface, FilterInterface
      */
     public function __construct(
         private readonly ManagerRegistry                $managerRegistry,
-        private readonly ?RequestStack                  $requestStack,
         private readonly IriConverterInterface          $iriConverter,
         private readonly ?PropertyAccessorInterface     $propertyAccessor = null,
         private readonly ?LoggerInterface               $logger = null,
@@ -68,7 +66,7 @@ final class ResourceEnumFilter implements SearchFilterInterface, FilterInterface
 
         $searchFilter = new SearchFilter(
             $this->managerRegistry,
-            $this->requestStack,
+            null,
             $this->iriConverter,
             $this->propertyAccessor,
             $this->logger,

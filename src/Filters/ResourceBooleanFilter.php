@@ -21,14 +21,12 @@ final class ResourceBooleanFilter implements FilterInterface
 
     /**
      * @param ManagerRegistry $managerRegistry
-     * @param RequestStack|null $requestStack
      * @param LoggerInterface|null $logger
      * @param array<string, mixed>|null $properties
      * @param NameConverterInterface|null $nameConverter
      */
     public function __construct(
         private readonly ManagerRegistry         $managerRegistry,
-        private readonly ?RequestStack           $requestStack = null,
         private readonly ?LoggerInterface        $logger = null,
         private readonly ?array                  $properties = null,
         private readonly ?NameConverterInterface $nameConverter = null
@@ -54,7 +52,7 @@ final class ResourceBooleanFilter implements FilterInterface
         $resourceClass = $this->classMapper->byResource($resourceClass);
         $booleanFilter = new BooleanFilter(
           $this->managerRegistry,
-          $this->requestStack,
+          null,
           $this->logger,
           $this->properties,
           $this->nameConverter,  

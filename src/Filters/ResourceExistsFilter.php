@@ -22,7 +22,6 @@ final class ResourceExistsFilter implements ExistsFilterInterface, FilterInterfa
 
     /**
      * @param ManagerRegistry $managerRegistry
-     * @param RequestStack|null $requestStack
      * @param LoggerInterface|null $logger
      * @param array<string, mixed>|null $properties
      * @param string $existsParameterName
@@ -30,7 +29,6 @@ final class ResourceExistsFilter implements ExistsFilterInterface, FilterInterfa
      */
     public function __construct(
         private readonly ManagerRegistry $managerRegistry, 
-        private readonly ?RequestStack $requestStack = null, 
         private readonly ?LoggerInterface $logger = null, 
         private ?array $properties = null, 
         private readonly string $existsParameterName = self::QUERY_PARAMETER_KEY, 
@@ -57,7 +55,7 @@ final class ResourceExistsFilter implements ExistsFilterInterface, FilterInterfa
         $resourceClass = $this->classMapper->byResource($resourceClass);
         $existsFilter = new ExistsFilter(
             $this->managerRegistry,
-            $this->requestStack,
+            null,
             $this->logger,
             $this->properties,
             $this->existsParameterName,

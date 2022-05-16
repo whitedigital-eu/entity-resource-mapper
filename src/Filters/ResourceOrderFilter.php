@@ -11,7 +11,6 @@ use ApiPlatform\Core\Bridge\Doctrine\Orm\Util\QueryNameGeneratorInterface;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Serializer\NameConverter\NameConverterInterface;
 use WhiteDigital\EntityResourceMapper\Mapper\AccessClassMapperTrait;
 
@@ -21,7 +20,6 @@ class ResourceOrderFilter implements FilterInterface
 
     /**
      * @param ManagerRegistry $managerRegistry
-     * @param RequestStack|null $requestStack
      * @param string $orderParameterName
      * @param LoggerInterface|null $logger
      * @param array<string, mixed>|null $properties
@@ -29,7 +27,6 @@ class ResourceOrderFilter implements FilterInterface
      */
     public function __construct(
         private readonly ManagerRegistry $managerRegistry,
-        private readonly ?RequestStack $requestStack = null,
         private readonly string $orderParameterName = 'order',
         private readonly ?LoggerInterface $logger = null,
         private ?array $properties = null,
@@ -63,7 +60,7 @@ class ResourceOrderFilter implements FilterInterface
         }
         $orderFilter = new OrderFilter(
             $this->managerRegistry,
-            $this->requestStack,
+            null,
             $this->orderParameterName,
             $this->logger,
             $this->properties,
