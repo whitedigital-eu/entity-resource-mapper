@@ -58,8 +58,8 @@ class ResourceToEntityMapper
             //  0. Set correct Timezone, as database does not store TZ info
             if ($propertyType === \DateTimeInterface::class
                 && null !== $propertyValue) {
-                /** @var \DateTime $propertyValue */
-                $propertyValue->setTimezone($this->timeZone);
+                /** @var \DateTimeImmutable $propertyValue */
+                $propertyValue = $propertyValue->setTimezone($this->timeZone);
             }
 
             // For existing entities, lets not update anything, if value not changed
