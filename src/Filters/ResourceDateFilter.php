@@ -46,14 +46,19 @@ class ResourceDateFilter implements FilterInterface, DateFilterInterface
      */
     public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string $operationName = null, ?array $context = null): void
     {
+        $timeZone = new \DateTimeZone(date_default_timezone_get());
+
         foreach ($context['filters'] as $property => $filter) {
             if (!array_key_exists($property, $this->properties)) {
                 unset($context['filters'][$property]);
                 continue;
             }
-            $value = current($filter);
-            // Try to instantiate DateTime object to validate filter value, otherwise it gets ignored later
-            $validDateTime = new \DateTimeImmutable($value);
+            foreach ($filter as $condition => $value) {
+                // Try to instantiate DateTime object to validate filter value, otherwise it gets ignored later.
+                // Also set default timezone if data is stored without TZ information in the database.
+                $validDateTime = new \DateTime($value);
+                $context['filters'][$property][$condition] = $validDateTime->setTimezone($timeZone)->format(\DateTimeInterface::ATOM);
+            }
 
         }
         $dateFilter = new DateFilter(
