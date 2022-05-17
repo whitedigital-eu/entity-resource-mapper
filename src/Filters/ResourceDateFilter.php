@@ -22,14 +22,12 @@ class ResourceDateFilter implements FilterInterface, DateFilterInterface
 
     /**
      * @param ManagerRegistry $managerRegistry
-     * @param RequestStack|null $requestStack
      * @param LoggerInterface|null $logger
      * @param array<string, mixed>|null $properties
      * @param NameConverterInterface|null $nameConverter
      */
     public function __construct(
         private readonly ManagerRegistry         $managerRegistry,
-        private readonly ?RequestStack           $requestStack = null,
         private readonly ?LoggerInterface        $logger = null,
         private ?array                           $properties = null,
         private readonly ?NameConverterInterface $nameConverter = null
@@ -60,7 +58,7 @@ class ResourceDateFilter implements FilterInterface, DateFilterInterface
         }
         $dateFilter = new DateFilter(
             $this->managerRegistry,
-            $this->requestStack,
+            null,
             $this->logger,
             $this->properties,
             $this->nameConverter,
