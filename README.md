@@ -2,6 +2,12 @@
 
 Extends Symfony / Api Platform functionality by helping to map Doctrine entity objects with Api Platform resource objects and offers other helpers such as filters, etc.
 
+## Requirements
+
+PHP 8.1+
+
+Symfony 6.1+
+
 ## Configuration
 
 ### ClassMapper service ###
