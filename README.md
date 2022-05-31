@@ -1,6 +1,6 @@
 # Entity Resource Mapper Bundle
 
-Extends Symfony / Api Platform functionality by helping to map Doctrine entity objects with Api Platform resource objects and offers other helpers such as filters, etc.
+Extends Symfony / Api Platform functionality by helping to map Doctrine entity objects with Api Platform resource objects and offers other helpers such as filters, JSON Functions, etc.
 
 ## Requirements
 
@@ -64,8 +64,15 @@ Following filters are currently available (filters works as described in Api Pla
 - ResourceJsonFilter _(new filter, TODO - register JSON functions...)_
 - ResourceNumericFilter
 - ResourceOrderFilter _(allows ordering by json values)_
+- ResourceOrderCustomFilter _(Order filter which will order by custom SELECT fields, which are not included in root alias nor joins)_
 - ResourceRangeFilter
 - ResourceSearchFilter
+
+### JSON Functions ### 
+Following PostgreSQL functions are available in Doctrine and used in ResourceJsonFilter and ResourceOrderFilter:
+- JSONB_PATH_EXISTS - PostgreSQL function jsonb_path_exists(%s::jsonb, %s)
+- JSON_GET_TEXT - alias for %s->>%s
+- JSON_ARRAY_LENGTH - PostgreSQL function json_array_length(%s)
 
 ## Tests
 

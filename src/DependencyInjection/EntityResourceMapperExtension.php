@@ -9,10 +9,13 @@ use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 
 class EntityResourceMapperExtension extends Extension
 {
-    public function load(array $configs, ContainerBuilder $containerBuilder)
+    /**
+     * @throws \Exception
+     */
+    public function load(array $configs, ContainerBuilder $container)
     {
       $loader = new YamlFileLoader(
-          $containerBuilder,
+          $container,
           new FileLocator(__DIR__.'/../Resources/config')
       );
       $loader->load('services.yaml');
