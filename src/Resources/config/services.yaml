@@ -5,3 +5,9 @@ services:
     autowire: true
   WhiteDigital\EntityResourceMapper\Mapper\ResourceToEntityMapper:
     autowire: true
+  WhiteDigital\EntityResourceMapper\Serializer\ArrayNormalizer:
+    autowire: true
+    autoconfigure: true
+  WhiteDigital\EntityResourceMapper\Serializer\EntityNormalizer:
+    autowire: true
+    autoconfigure: true
