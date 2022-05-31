@@ -27,6 +27,9 @@ class ResourceOrderCustomFilter extends AbstractContextAwareFilter
      */
     protected function filterProperty(string $property, mixed $value, QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string $operationName = null): void
     {
+        if (!is_array($value)) {
+            return;
+        }
         foreach ($value as $propertyName => $direction) {
             if (array_key_exists($propertyName, $this->properties)) {
                 $queryBuilder->addOrderBy($propertyName, $direction);
