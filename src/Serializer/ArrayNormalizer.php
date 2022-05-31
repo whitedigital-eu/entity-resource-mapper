@@ -49,7 +49,7 @@ class ArrayNormalizer implements NormalizerInterface, NormalizerAwareInterface
                 continue;
             }
             if (!property_exists($apiResource, $key)) {
-                throw new RuntimeException("Custom SQL property $key does not exist on ". $apiResource::class);
+                throw new RuntimeException("Custom SQL property $key does not exist on " . $apiResource::class);
             }
             $apiResource->{$key} = $value;
         }
@@ -70,6 +70,17 @@ class ArrayNormalizer implements NormalizerInterface, NormalizerAwareInterface
         }
         return is_array($data)
             && array_key_exists(0, $data)
-            && $data[0] instanceof BaseEntity;
+            && $data[0] instanceof BaseEntity
+            && $this->hasStringKeys($data);
+    }
+
+    /**
+     * Checks if array has string keys, to detected custom queryBuilder fields
+     * @param array<int|string, mixed> $array
+     * @return bool
+     */
+    private function hasStringKeys(array $array): bool
+    {
+        return count(array_filter(array_keys($array), 'is_string')) > 0;
     }
 }
