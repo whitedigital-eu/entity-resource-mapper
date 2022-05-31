@@ -7,6 +7,7 @@ namespace WhiteDigital\EntityResourceMapper\Resource;
 
 use ApiPlatform\Core\Exception\ResourceClassNotFoundException;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
+use Symfony\Component\Serializer\Exception\RuntimeException;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Mapper\EntityToResourceMapper;
 
@@ -28,15 +29,29 @@ abstract class BaseResource
 
     /**
      * Factory method to create a Resource from Entity, by using EntityToResourceMapper
-     * @param BaseEntity $entity
+     * If entity is array, queryBuilder object contains BaseEntity plus SQL calculated fields for merging with final resource.
+     * @param BaseEntity|array<string|int, mixed> $entity
      * @param array<string> $context
      * @return static
      * @throws ExceptionInterface
      * @throws ResourceClassNotFoundException
      */
-    public static function create(BaseEntity $entity, array $context): static
+    public static function create(BaseEntity|array $entity, array $context): static
     {
-        $resource = self::$entityToResourceMapper->map($entity, $context);
+        if (is_array($entity)) { // Same happens in ArrayNormalizer, create trait?
+            $resource = self::$entityToResourceMapper->map($entity[0], $context);
+            foreach ($entity as $key => $value) {
+                if ($value instanceof BaseEntity) {
+                    continue;
+                }
+                if (!property_exists($resource, $key)) {
+                    throw new RuntimeException("Custom SQL property $key does not exist on " . $resource::class);
+                }
+                $resource->{$key} = $value;
+            }
+        } else {
+            $resource = self::$entityToResourceMapper->map($entity, $context);
+        }
         if (!($resource instanceof static)) {
             throw new \RuntimeException(sprintf("Wrong type (%s instead of %s) in Resource factory.", get_class($resource), static::class));
         }
