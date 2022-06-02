@@ -19,7 +19,7 @@ class EntityToResourceMapper
     public const PARENT_CLASSES = 'parent_classes';
 
     public function __construct(
-        private readonly ClassMapper $classMapper,
+        private readonly ClassMapper                      $classMapper,
         private readonly ResourceMetadataFactoryInterface $resourceMetadataFactory,
     )
     {
@@ -45,7 +45,7 @@ class EntityToResourceMapper
 
         $dtoClassCurrent = $this->classMapper->byEntity($reflection->getName());
         $this->addElementIfNotExists($context[self::PARENT_CLASSES], $dtoClassCurrent);
-        $currentNormalizationGroups = $this->getNormalizationGroups($dtoClassCurrent);
+        $currentNormalizationGroups = $this->getNormalizationGroups($dtoClassCurrent, $context);
 
         $properties = $reflection->getProperties();
         $output = new $dtoClassCurrent();
@@ -58,7 +58,7 @@ class EntityToResourceMapper
             }
             try {
                 // Use getter instead of reflection
-                $getterName = 'get'.ucfirst($propertyName);
+                $getterName = 'get' . ucfirst($propertyName);
                 $propertyValue = $object->{$getterName}();
             } catch (\Error $e) {
                 $propertyValue = null;
@@ -79,7 +79,7 @@ class EntityToResourceMapper
                 /** @var  PersistentCollection $propertyValue */
                 $collectionElementType = $propertyValue->getTypeClass()->getName();
                 $targetClass = $this->classMapper->byEntity($collectionElementType);
-                $targetNormalizationGroups = $this->getNormalizationGroups($targetClass);
+                $targetNormalizationGroups = $this->getNormalizationGroups($targetClass, $context);
                 if (array_key_exists('groups', $context)
                     && !$this->haveCommonElements($currentNormalizationGroups, $context['groups'])
                     && !$this->haveCommonElements($targetNormalizationGroups, $context['groups'])
@@ -98,7 +98,7 @@ class EntityToResourceMapper
             // 2B. Normalize relations for Entity property
             if ($this->isPropertyBaseEntity($propertyType)) {
                 $targetClass = $this->classMapper->byEntity($propertyType);
-                $targetNormalizationGroups = $this->getNormalizationGroups($targetClass);
+                $targetNormalizationGroups = $this->getNormalizationGroups($targetClass, $context);
                 if (array_key_exists('groups', $context)
                     && !$this->haveCommonElements($currentNormalizationGroups, $context['groups'])
                     && !$this->haveCommonElements($targetNormalizationGroups, $context['groups'])
@@ -177,17 +177,34 @@ class EntityToResourceMapper
 
     /**
      * @param string $dtoClass
-     * @return array<string, mixed>
+     * @param array<string, mixed> $context
+     * @return array<string>
      * @throws ResourceClassNotFoundException
      */
-    private function getNormalizationGroups(string $dtoClass): array
+    private function getNormalizationGroups(string $dtoClass, array $context): array
     {
+        $output = [];
         $resourceMetadata = $this->resourceMetadataFactory->create($dtoClass);
-        $normalizationContext = $resourceMetadata->getAttribute('normalization_context');
-        if (null === $normalizationContext) {
-            return [];
+
+        if (null !== $normalizationContext = $resourceMetadata->getAttribute('normalization_context')) {
+            $output = $normalizationContext['groups'] ?? [];
         }
-        return $normalizationContext['groups'];
+
+        // Override specific operation normalization group
+        if (array_key_exists('operation_type', $context) && 'item' === $context['operation_type']) {
+            $operationContext = $resourceMetadata->getItemOperationAttribute($context['item_operation_name'], 'normalization_context');
+            if (null !== $operationContext) {
+                $output = $operationContext['groups'] ?? [];
+            }
+        }
+        if (array_key_exists('operation_type', $context) && 'collection' === $context['operation_type']) {
+            $operationContext = $resourceMetadata->getCollectionOperationAttribute($context['collection_operation_name'], 'normalization_context');
+            if (null !== $operationContext) {
+                $output = $operationContext['groups'] ?? [];
+            }
+        }
+
+        return $output;
     }
 
     /**
