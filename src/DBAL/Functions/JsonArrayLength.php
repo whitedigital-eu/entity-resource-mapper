@@ -28,7 +28,7 @@ class JsonArrayLength extends FunctionNode
      */
     public function getSql(SqlWalker $sqlWalker): string
     {
-        return sprintf('json_array_length(%s)',
+        return sprintf('json_array_length(%s::json)',
             $this->leftHandSide->dispatch($sqlWalker)
         );
     }
