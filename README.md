@@ -70,9 +70,10 @@ Following filters are currently available (filters works as described in Api Pla
 
 ### JSON Functions ### 
 Following PostgreSQL functions are available in Doctrine and used in ResourceJsonFilter and ResourceOrderFilter:
-- JSONB_PATH_EXISTS - PostgreSQL function jsonb_path_exists(%s::jsonb, %s)
-- JSON_GET_TEXT - alias for %s->>%s
-- JSON_ARRAY_LENGTH - PostgreSQL function json_array_length(%s)
+- JSONB_PATH_EXISTS(%s, %s) - PostgreSQL function jsonb_path_exists(%s::jsonb, %s)
+- JSON_GET_TEXT(%s, %s) - PostgreSQL alias for %s->>%s
+- JSON_ARRAY_LENGTH(%s) - PostgreSQL function json_array_length(%s)
+- JSON_CONTAINS(%s, %s) - PostgreSQL alias for %s::jsonb @> '%s'
 
 ## Tests
 

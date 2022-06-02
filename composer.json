@@ -3,7 +3,7 @@
   "description": "Bundle to map Doctrine entity object to and from API resource object.",
   "type": "symfony-bundle",
   "license": "MIT",
-  "version": "0.14.4",
+  "version": "0.14.5",
   "authors": [
     {
       "name": "Raitis Rasmanis",
