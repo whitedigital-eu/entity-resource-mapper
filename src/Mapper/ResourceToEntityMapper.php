@@ -158,8 +158,8 @@ class ResourceToEntityMapper
         }
         $type = $types[0];
         if ($type->isCollection()) {
-            $collectionValueType = $type->getCollectionValueTypes()[0];
-            return is_subclass_of($collectionValueType->getClassName(), BaseResource::class);
+            $collectionValueType = $type->getCollectionValueTypes()[0] ?? null;
+            return is_subclass_of($collectionValueType?->getClassName(), BaseResource::class);
         }
 
         return false;
