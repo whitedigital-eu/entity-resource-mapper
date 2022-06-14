@@ -28,10 +28,10 @@ final class ResourceExistsFilter implements ExistsFilterInterface, FilterInterfa
      * @param NameConverterInterface|null $nameConverter
      */
     public function __construct(
-        private readonly ManagerRegistry $managerRegistry, 
-        private readonly ?LoggerInterface $logger = null, 
-        private ?array $properties = null, 
-        private readonly string $existsParameterName = self::QUERY_PARAMETER_KEY, 
+        private readonly ManagerRegistry         $managerRegistry,
+        private readonly ?LoggerInterface        $logger = null,
+        private ?array                           $properties = null,
+        private readonly string                  $existsParameterName = self::QUERY_PARAMETER_KEY,
         private readonly ?NameConverterInterface $nameConverter = null
     )
     {
@@ -47,9 +47,12 @@ final class ResourceExistsFilter implements ExistsFilterInterface, FilterInterfa
      */
     public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string $operationName = null, array $context = null): void
     {
-        foreach ($context['filters'] as $property => $filter) {
+        if (!array_key_exists('exists', $context['filters'])) {
+            return;
+        }
+        foreach ($context['filters']['exists'] as $property => $filter) {
             if (!array_key_exists($property, $this->properties)) {
-                unset($context['filters'][$property]);
+                unset($context['filters']['exists'][$property]);
             }
         }
         $resourceClass = $this->classMapper->byResource($resourceClass);
