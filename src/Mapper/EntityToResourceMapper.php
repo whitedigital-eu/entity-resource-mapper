@@ -6,8 +6,6 @@ namespace WhiteDigital\EntityResourceMapper\Mapper;
 
 use ApiPlatform\Core\Exception\ResourceClassNotFoundException;
 use ApiPlatform\Core\Metadata\Resource\Factory\ResourceMetadataFactoryInterface;
-use App\Extension\Attribute\Authorize;
-use App\Security\AuthorizationService;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\PersistentCollection;
 use Doctrine\Persistence\Proxy;
@@ -15,6 +13,8 @@ use Symfony\Component\Serializer\Annotation\Ignore;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
+use WhiteDigital\EntityResourceMapper\Security\Attribute\AuthorizeResource;
+use WhiteDigital\EntityResourceMapper\Security\AuthorizationService;
 
 class EntityToResourceMapper
 {
@@ -40,7 +40,7 @@ class EntityToResourceMapper
      * @param array<string, mixed> $context
      * @return BaseResource
      * @throws ExceptionInterface
-     * @throws ResourceClassNotFoundException
+     * @throws ResourceClassNotFoundException|\ReflectionException
      */
     public function map(BaseEntity $object, array $context = []): BaseResource
     {
@@ -56,17 +56,28 @@ class EntityToResourceMapper
 
         // Skip normalization if user has no permissions on current entity
         $resourceReflection = new \ReflectionClass($targetResourceClass);
-        $authorizeGetter = null;
-        if (!empty($authorize = $resourceReflection->getAttributes(Authorize::class))) {
-            $authorizeGetter = $authorize[0]->getArguments()['getter'];
-            if (!$this->authorizationService->authorizeSingleEntity($object, $authorizeGetter, $context, false)) {
+        $visibleProperties = [];
+        if (!empty($authorize = $resourceReflection->getAttributes(AuthorizeResource::class))) {
+            $ownerProperty = $authorize[0]->getArguments()['ownerProperty'];
+            $getterName = 'get' . ucfirst($ownerProperty);
+            if (!$this->authorizationService->authorizeSingleEntity($object, $getterName, $context, false)) {
+                $visibleProperties = $authorize[0]->getArguments()['visibleProperties'];
                 $this->setResourceProperty($output, 'id', $object->getId());
-                return $output;
+                $this->setResourceProperty($output, 'isRestricted', true);
+                if (empty($visibleProperties)) {
+                    return $output;
+                }
             }
         }
 
         foreach ($properties as $property) {
             $propertyName = $property->getName();
+
+            // If authorization service limited access to the resource but some properties must remain visible
+            if (!empty($visibleProperties) && !in_array($propertyName, $visibleProperties, true)) {
+                continue;
+            }
+
             /** @phpstan-ignore-next-line */
             $propertyType = $property->getType()?->getName();
             if (null === $propertyType) {

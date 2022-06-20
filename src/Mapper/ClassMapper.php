@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace WhiteDigital\EntityResourceMapper\Mapper;
 
+use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 
+#[Autoconfigure(configurator: '@App\Service\Configurator\ClassMapperConfigurator')]
 class ClassMapper
 {
     private array $map;
