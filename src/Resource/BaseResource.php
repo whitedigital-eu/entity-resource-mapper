@@ -31,7 +31,7 @@ abstract class BaseResource
      * Factory method to create a Resource from Entity, by using EntityToResourceMapper
      * If entity is array, queryBuilder object contains BaseEntity plus SQL calculated fields for merging with final resource.
      * @param BaseEntity|array<string|int, mixed> $entity
-     * @param array<string> $context
+     * @param array<string, mixed> $context // Must contain at least operation type & normalization groups
      * @return static
      * @throws ExceptionInterface
      * @throws ResourceClassNotFoundException

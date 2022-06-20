@@ -6,6 +6,8 @@ namespace WhiteDigital\EntityResourceMapper\Mapper;
 
 use ApiPlatform\Core\Exception\ResourceClassNotFoundException;
 use ApiPlatform\Core\Metadata\Resource\Factory\ResourceMetadataFactoryInterface;
+use App\Extension\Attribute\Authorize;
+use App\Security\AuthorizationService;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\PersistentCollection;
 use Doctrine\Persistence\Proxy;
@@ -21,6 +23,7 @@ class EntityToResourceMapper
     public function __construct(
         private readonly ClassMapper                      $classMapper,
         private readonly ResourceMetadataFactoryInterface $resourceMetadataFactory,
+        private readonly AuthorizationService             $authorizationService,
     )
     {
         BaseResource::setEntityToResourceMapper($this);
@@ -43,12 +46,25 @@ class EntityToResourceMapper
     {
         $reflection = $this->loadReflection($object);
 
-        $dtoClassCurrent = $this->classMapper->byEntity($reflection->getName());
-        $this->addElementIfNotExists($context[self::PARENT_CLASSES], $dtoClassCurrent);
-        $currentNormalizationGroups = $this->getNormalizationGroups($dtoClassCurrent, $context);
+        $targetResourceClass = $this->classMapper->byEntity($reflection->getName());
+
+        $this->addElementIfNotExists($context[self::PARENT_CLASSES], $targetResourceClass);
+        $currentNormalizationGroups = $this->getNormalizationGroups($targetResourceClass, $context);
 
         $properties = $reflection->getProperties();
-        $output = new $dtoClassCurrent();
+        $output = new $targetResourceClass();
+
+        // Skip normalization if user has no permissions on current entity
+        $resourceReflection = new \ReflectionClass($targetResourceClass);
+        $authorizeGetter = null;
+        if (!empty($authorize = $resourceReflection->getAttributes(Authorize::class))) {
+            $authorizeGetter = $authorize[0]->getArguments()['getter'];
+            if (!$this->authorizationService->authorizeSingleEntity($object, $authorizeGetter, $context, false)) {
+                $this->setResourceProperty($output, 'id', $object->getId());
+                return $output;
+            }
+        }
+
         foreach ($properties as $property) {
             $propertyName = $property->getName();
             /** @phpstan-ignore-next-line */
