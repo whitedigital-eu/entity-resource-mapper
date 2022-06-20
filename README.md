@@ -1,6 +1,13 @@
 # Entity Resource Mapper Bundle
 
-Extends Symfony / Api Platform functionality by helping to map Doctrine entity objects with Api Platform resource objects and offers other helpers such as filters, JSON Functions, etc.
+1) Extends Symfony / Api Platform functionality by helping to map Doctrine entity objects with Api Platform resource objects and offers other helpers such as filters, JSON Functions, etc.
+
+2) Implements AuthorizationService which centralizes all authorization configuration and provides methods for authorizing resources in:
+- Data provider - collection get
+- Data provider - item get
+- Data persister - item post/put/patch
+- Data persister - item delete
+- Individual resource in EntityToResourceMapper
 
 ## Requirements
 
@@ -75,6 +82,77 @@ Following PostgreSQL functions are available in Doctrine and used in ResourceJso
 - JSON_ARRAY_LENGTH(%s) - PostgreSQL function json_array_length(%s)
 - JSON_CONTAINS(%s, %s) - PostgreSQL alias for %s::jsonb @> '%s'
 
+### Security ### 
+Available operation types:
+- `AuthorizationService::ALL` Includes all of the below
+- `AuthorizationService::COL_GET` Collection GET 
+- `AuthorizationService::ITEM_GET` Item GET
+- `AuthorizationService::COL_POST` Collection POST
+- `AuthorizationService::ITEM_WRITE` Item PUT + PATCH + DELETE
+
+Available grant types:
+- `GrantType::ALL` resource fully available
+- `GrantType::OWN` only owned resource available
+- `GrantType::NONE` resource not available
+
+AuthorizationService Configurator must be implemented. 
+
+```php
+// src/Service/Configurator/AuthorizationServiceConfigurator.php
+
+final class AuthorizationServiceConfigurator
+{
+    public function __invoke(AuthorizationService $service): void
+    {
+        $service->setResources([
+            ActivityResource::class => [
+                AuthorizationService::ALL => ['ROLE_SUPER_ADMIN' => GrantType::ALL, 'ROLE_KAM' => GrantType::ALL],
+                AuthorizationService::COL_GET => [, 'ROLE_JUNIOR_KAM' => GrantType::OWN],
+                AuthorizationService::ITEM_GET => [, 'ROLE_JUNIOR_KAM' => GrantType::OWN],
+                AuthorizationService::COL_POST => [],
+                AuthorizationService::ITEM_WRITE => [],
+            ]]);
+    
+        //either mainResource or roles key must be set
+        $service->setMenuStructure(
+                [
+                    ['name' => 'ACTIVITIES',
+                        'mainResource' => ActivityResource::class,
+                    ],
+                    ['name' => 'REPORTS',
+                        'roles' => ['ROLE_SUPER_ADMIN', 'ROLE_KAM'],
+                    ],
+                 ]);
+    }
+}
+```
+Use following methods:  
+- In DataProvider, getCollection:
+```php
+$this->authorizationService->limitGetCollection($resourceClass, $queryBuilder); // This will affect queryBuilder object
+```
+- In DataProvider, getItem:
+```php
+$this->authorizationService->authorizeSingleEntity($entity,'owner', $context); // This will throw AccessDeniedException if not authorized
+```
+- In DataPersister, persist:
+```php
+$this->authorizationService->authorizeSingleResource($data, 'responsible', $context); // This will throw AccessDeniedException if not authorized
+```
+- In DataPersister, remove:
+```php
+$this->authorizationService->authorizeSingleResource($data, 'responsible', $context); // This will throw AccessDeniedException if not authorized
+```
+- In Any Resource, you want to limit output for non-OWN properties, add attribute to the resource class:
+```php
+AuthorizeResource(ownerProperty: 'owner', visibleProperties: ['owner']),
+```
+Same class must also set following property with correct normalization group:
+```php
+    #[Groups('deal_read')]
+    #[ApiProperty(attributes: ["openapi_context" => ["description" => "If Authorization GrantType::OWN is calculated, resource can be restricted."]])]
+    public bool $isRestricted = false;
+```
 ## Tests
 
 Run tests by:
