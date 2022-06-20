@@ -74,7 +74,7 @@ final class AuthorizationService
      * @param bool $throwException
      * @return bool
      */
-    public function authorizeSingleResource(BaseResource $resource, ?string $ownerProperty, array $context, bool $throwException = true): bool
+    public function authorizeSingleResource(BaseResource $resource, array $context, ?string $ownerProperty = null, bool $throwException = true): bool
     {
         $accessDecision = false;
 
@@ -87,7 +87,10 @@ final class AuthorizationService
         if (GrantType::ALL === $finalGrant) {
             $accessDecision = true;
         }
-        if (GrantType::OWN === $finalGrant && $ownerProperty) {
+        if (GrantType::OWN === $finalGrant) {
+            if (!$ownerProperty) {
+                throw new \RuntimeException('GrantType::OWN but $ownerProperty not set at ' . __CLASS__);
+            }
             $user = $this->security->getUser();
             $accessDecision = $resource->{$ownerProperty}->getId() === $user->getId();
         }
@@ -100,12 +103,12 @@ final class AuthorizationService
 
     /**
      * @param BaseEntity $entity
-     * @param string|null $getterMethod
      * @param array<string, mixed> $context
+     * @param string|null $ownerProperty
      * @param bool $throwException
      * @return bool
      */
-    public function authorizeSingleEntity(BaseEntity $entity, ?string $getterMethod, array $context, bool $throwException = true): bool
+    public function authorizeSingleEntity(BaseEntity $entity, array $context, ?string $ownerProperty, bool $throwException = true): bool
     {
         $accessDecision = false;
 
@@ -122,8 +125,12 @@ final class AuthorizationService
         if (GrantType::ALL === $finalGrant) {
             $accessDecision = true;
         }
-        if (GrantType::OWN === $finalGrant && $getterMethod) {
+        if (GrantType::OWN === $finalGrant) {
+            if (!$ownerProperty) {
+                throw new \RuntimeException('GrantType::OWN but $ownerProperty not set at ' . __CLASS__);
+            }
             $user = $this->security->getUser();
+            $getterMethod = $this->makeGetter($ownerProperty);
             $accessDecision = $entity->{$getterMethod}()->getId() === $user->getId();
         }
         if ($throwException && !$accessDecision) {
@@ -136,10 +143,10 @@ final class AuthorizationService
     /**
      * @param class-string $resourceClass
      * @param QueryBuilder $queryBuilder
-     * @param string $userColumn
+     * @param string|null $ownerProperty
      * @return void
      */
-    public function limitGetCollection(string $resourceClass, QueryBuilder $queryBuilder, string $userColumn = 'owner'): void
+    public function limitGetCollection(string $resourceClass, QueryBuilder $queryBuilder, ?string $ownerProperty = null): void
     {
 
         $highestGrantType = $this->calculateFinalGrantType($resourceClass, self::COL_GET);
@@ -149,9 +156,12 @@ final class AuthorizationService
         }
 
         if (GrantType::OWN === $highestGrantType) {
+            if (!$ownerProperty) {
+                throw new \RuntimeException('GrantType::OWN but $ownerProperty not set at ' . __CLASS__);
+            }
             $user = $this->security->getUser();
             $rootAlias = $queryBuilder->getRootAliases()[0];
-            $queryBuilder->andWhere(sprintf('%s.%s = :current_user', $rootAlias, $userColumn))
+            $queryBuilder->andWhere(sprintf('%s.%s = :current_user', $rootAlias, $ownerProperty))
                 ->setParameter('current_user', $user->getId());
         }
     }
@@ -198,7 +208,7 @@ final class AuthorizationService
             }
             if (!$included && array_key_exists('roles', $menuItem)) {
                 $user = $this->security->getUser();
-                $included = (0 < count(array_intersect($user->getRoles(), $menuItem['roles'])));
+                $included = (0 < count(array_intersect($user?->getRoles(), $menuItem['roles'])));
             }
 
             $childrenMenu = [];
@@ -300,5 +310,14 @@ final class AuthorizationService
     private function extractClassName(string $FQCN): string
     {
         return (new \ReflectionClass($FQCN))->getShortName();
+    }
+
+    /**
+     * @param string $property
+     * @return string
+     */
+    private function makeGetter(string $property): string
+    {
+        return 'get' . ucfirst($property);
     }
 }

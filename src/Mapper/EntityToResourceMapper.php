@@ -59,8 +59,7 @@ class EntityToResourceMapper
         $visibleProperties = [];
         if (!empty($authorize = $resourceReflection->getAttributes(AuthorizeResource::class))) {
             $ownerProperty = $authorize[0]->getArguments()['ownerProperty'];
-            $getterName = 'get' . ucfirst($ownerProperty);
-            if (!$this->authorizationService->authorizeSingleEntity($object, $getterName, $context, false)) {
+            if (!$this->authorizationService->authorizeSingleEntity($object, $context, $ownerProperty, false)) {
                 $visibleProperties = $authorize[0]->getArguments()['visibleProperties'];
                 $this->setResourceProperty($output, 'id', $object->getId());
                 $this->setResourceProperty($output, 'isRestricted', true);
