@@ -5,6 +5,8 @@ services:
     autowire: true
   WhiteDigital\EntityResourceMapper\Mapper\ResourceToEntityMapper:
     autowire: true
+  WhiteDigital\EntityResourceMapper\Security\AuthorizationService:
+    autowire: true
   WhiteDigital\EntityResourceMapper\Serializer\ArrayNormalizer:
     autowire: true
     autoconfigure: true
