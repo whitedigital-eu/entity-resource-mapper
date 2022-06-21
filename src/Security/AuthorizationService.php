@@ -71,6 +71,7 @@ final class AuthorizationService
      * @param BaseResource $resource
      * @param string|null $ownerProperty
      * @param array<string, mixed> $context
+     * @param string|null $ownerProperty
      * @param bool $throwException
      * @return bool
      */
@@ -92,7 +93,9 @@ final class AuthorizationService
                 throw new \RuntimeException('GrantType::OWN but $ownerProperty not set at ' . __CLASS__);
             }
             $user = $this->security->getUser();
-            $accessDecision = $resource->{$ownerProperty}->getId() === $user->getId();
+            $ownerObjectOrScalar = $resource->{$ownerProperty};
+            $userId = is_object($ownerObjectOrScalar) ? $ownerObjectOrScalar->id : $ownerObjectOrScalar;
+            $accessDecision = $userId === $user->getId();
         }
         if ($throwException && !$accessDecision) {
             throw new AccessDeniedException(self::ACCESS_DENIED_MESSAGE);
@@ -131,7 +134,9 @@ final class AuthorizationService
             }
             $user = $this->security->getUser();
             $getterMethod = $this->makeGetter($ownerProperty);
-            $accessDecision = $entity->{$getterMethod}()->getId() === $user->getId();
+            $ownerObjectOrScalar = $entity->{$getterMethod}();
+            $userId = is_object($ownerObjectOrScalar) ? $ownerObjectOrScalar->getId() : $ownerObjectOrScalar;
+            $accessDecision = $userId === $user->getId();
         }
         if ($throwException && !$accessDecision) {
             throw new AccessDeniedException(self::ACCESS_DENIED_MESSAGE);
