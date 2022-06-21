@@ -69,21 +69,15 @@ final class AuthorizationService
 
     /**
      * @param BaseResource $resource
-     * @param string|null $ownerProperty
-     * @param array<string, mixed> $context
+     * @param string $operation
      * @param string|null $ownerProperty
      * @param bool $throwException
      * @return bool
      */
-    public function authorizeSingleResource(BaseResource $resource, array $context, ?string $ownerProperty = null, bool $throwException = true): bool
+    public function authorizeSingleResource(BaseResource $resource, string $operation, ?string $ownerProperty = null, bool $throwException = true): bool
     {
         $accessDecision = false;
-
-        $operation = $this->getOperationfromContext($context);
-        if (null === $operation) {
-            throw new AccessDeniedException('Operation type not provided.');
-        }
-
+        
         $finalGrant = $this->calculateFinalGrantType(get_class($resource), $operation);
         if (GrantType::ALL === $finalGrant) {
             $accessDecision = true;
@@ -106,20 +100,15 @@ final class AuthorizationService
 
     /**
      * @param BaseEntity $entity
-     * @param array<string, mixed> $context
+     * @param string $operation
      * @param string|null $ownerProperty
      * @param bool $throwException
      * @return bool
      */
-    public function authorizeSingleEntity(BaseEntity $entity, array $context, ?string $ownerProperty, bool $throwException = true): bool
+    public function authorizeSingleEntity(BaseEntity $entity, string $operation, ?string $ownerProperty, bool $throwException = true): bool
     {
         $accessDecision = false;
-
-        $operation = $this->getOperationfromContext($context);
-        if (null === $operation) {
-            throw new AccessDeniedException('Operation type not provided.');
-        }
-
+        
         $reflection = new \ReflectionClass($entity);
         if ($entity instanceof Proxy) { //get real object behind Doctrine proxy object
             $reflection = $reflection->getParentClass();
@@ -229,36 +218,7 @@ final class AuthorizationService
             ] : null;
         }, $menu ?? $this->menuStructure)));
     }
-
-
-    /**
-     * Find an operation type (col-get, col-post, item-get, item-write (item-put, item-delete, item-patch)) from Api Platform context variable.
-     * @param array<string, mixed> $context
-     * @return string|null
-     */
-    private function getOperationfromContext(array $context): ?string
-    {
-        $operationType = array_key_exists('item_operation_name', $context) ? 'item' : null;
-        $operationType = array_key_exists('collection_operation_name', $context) ? 'collection' : $operationType;
-
-        if ('item' === $operationType) {
-            $operation = match ($context['item_operation_name']) {
-                'get' => self::ITEM_GET,
-                'delete', 'patch', 'put' => self::ITEM_WRITE,
-                default => null,
-            };
-        } else if ('collection' === $operationType) {
-            $operation = match ($context['collection_operation_name']) {
-                'get' => self::COL_GET,
-                'post' => self::COL_POST,
-                default => null,
-            };
-        } else {
-            return null;
-        }
-        return $operation;
-    }
-
+    
     /**
      * Calculate the highest grant level based on Resource permissions for specific operation merged with ALL.
      * @param class-string $resourceClass
