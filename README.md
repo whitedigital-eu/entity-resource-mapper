@@ -133,15 +133,17 @@ $this->authorizationService->limitGetCollection($resourceClass, $queryBuilder); 
 ```
 - In DataProvider, getItem:
 ```php
-$this->authorizationService->authorizeSingleEntity($entity,'owner', $context); // This will throw AccessDeniedException if not authorized
+$this->authorizationService->authorizeSingleEntity($entity,'owner', AuthorizationService::ITEM_GET); // This will throw AccessDeniedException if not authorized
 ```
 - In DataPersister, persist:
 ```php
-$this->authorizationService->authorizeSingleResource($data, 'responsible', $context); // This will throw AccessDeniedException if not authorized
+$this->authorizationService->authorizeSingleResource($data, 'responsible', AuthorizationService::ITEM_WRITE); // This will throw AccessDeniedException if not authorized
+// or
+$this->authorizationService->authorizeSingleResource($data, 'responsible', AuthorizationService::COL_POST; // This will throw AccessDeniedException if not authorized
 ```
 - In DataPersister, remove:
 ```php
-$this->authorizationService->authorizeSingleResource($data, 'responsible', $context); // This will throw AccessDeniedException if not authorized
+$this->authorizationService->authorizeSingleResource($data, 'responsible', AuthorizationService::ITEM_WRITE); // This will throw AccessDeniedException if not authorized
 ```
 - In Any Resource, you want to limit output for non-OWN properties, add attribute to the resource class:
 ```php
