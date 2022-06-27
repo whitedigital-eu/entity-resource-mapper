@@ -44,7 +44,10 @@ final class ResourceNumericFilter implements FilterInterface
      */
     public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string $operationName = null, ?array $context = null): void
     {
-        foreach ($context['filters'] as $property => $filter) {
+        foreach ($context['filters'] as $property => $value) {
+            if (!is_numeric($value)) {
+                throw new \RuntimeException("Non numeric value ($value) for numeric filter on property $property");
+            }
             if (!array_key_exists($property, $this->properties)) {
                 unset($context['filters'][$property]);
             }
