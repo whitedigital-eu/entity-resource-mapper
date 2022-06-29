@@ -12,6 +12,7 @@ use Symfony\Component\Security\Core\Security;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Mapper\ClassMapper;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
+use WhiteDigital\EntityResourceMapper\Security\Attribute\AuthorizeResource;
 use WhiteDigital\EntityResourceMapper\Security\Enum\GrantType;
 
 /**
@@ -76,8 +77,9 @@ final class AuthorizationService
      */
     public function authorizeSingleResource(BaseResource $resource, string $operation, ?string $ownerProperty = null, bool $throwException = true): bool
     {
+        // TODO handle many-to-many with $isCollection = str_ends_with($ownerProperty, '[]');
         $accessDecision = false;
-        
+
         $finalGrant = $this->calculateFinalGrantType(get_class($resource), $operation);
         if (GrantType::ALL === $finalGrant) {
             $accessDecision = true;
@@ -101,32 +103,85 @@ final class AuthorizationService
     /**
      * @param BaseEntity $entity
      * @param string $operation
-     * @param string|null $ownerProperty
      * @param bool $throwException
      * @return bool
      */
-    public function authorizeSingleEntity(BaseEntity $entity, string $operation, ?string $ownerProperty, bool $throwException = true): bool
+    public function authorizeSingleEntity(BaseEntity $entity, string $operation, bool $throwException = true): bool
     {
         $accessDecision = false;
-        
+
         $reflection = new \ReflectionClass($entity);
         if ($entity instanceof Proxy) { //get real object behind Doctrine proxy object
             $reflection = $reflection->getParentClass();
         }
-        $finalGrant = $this->calculateFinalGrantType($this->classMapper->byEntity($reflection->getName()), $operation);
-        if (GrantType::ALL === $finalGrant) {
+        $highestGrantType = $this->calculateFinalGrantType($resourceClass = $this->classMapper->byEntity($reflection->getName()), $operation);
+
+        if (GrantType::ALL === $highestGrantType) {
             $accessDecision = true;
         }
-        if (GrantType::OWN === $finalGrant) {
-            if (!$ownerProperty) {
+
+        $property = '';
+        $authorizedValue = null;
+        if (GrantType::OWN === $highestGrantType) {
+            if (!$property = $this->getAuthorizeAttributeValue($resourceClass, 'ownerProperty')) {
                 throw new \RuntimeException('GrantType::OWN but $ownerProperty not set at ' . __CLASS__);
             }
-            $user = $this->security->getUser();
-            $getterMethod = $this->makeGetter($ownerProperty);
-            $ownerObjectOrScalar = $entity->{$getterMethod}();
-            $userId = is_object($ownerObjectOrScalar) ? $ownerObjectOrScalar->getId() : $ownerObjectOrScalar;
-            $accessDecision = $userId === $user->getId();
+            $authorizedValue = $this->security->getUser();
         }
+
+        if (GrantType::GROUP === $highestGrantType) {
+            if (!$property = $this->getAuthorizeAttributeValue($resourceClass, 'groupProperty')) {
+                throw new \RuntimeException('GrantType::GROUP but $departmentProperty not set at ' . __CLASS__);
+            }
+            $exploded = explode('.', $property);
+            $groupProperty = end($exploded);
+            $getter = $this->makeGetter($groupProperty);
+            $authorizedValue = $this->security->getUser()->{$getter}();
+        }
+
+        if (str_contains($property, '.')) {
+
+        } else {
+            $getterMethod = $this->makeGetter($property);
+            $ownerObjectOrScalar = $entity->{$getterMethod}();
+            $authorizedValue = is_object($ownerObjectOrScalar) ? $authorizedValue : $authorizedValue->getId();
+            $accessDecision = $ownerObjectOrScalar === $authorizedValue;
+        }
+
+            ////////////////// DELETE ////////////////////
+//        if (GrantType::OWN === $finalGrant) {
+//            if (!$ownerProperty = $this->getAuthorizeAttributeValue($resourceClass, 'ownerProperty')) {
+//                throw new \RuntimeException('GrantType::OWN but $ownerProperty not set at ' . __CLASS__);
+//            }
+//            $user = $this->security->getUser();
+//            $isCollection = str_ends_with($ownerProperty, '[]');
+//            if (!$isCollection) {
+//                $getterMethod = $this->makeGetter($ownerProperty);
+//                $ownerObjectOrScalar = $entity->{$getterMethod}();
+//                $userId = is_object($ownerObjectOrScalar) ? $ownerObjectOrScalar->getId() : $ownerObjectOrScalar;
+//                $accessDecision = $userId === $user->getId();
+//            } else {
+//                $getterMethod = $this->makeGetter(substr($ownerProperty, 0, -2));
+//                $ownerCollection = $entity->{$getterMethod}();
+//                $accessDecision = $ownerCollection->contains($user);
+//            }
+//
+//        }
+//        if (GrantType::GROUP === $finalGrant) {
+//            if (!$groupProperty = $this->getAuthorizeAttributeValue($resourceClass, 'groupProperty')) {
+//                throw new \RuntimeException('GrantType::GROUP but $groupProperty not set at ' . __CLASS__);
+//            }
+//            /** @var User $user */
+//            $user = $this->security->getUser();
+//            $department = $user->getDepartment();
+//
+//            $getterMethod = $this->makeGetter($groupProperty);
+//            $ownerObjectOrScalar = $entity->{$getterMethod}();
+//            $userId = is_object($ownerObjectOrScalar) ? $ownerObjectOrScalar->getId() : $ownerObjectOrScalar;
+//            $accessDecision = $userId === $user->getId();
+//
+//        }
+        ////////////////////// END DELETE /////////////
         if ($throwException && !$accessDecision) {
             throw new AccessDeniedException(self::ACCESS_DENIED_MESSAGE);
         }
@@ -137,27 +192,58 @@ final class AuthorizationService
     /**
      * @param class-string $resourceClass
      * @param QueryBuilder $queryBuilder
-     * @param string|null $ownerProperty
      * @return void
      */
-    public function limitGetCollection(string $resourceClass, QueryBuilder $queryBuilder, ?string $ownerProperty = null): void
+    public function limitGetCollection(string $resourceClass, QueryBuilder $queryBuilder): void
     {
 
         $highestGrantType = $this->calculateFinalGrantType($resourceClass, self::COL_GET);
+
+        if (GrantType::ALL === $highestGrantType) {
+            return;
+        }
 
         if (GrantType::NONE === $highestGrantType) {
             throw new AccessDeniedException(self::ACCESS_DENIED_MESSAGE);
         }
 
+        $property = '';
+        $authorizedValue = null;
         if (GrantType::OWN === $highestGrantType) {
-            if (!$ownerProperty) {
+            if (!$property = $this->getAuthorizeAttributeValue($resourceClass, 'ownerProperty')) {
                 throw new \RuntimeException('GrantType::OWN but $ownerProperty not set at ' . __CLASS__);
             }
-            $user = $this->security->getUser();
-            $rootAlias = $queryBuilder->getRootAliases()[0];
-            $queryBuilder->andWhere(sprintf('%s.%s = :current_user', $rootAlias, $ownerProperty))
-                ->setParameter('current_user', $user->getId());
+            $authorizedValue = $this->security->getUser();
         }
+
+        if (GrantType::GROUP === $highestGrantType) {
+            if (!$property = $this->getAuthorizeAttributeValue($resourceClass, 'groupProperty')) {
+                throw new \RuntimeException('GrantType::GROUP but $departmentProperty not set at ' . __CLASS__);
+            }
+            $exploded = explode('.', $property);
+            $groupProperty = end($exploded);
+            $getter = $this->makeGetter($groupProperty);
+            $authorizedValue = $this->security->getUser()->{$getter}();
+        }
+
+        $rootAlias = $queryBuilder->getRootAliases()[0];
+        if (str_contains($property, '.')) { // Nested, we need to add joins to query builder
+            $joins = explode('.', $property);
+            $lastJoin = array_pop($joins);
+            foreach ($joins as $join) {
+                $queryBuilder->join("$rootAlias.$join", $join);
+            }
+            $queryBuilder->andWhere("$property = :authorizedValue");
+        } else {
+            if (str_ends_with($property, '[]')) { // many-to-many relation
+                $collectionProperty = substr($property, 0, -2);
+                $queryBuilder->join("$rootAlias.$collectionProperty", $collectionProperty);
+                $queryBuilder->andWhere("$collectionProperty = :authorizedValue");
+            } else {
+                $queryBuilder->andWhere("$rootAlias.$property = :authorizedValue");
+            }
+        }
+        $queryBuilder->setParameter('authorizedValue', $authorizedValue);
     }
 
 
@@ -218,7 +304,7 @@ final class AuthorizationService
             ] : null;
         }, $menu ?? $this->menuStructure)));
     }
-    
+
     /**
      * Calculate the highest grant level based on Resource permissions for specific operation merged with ALL.
      * @param class-string $resourceClass
@@ -258,6 +344,7 @@ final class AuthorizationService
         $order = [
             GrantType::NONE->value => 10,
             GrantType::OWN->value => 20,
+            GrantType::GROUP->value => 25,
             GrantType::ALL->value => 30,
         ];
         if ($order[$expectedGrantType->value] > $order[$currentGrantType->value]) {
@@ -284,5 +371,23 @@ final class AuthorizationService
     private function makeGetter(string $property): string
     {
         return 'get' . ucfirst($property);
+    }
+
+    /**
+     * Extract data from Resource class attribute AuthorizeResource
+     * @param class-string<BaseResource> $resourceClass
+     * @param string $attribute
+     * @return string|array<string>|null
+     */
+    private function getAuthorizeAttributeValue(string $resourceClass, string $attribute): string|array|null
+    {
+        try {
+            $reflection = new \ReflectionClass($resourceClass);
+            /** @phpstan-ignore-next-line */
+        } catch (\ReflectionException $e) {
+            return null;
+        }
+        $authorizeAttribute = $reflection->getAttributes(AuthorizeResource::class)[0] ?? null;
+        return $authorizeAttribute?->getArguments()[$attribute] ?? null;
     }
 }
