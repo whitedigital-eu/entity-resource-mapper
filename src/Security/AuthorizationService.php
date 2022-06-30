@@ -301,7 +301,7 @@ final class AuthorizationService
     private function calculateFinalGrantType(string $resourceClass, string $operation, ?array $forceRoles = null): GrantType
     {
         if (empty($this->resources)) {
-            throw new \RuntimeException(__CLASS__ . " must be configured by AuthorizationServiceConfigurator. Resource permissions not set.");
+            return GrantType::ALL;
         }
         $user = $this->security->getUser();
         if (null === $user) {
