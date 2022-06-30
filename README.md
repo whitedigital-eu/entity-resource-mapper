@@ -91,8 +91,9 @@ Available operation types:
 - `AuthorizationService::ITEM_WRITE` Item PUT + PATCH + DELETE
 
 Available grant types:
-- `GrantType::ALL` resource fully available
-- `GrantType::OWN` only owned resource available
+- `GrantType::ALL` resource fully available  
+- `GrantType::GROUP` only resources owned by same group available.
+- `GrantType::OWN` only owned resource available (MUST also have valid group!)
 - `GrantType::NONE` resource not available
 
 AuthorizationService Configurator must be implemented. 
@@ -108,7 +109,7 @@ final class AuthorizationServiceConfigurator
             ActivityResource::class => [
                 AuthorizationService::ALL => ['ROLE_SUPER_ADMIN' => GrantType::ALL, 'ROLE_KAM' => GrantType::ALL],
                 AuthorizationService::COL_GET => [, 'ROLE_JUNIOR_KAM' => GrantType::OWN],
-                AuthorizationService::ITEM_GET => [, 'ROLE_JUNIOR_KAM' => GrantType::OWN],
+                AuthorizationService::ITEM_GET => [, 'ROLE_JUNIOR_KAM' => GrantType::GROUP],
                 AuthorizationService::COL_POST => [],
                 AuthorizationService::ITEM_WRITE => [],
             ]]);
@@ -133,26 +134,26 @@ $this->authorizationService->limitGetCollection($resourceClass, $queryBuilder); 
 ```
 - In DataProvider, getItem:
 ```php
-$this->authorizationService->authorizeSingleEntity($entity,'owner', AuthorizationService::ITEM_GET); // This will throw AccessDeniedException if not authorized
+$this->authorizationService->authorizeSingleObject($entity, AuthorizationService::ITEM_GET); // This will throw AccessDeniedException if not authorized
 ```
 - In DataPersister, persist:
 ```php
-$this->authorizationService->authorizeSingleResource($data, 'responsible', AuthorizationService::ITEM_WRITE); // This will throw AccessDeniedException if not authorized
+$this->authorizationService->authorizeSingleObject($data, AuthorizationService::ITEM_WRITE); // This will throw AccessDeniedException if not authorized
 // or
-$this->authorizationService->authorizeSingleResource($data, 'responsible', AuthorizationService::COL_POST; // This will throw AccessDeniedException if not authorized
+$this->authorizationService->authorizeSingleObject($data, AuthorizationService::COL_POST; // This will throw AccessDeniedException if not authorized
 ```
 - In DataPersister, remove:
 ```php
-$this->authorizationService->authorizeSingleResource($data, 'responsible', AuthorizationService::ITEM_WRITE); // This will throw AccessDeniedException if not authorized
+$this->authorizationService->authorizeSingleObject($data, AuthorizationService::ITEM_WRITE); // This will throw AccessDeniedException if not authorized
 ```
-- In Any Resource, you want to limit output for non-OWN properties, add attribute to the resource class:
+- In Any Resource, you want to limit output for non-OWN or non-GROUP properties, add attribute to the resource class:
 ```php
-AuthorizeResource(ownerProperty: 'owner', visibleProperties: ['owner']),
+AuthorizeResource(ownerProperty: 'owner', groupProperty: 'department', visibleProperties: ['owner']),
 ```
 Same class must also set following property with correct normalization group:
 ```php
     #[Groups('deal_read')]
-    #[ApiProperty(attributes: ["openapi_context" => ["description" => "If Authorization GrantType::OWN is calculated, resource can be restricted."]])]
+    #[ApiProperty(attributes: ["openapi_context" => ["description" => "If Authorization GrantType::OWN or GROUP is calculated, resource can be restricted."]])]
     public bool $isRestricted = false;
 ```
 ## Tests

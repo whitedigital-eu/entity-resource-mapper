@@ -59,7 +59,7 @@ abstract class BaseEntity
     /**
      * Factory to create Entity from Resource by using ResourceToEntityMapper
      * @param BaseResource $resource
-     * @param array $context
+     * @param array<string, mixed> $context
      * @param BaseEntity|null $existingEntity
      * @return static
      * @throws ExceptionInterface

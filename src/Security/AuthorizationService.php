@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WhiteDigital\EntityResourceMapper\Security;
 
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\Proxy;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
@@ -67,69 +68,50 @@ final class AuthorizationService
         $this->menuStructure = $menuStructure;
     }
 
-
     /**
-     * @param BaseResource $resource
+     * @param BaseEntity|BaseResource $object
      * @param string $operation
-     * @param string|null $ownerProperty
      * @param bool $throwException
      * @return bool
      */
-    public function authorizeSingleResource(BaseResource $resource, string $operation, ?string $ownerProperty = null, bool $throwException = true): bool
+    public function authorizeSingleObject(BaseEntity|BaseResource $object, string $operation, bool $throwException = true, GrantType $forcedGrantType = null): bool
     {
-        // TODO handle many-to-many with $isCollection = str_ends_with($ownerProperty, '[]');
         $accessDecision = false;
 
-        $finalGrant = $this->calculateFinalGrantType(get_class($resource), $operation);
-        if (GrantType::ALL === $finalGrant) {
-            $accessDecision = true;
-        }
-        if (GrantType::OWN === $finalGrant) {
-            if (!$ownerProperty) {
-                throw new \RuntimeException('GrantType::OWN but $ownerProperty not set at ' . __CLASS__);
+        if ($object instanceof BaseEntity) {
+            $reflection = new \ReflectionClass($object);
+            if ($object instanceof Proxy) { //get real object behind Doctrine proxy object
+                $reflection = $reflection->getParentClass();
             }
-            $user = $this->security->getUser();
-            $ownerObjectOrScalar = $resource->{$ownerProperty};
-            $userId = is_object($ownerObjectOrScalar) ? $ownerObjectOrScalar->id : $ownerObjectOrScalar;
-            $accessDecision = $userId === $user->getId();
+            $resourceClass = $this->classMapper->byEntity($reflection->getName());
+        } else {
+            $resourceClass = $object::class;
         }
-        if ($throwException && !$accessDecision) {
-            throw new AccessDeniedException(self::ACCESS_DENIED_MESSAGE);
-        }
-        return $accessDecision;
-    }
 
-
-    /**
-     * @param BaseEntity $entity
-     * @param string $operation
-     * @param bool $throwException
-     * @return bool
-     */
-    public function authorizeSingleEntity(BaseEntity $entity, string $operation, bool $throwException = true): bool
-    {
-        $accessDecision = false;
-
-        $reflection = new \ReflectionClass($entity);
-        if ($entity instanceof Proxy) { //get real object behind Doctrine proxy object
-            $reflection = $reflection->getParentClass();
-        }
-        $highestGrantType = $this->calculateFinalGrantType($resourceClass = $this->classMapper->byEntity($reflection->getName()), $operation);
+        $highestGrantType = $forcedGrantType ?? $this->calculateFinalGrantType($resourceClass, $operation);
 
         if (GrantType::ALL === $highestGrantType) {
             $accessDecision = true;
         }
 
+        if (in_array($highestGrantType, [GrantType::OWN, GrantType::GROUP], true) && $operation === self::COL_POST) {
+            $accessDecision = true; // POST is allowed for ALL and OWN, and GROUP grant types.
+        }
+
+        if (GrantType::NONE === $highestGrantType) {
+            $accessDecision = false;
+        }
+
         $property = '';
         $authorizedValue = null;
-        if (GrantType::OWN === $highestGrantType) {
+        if (!$accessDecision && GrantType::OWN === $highestGrantType) {
             if (!$property = $this->getAuthorizeAttributeValue($resourceClass, 'ownerProperty')) {
                 throw new \RuntimeException('GrantType::OWN but $ownerProperty not set at ' . __CLASS__);
             }
             $authorizedValue = $this->security->getUser();
         }
 
-        if (GrantType::GROUP === $highestGrantType) {
+        if (!$accessDecision && GrantType::GROUP === $highestGrantType) {
             if (!$property = $this->getAuthorizeAttributeValue($resourceClass, 'groupProperty')) {
                 throw new \RuntimeException('GrantType::GROUP but $departmentProperty not set at ' . __CLASS__);
             }
@@ -139,49 +121,35 @@ final class AuthorizationService
             $authorizedValue = $this->security->getUser()->{$getter}();
         }
 
-        if (str_contains($property, '.')) {
-
-        } else {
-            $getterMethod = $this->makeGetter($property);
-            $ownerObjectOrScalar = $entity->{$getterMethod}();
-            $authorizedValue = is_object($ownerObjectOrScalar) ? $authorizedValue : $authorizedValue->getId();
-            $accessDecision = $ownerObjectOrScalar === $authorizedValue;
+        if (!$accessDecision && in_array($highestGrantType, [GrantType::GROUP, GrantType::OWN], true)) {
+            $topElement = $object;
+            $isCollection = false;
+            foreach (explode('.', $property) as $node) {
+                if (str_ends_with($node, '[]')  // Collection as NON-LAST item in property chain
+                    && !str_ends_with($property, $node)) {
+                    throw new \RuntimeException('Collection is not supported as non-last element.');
+                }
+                if (str_ends_with($node, '[]')) {
+                    $node = substr($node, 0, -2);
+                    $isCollection = true;
+                }
+                $topElement = $this->accessValue($topElement, $node);
+            }
+            if ($isCollection) {
+                /** @var  Collection<int, BaseEntity> $topElement */
+                $accessDecision = $topElement->contains($authorizedValue);
+                //TODO WHat if top element is BaseResource?
+            } else {
+                $isObject = is_object($topElement); // handle scalar or object
+                $authorizedValueId = $this->accessValue($authorizedValue, 'id');
+                $accessDecision = $isObject ? ($this->accessValue($topElement, 'id') === $authorizedValueId) : ($topElement === $authorizedValueId);
+                // If OWN grant type is successful, then we must check also GROUP if set:
+                if ($accessDecision && GrantType::OWN === $highestGrantType && $this->getAuthorizeAttributeValue($resourceClass, 'groupProperty')) {
+                    $accessDecision = $this->authorizeSingleObject($object, $operation, $throwException, GrantType::GROUP);
+                }
+            }
         }
 
-            ////////////////// DELETE ////////////////////
-//        if (GrantType::OWN === $finalGrant) {
-//            if (!$ownerProperty = $this->getAuthorizeAttributeValue($resourceClass, 'ownerProperty')) {
-//                throw new \RuntimeException('GrantType::OWN but $ownerProperty not set at ' . __CLASS__);
-//            }
-//            $user = $this->security->getUser();
-//            $isCollection = str_ends_with($ownerProperty, '[]');
-//            if (!$isCollection) {
-//                $getterMethod = $this->makeGetter($ownerProperty);
-//                $ownerObjectOrScalar = $entity->{$getterMethod}();
-//                $userId = is_object($ownerObjectOrScalar) ? $ownerObjectOrScalar->getId() : $ownerObjectOrScalar;
-//                $accessDecision = $userId === $user->getId();
-//            } else {
-//                $getterMethod = $this->makeGetter(substr($ownerProperty, 0, -2));
-//                $ownerCollection = $entity->{$getterMethod}();
-//                $accessDecision = $ownerCollection->contains($user);
-//            }
-//
-//        }
-//        if (GrantType::GROUP === $finalGrant) {
-//            if (!$groupProperty = $this->getAuthorizeAttributeValue($resourceClass, 'groupProperty')) {
-//                throw new \RuntimeException('GrantType::GROUP but $groupProperty not set at ' . __CLASS__);
-//            }
-//            /** @var User $user */
-//            $user = $this->security->getUser();
-//            $department = $user->getDepartment();
-//
-//            $getterMethod = $this->makeGetter($groupProperty);
-//            $ownerObjectOrScalar = $entity->{$getterMethod}();
-//            $userId = is_object($ownerObjectOrScalar) ? $ownerObjectOrScalar->getId() : $ownerObjectOrScalar;
-//            $accessDecision = $userId === $user->getId();
-//
-//        }
-        ////////////////////// END DELETE /////////////
         if ($throwException && !$accessDecision) {
             throw new AccessDeniedException(self::ACCESS_DENIED_MESSAGE);
         }
@@ -192,12 +160,13 @@ final class AuthorizationService
     /**
      * @param class-string $resourceClass
      * @param QueryBuilder $queryBuilder
+     * @param GrantType|null $forceGrantType
      * @return void
      */
-    public function limitGetCollection(string $resourceClass, QueryBuilder $queryBuilder): void
+    public function limitGetCollection(string $resourceClass, QueryBuilder $queryBuilder, GrantType $forceGrantType = null): void
     {
 
-        $highestGrantType = $this->calculateFinalGrantType($resourceClass, self::COL_GET);
+        $highestGrantType = $forceGrantType ?? $this->calculateFinalGrantType($resourceClass, self::COL_GET);
 
         if (GrantType::ALL === $highestGrantType) {
             return;
@@ -209,11 +178,13 @@ final class AuthorizationService
 
         $property = '';
         $authorizedValue = null;
+        $paramName = '';
         if (GrantType::OWN === $highestGrantType) {
             if (!$property = $this->getAuthorizeAttributeValue($resourceClass, 'ownerProperty')) {
                 throw new \RuntimeException('GrantType::OWN but $ownerProperty not set at ' . __CLASS__);
             }
             $authorizedValue = $this->security->getUser();
+            $paramName= 'ownerValue';
         }
 
         if (GrantType::GROUP === $highestGrantType) {
@@ -224,26 +195,41 @@ final class AuthorizationService
             $groupProperty = end($exploded);
             $getter = $this->makeGetter($groupProperty);
             $authorizedValue = $this->security->getUser()->{$getter}();
+            $paramName = 'groupValue';
         }
 
         $rootAlias = $queryBuilder->getRootAliases()[0];
         if (str_contains($property, '.')) { // Nested, we need to add joins to query builder
             $joins = explode('.', $property);
+            if (count($joins) > 2) {
+                throw new \RuntimeException('More than two nested properties are currently not supported: '.$property);
+            }
             $lastJoin = array_pop($joins);
             foreach ($joins as $join) {
+                // check if join already exists
+                foreach ($queryBuilder->getDQLPart('join') as $joinPart) {
+                    if ($joinPart[0]->getJoin() === "$rootAlias.$join") {
+                        continue 2;
+                    }
+                }
                 $queryBuilder->join("$rootAlias.$join", $join);
             }
-            $queryBuilder->andWhere("$property = :authorizedValue");
+            $queryBuilder->andWhere("$property = :$paramName");
         } else {
             if (str_ends_with($property, '[]')) { // many-to-many relation
                 $collectionProperty = substr($property, 0, -2);
                 $queryBuilder->join("$rootAlias.$collectionProperty", $collectionProperty);
-                $queryBuilder->andWhere("$collectionProperty = :authorizedValue");
+                $queryBuilder->andWhere("$collectionProperty = :$paramName");
             } else {
-                $queryBuilder->andWhere("$rootAlias.$property = :authorizedValue");
+                $queryBuilder->andWhere("$rootAlias.$property = :$paramName");
             }
         }
-        $queryBuilder->setParameter('authorizedValue', $authorizedValue);
+        $queryBuilder->setParameter($paramName, $authorizedValue);
+
+        // IF User has OWN permission, groups must be checked also:
+        if (GrantType::OWN === $highestGrantType && $this->getAuthorizeAttributeValue($resourceClass, 'groupProperty')) {
+            $this->limitGetCollection($resourceClass, $queryBuilder, GrantType::GROUP);
+        }
     }
 
 
@@ -362,6 +348,21 @@ final class AuthorizationService
     private function extractClassName(string $FQCN): string
     {
         return (new \ReflectionClass($FQCN))->getShortName();
+    }
+
+    /**
+     * @param BaseEntity|BaseResource $object
+     * @param string $property
+     * @return mixed
+     */
+    private function accessValue(BaseEntity|BaseResource $object, string $property): mixed
+    {
+        if ($object instanceof BaseEntity) {
+            $getter = $this->makeGetter($property);
+            return $object->{$getter}();
+        } else {
+            return $object->{$property};
+        }
     }
 
     /**
