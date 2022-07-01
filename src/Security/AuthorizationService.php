@@ -303,15 +303,17 @@ final class AuthorizationService
         if (empty($this->resources)) {
             return GrantType::ALL;
         }
+
+        if (!array_key_exists($resourceClass, $this->resources)) {
+            throw new \RuntimeException("Resource $resourceClass not configured in AuthorizationService.");
+        }
+        
         $user = $this->security->getUser();
         if (null === $user) {
             throw new AccessDeniedException(self::ACCESS_DENIED_MESSAGE);
         }
         $availableRoles = $forceRoles ?: $user->getRoles();
-
-        if (!array_key_exists($resourceClass, $this->resources)) {
-            throw new \RuntimeException("Resource $resourceClass not configured in AuthorizationService.");
-        }
+        
         $allowedRoles = array_merge($this->resources[$resourceClass][$operation], $this->resources[$resourceClass][self::ALL]);
         $highestGrantType = GrantType::NONE;
         foreach ($allowedRoles as $role => $grantType) {
