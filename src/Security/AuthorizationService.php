@@ -309,6 +309,9 @@ final class AuthorizationService
         }
         $availableRoles = $forceRoles ?: $user->getRoles();
 
+        if (!array_key_exists($resourceClass, $this->resources)) {
+            throw new \RuntimeException("Resource $resourceClass not configured in AuthorizationService.");
+        }
         $allowedRoles = array_merge($this->resources[$resourceClass][$operation], $this->resources[$resourceClass][self::ALL]);
         $highestGrantType = GrantType::NONE;
         foreach ($allowedRoles as $role => $grantType) {
