@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace WhiteDigital\EntityResourceMapper\Entity;
 
-
+use DateTimeImmutable;
+use DateTimeZone;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\ORM\Mapping\MappedSuperclass;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
@@ -15,36 +16,34 @@ use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 #[MappedSuperclass]
 abstract class BaseEntity
 {
-    #[ORM\Column(type: 'datetime')]
-    protected ?\DateTimeInterface $created = null;
+    #[ORM\Column(type: 'datetime_immutable')]
+    protected ?DateTimeImmutable $createdAt = null;
 
-    #[ORM\Column(type: 'datetime', nullable: true)]
-    protected ?\DateTimeInterface $updated = null;
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    protected ?DateTimeImmutable $updatedAt = null;
 
-
-    public function getCreated(): ?\DateTimeInterface
+    public function getCreatedAt(): ?DateTimeImmutable
     {
-        return $this->created;
+        return $this->createdAt;
     }
 
-    public function getUpdated(): ?\DateTimeInterface
+    public function getUpdatedAt(): ?DateTimeImmutable
     {
-        return $this->updated;
+        return $this->updatedAt;
     }
-
 
     #[ORM\PrePersist]
     public function onPrePersist(): void
     {
-        $now = new \DateTime('now');
-        $this->created = $now;
-        $this->updated = $now;
+        $now = new DateTimeImmutable(timezone: new DateTimeZone('UTC'));
+        $this->createdAt = $now;
+        $this->updatedAt = $now;
     }
 
     #[ORM\PreUpdate]
     public function onPreUpdate(): void
     {
-        $this->updated = new \DateTime('now');
+        $this->updatedAt = new DateTimeImmutable(timezone: new DateTimeZone('UTC'));
     }
 
     abstract public function getId(): ?int;
