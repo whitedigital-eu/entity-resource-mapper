@@ -184,7 +184,7 @@ final class AuthorizationService
                 throw new \RuntimeException('GrantType::OWN but $ownerProperty not set at ' . __CLASS__);
             }
             $authorizedValue = $this->security->getUser();
-            $paramName= 'ownerValue';
+            $paramName = 'ownerValue';
         }
 
         if (GrantType::GROUP === $highestGrantType) {
@@ -202,7 +202,7 @@ final class AuthorizationService
         if (str_contains($property, '.')) { // Nested, we need to add joins to query builder
             $joins = explode('.', $property);
             if (count($joins) > 2) {
-                throw new \RuntimeException('More than two nested properties are currently not supported: '.$property);
+                throw new \RuntimeException('More than two nested properties are currently not supported: ' . $property);
             }
             $lastJoin = array_pop($joins);
             foreach ($joins as $join) {
@@ -270,7 +270,7 @@ final class AuthorizationService
 
             if (array_key_exists('mainResource', $menuItem)) {
                 $grantType = $this->calculateFinalGrantType($menuItem['mainResource'], self::COL_GET);
-                $included = (in_array($grantType, [GrantType::OWN, GrantType::ALL], true));
+                $included = (in_array($grantType, [GrantType::OWN, GrantType::GROUP, GrantType::ALL], true));
             }
             if (!$included && array_key_exists('roles', $menuItem)) {
                 $user = $this->security->getUser();
@@ -307,13 +307,13 @@ final class AuthorizationService
         if (!array_key_exists($resourceClass, $this->resources)) {
             throw new \RuntimeException("Resource $resourceClass not configured in AuthorizationService.");
         }
-        
+
         $user = $this->security->getUser();
         if (null === $user) {
             throw new AccessDeniedException(self::ACCESS_DENIED_MESSAGE);
         }
         $availableRoles = $forceRoles ?: $user->getRoles();
-        
+
         $allowedRoles = array_merge($this->resources[$resourceClass][$operation], $this->resources[$resourceClass][self::ALL]);
         $highestGrantType = GrantType::NONE;
         foreach ($allowedRoles as $role => $grantType) {

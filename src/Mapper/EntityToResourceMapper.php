@@ -57,6 +57,7 @@ class EntityToResourceMapper
         // Skip normalization if user has no permissions on current entity
         $resourceReflection = new \ReflectionClass($targetResourceClass);
         $visibleProperties = [];
+        $normalizeForAuthorization = [];
         if (!empty($authorize = $resourceReflection->getAttributes(AuthorizeResource::class))) {
             if (!$this->authorizationService->authorizeSingleObject($object, AuthorizationService::ITEM_GET, false)) {
                 $visibleProperties = $authorize[0]->getArguments()['visibleProperties'] ?? [];
@@ -66,6 +67,9 @@ class EntityToResourceMapper
                     return $output;
                 }
             }
+            // if AuthorizeResource includes nested properties (like email.document.owner), they need to be normalized for later use in authorizeSingleObject()
+            $this->splitNestedProperties($authorize[0]->getArguments()['ownerProperty'] ?? null, $normalizeForAuthorization);
+            $this->splitNestedProperties($authorize[0]->getArguments()['groupProperty'] ?? null, $normalizeForAuthorization);
         }
 
         foreach ($properties as $property) {
@@ -108,6 +112,7 @@ class EntityToResourceMapper
                 if (array_key_exists('groups', $context)
                     && !$this->haveCommonElements($currentNormalizationGroups, $context['groups'])
                     && !$this->haveCommonElements($targetNormalizationGroups, $context['groups'])
+                    && !in_array($propertyName, $normalizeForAuthorization, true)
                 ) {
                     continue;
                 }
@@ -127,6 +132,7 @@ class EntityToResourceMapper
                 if (array_key_exists('groups', $context)
                     && !$this->haveCommonElements($currentNormalizationGroups, $context['groups'])
                     && !$this->haveCommonElements($targetNormalizationGroups, $context['groups'])
+                    && !in_array($propertyName, $normalizeForAuthorization, true)
                 ) {
                     continue;
                 }
@@ -265,4 +271,22 @@ class EntityToResourceMapper
         }
     }
 
+    /**
+     * Parse AuthorizeResource attributes and return all nested properties.
+     * For example, document.owner will return ['document', 'owner']
+     * @param string|null $attributeValue
+     * @param string[] $output
+     * @return void
+     */
+    private function splitNestedProperties(?string $attributeValue, array &$output): void
+    {
+        if (null === $attributeValue) {
+            return;
+        }
+        foreach (explode('.', $attributeValue) as $node) {
+            if (!in_array($node, $output, true)) {
+                $output[] = $node;
+            }
+        }
+    }
 }
