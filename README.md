@@ -146,9 +146,14 @@ $this->authorizationService->authorizeSingleObject($data, AuthorizationService::
 ```php
 $this->authorizationService->authorizeSingleObject($data, AuthorizationService::ITEM_WRITE); // This will throw AccessDeniedException if not authorized
 ```
-- In Any Resource, you want to limit output for non-OWN or non-GROUP properties, add attribute to the resource class:
+- In any Resource, if you want to limit output for non-OWN or non-GROUP properties, add attribute to the resource class:
 ```php
 AuthorizeResource(ownerProperty: 'owner', groupProperty: 'department', visibleProperties: ['owner']),
+```
+- In any Resource, if you want to make it public (for any authenticated user), set publicProperty to bool column in table: 
+```php
+AuthorizeResource(ownerProperty: 'owner', groupProperty: 'department', visibleProperties: ['owner'], publicProperty: 'isPublic'),
+```
 ```
 Same class must also set following property with correct normalization group:
 ```php
