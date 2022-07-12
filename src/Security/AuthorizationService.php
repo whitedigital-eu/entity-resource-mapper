@@ -102,6 +102,12 @@ final class AuthorizationService
             $accessDecision = false;
         }
 
+        if (!$accessDecision
+            && ($property = $this->getAuthorizeAttributeValue($resourceClass, 'publicProperty'))
+            && $operation === self::ITEM_GET) {
+            $accessDecision = (bool)$this->accessValue($object, $property);
+        }
+
         $property = '';
         $authorizedValue = null;
         if (!$accessDecision && GrantType::OWN === $highestGrantType) {
