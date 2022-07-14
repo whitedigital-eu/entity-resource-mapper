@@ -32,12 +32,24 @@ abstract class BaseEntity
         return $this->updated;
     }
 
-
+    /**
+     * Can be used for data migrations where original created date is in the past.
+     * @param \DateTimeInterface|null $date
+     * @return $this
+     */
+    public function setCreated(?\DateTimeInterface $date): self
+    {
+        $this->created = $date;
+        return $this;
+    }
+    
     #[ORM\PrePersist]
     public function onPrePersist(): void
     {
         $now = new \DateTime('now');
-        $this->created = $now;
+        if (null === $this->created) {
+            $this->created = $now;
+        }
         $this->updated = $now;
     }
 
