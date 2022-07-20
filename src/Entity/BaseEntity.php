@@ -60,7 +60,7 @@ abstract class BaseEntity
         $this->updatedAt = new DateTimeImmutable(timezone: new DateTimeZone('UTC'));
     }
 
-    abstract public function getId(): ?int;
+    abstract public function getId(): mixed;
 
     private static ResourceToEntityMapper $resourceToEntityMapper;
 
