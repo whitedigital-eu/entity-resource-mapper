@@ -12,7 +12,7 @@ use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 #[ApiFilter(ResourceSearchFilter::class, properties: ['number'])]
 class ResourceClass extends BaseResource
 {
-    public ?int $id = null;
+    public mixed $id = null;
     public int $number;
     public string $text;
     public ?\DateTimeImmutable $created = null;
