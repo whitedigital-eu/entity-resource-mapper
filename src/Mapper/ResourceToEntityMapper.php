@@ -44,8 +44,8 @@ class ResourceToEntityMapper
 
         foreach ($properties as $property) {
             $propertyName = $property->getName();
-            if (!property_exists($output, $propertyName)) {
-                continue; // Silently skip properties which do no exist on target class.
+            if (!property_exists($targetEntityClass, $propertyName)) {
+                continue; // Silently skip properties which do not exist on target class.
             }
             /** @phpstan-ignore-next-line */
             $propertyType = $property->getType()?->getName();
