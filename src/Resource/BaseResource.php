@@ -13,7 +13,7 @@ use WhiteDigital\EntityResourceMapper\Mapper\EntityToResourceMapper;
 
 abstract class BaseResource
 {
-    public ?int $id = null;
+    public mixed $id = null;
 
     public bool $isRestricted = false; // must set this property in resource class with correct Normalization group, if GrantType::OWN used on the resource
 
