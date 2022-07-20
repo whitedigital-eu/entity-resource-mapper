@@ -49,8 +49,14 @@ final class ResourceNumericFilter implements FilterInterface
                 unset($context['filters'][$property]);
                 continue;
             }
-            if (!is_numeric($value)) {
+            if (!is_array($value) && !is_numeric($value)) {
                 throw new \RuntimeException("Non numeric value ($value) for numeric filter on property $property");
+            } else if (is_array($value)) {
+                foreach ($value as $element) {
+                    if (!is_numeric($element)) {
+                        throw new \RuntimeException("Non numeric value ($element) for numeric filter on property $property");
+                    }
+                }
             }
         }
         $resourceClass = $this->classMapper->byResource($resourceClass);

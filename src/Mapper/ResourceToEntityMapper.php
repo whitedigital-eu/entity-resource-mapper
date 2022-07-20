@@ -23,7 +23,7 @@ class ResourceToEntityMapper
     )
     {
         BaseEntity::setResourceToEntityMapper($this);
-        // We should use UTC timezone for all datetimes.
+        // We should use UTC timezone for all datetimes within entities.
         $this->timeZone = new \DateTimeZone('UTC');
     }
 
@@ -56,7 +56,7 @@ class ResourceToEntityMapper
             }
 
             //  0. Set correct Timezone, as database does not store TZ info
-            if (is_subclass_of($propertyValue, \DateTimeInterface::class)
+            if (is_subclass_of($propertyType, \DateTimeInterface::class)
                 && $propertyValue instanceof \DateTimeInterface) {
                 $propertyValue = $propertyValue->setTimezone($this->timeZone);
             }
