@@ -23,8 +23,8 @@ class ResourceToEntityMapper
     )
     {
         BaseEntity::setResourceToEntityMapper($this);
-        // We are using PHP configured timezone (Europe/Riga)
-        $this->timeZone = new \DateTimeZone(date_default_timezone_get());
+        // We should use UTC timezone for all datetimes within entities.
+        $this->timeZone = new \DateTimeZone('UTC');
     }
 
     /**
@@ -56,9 +56,8 @@ class ResourceToEntityMapper
             }
 
             //  0. Set correct Timezone, as database does not store TZ info
-            if (in_array($propertyType, [\DateTimeInterface::class, \DateTimeImmutable::class, \DateTime::class], true)
-                && null !== $propertyValue) {
-                /** @var \DateTimeImmutable $propertyValue */
+            if (is_subclass_of($propertyType, \DateTimeInterface::class)
+                && $propertyValue instanceof \DateTimeInterface) {
                 $propertyValue = $propertyValue->setTimezone($this->timeZone);
             }
 
