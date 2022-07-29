@@ -15,16 +15,12 @@ class ResourceToEntityMapper
 {
     public const CONDITION_CONTEXT = 'condition_context';
 
-    private \DateTimeZone $timeZone;
-
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly ClassMapper            $classMapper,
     )
     {
         BaseEntity::setResourceToEntityMapper($this);
-        // We should use UTC timezone for all datetimes within entities.
-        $this->timeZone = new \DateTimeZone('UTC');
     }
 
     /**
@@ -55,10 +51,10 @@ class ResourceToEntityMapper
                 $propertyValue = null;
             }
 
-            //  0. Set correct Timezone, as database does not store TZ info
+            //  DateTimeInterface implementations are converted to DateTimeImmutable in entities
             if (is_subclass_of($propertyType, \DateTimeInterface::class)
                 && $propertyValue instanceof \DateTimeInterface) {
-                $propertyValue = $propertyValue->setTimezone($this->timeZone);
+                $propertyValue = \DateTimeImmutable::createFromInterface($propertyValue);
             }
 
             // For existing entities, lets not update anything, if value not changed
@@ -203,9 +199,8 @@ class ResourceToEntityMapper
         if ($value1 === $value2) {
             return true;
         }
-        // \DateTime or \DateTimeImmutable
+        // \DateTimeInterface implementations
         if ($value1 instanceof \DateTimeInterface && $value2 instanceof \DateTimeInterface) {
-            //TODO Timezones are not equal ??
             return $value1->getTimestamp() === $value2->getTimestamp();
         }
         // Doctrine Collection and array, both empty
