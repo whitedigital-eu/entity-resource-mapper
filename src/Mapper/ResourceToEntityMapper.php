@@ -214,13 +214,13 @@ class ResourceToEntityMapper
         if ($value1 instanceof PersistentCollection && is_array($value2) && count($value1) === count($value2)) {
             /** @var BaseEntity[] $firstSet */
             $firstSet = $value1->getValues();
-            /** @var BaseEntity[] $secondSet */
+            /** @var BaseResource[] $secondSet */
             $secondSet = $value2;
             $equal = true;
             for ($i = 0, $iMax = count($firstSet); $i < $iMax; $i++) {
                 $classesAreEqual = get_class($firstSet[$i]) === $this->classMapper->byResource(get_class($secondSet[$i]), get_class($firstSet[$i]));
                 $idsAreEqual = $firstSet[$i]->getId() === $secondSet[$i]->id;
-                $equal = $equal && $classesAreEqual && $idsAreEqual;
+                $equal = $classesAreEqual && $idsAreEqual;
                 if (!$equal) {
                     break;
                 }
