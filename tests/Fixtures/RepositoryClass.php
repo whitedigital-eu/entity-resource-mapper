@@ -35,4 +35,25 @@ class RepositoryClass
         return $entity;
     }
 
+    private function returnSelfReferencingEntity(): BaseEntity
+    {
+        $subChildEntity = new SelfReferencingEntityClass();
+        $subChildEntity->setNumber(3);
+        $subChildEntity->setText('testText3');
+        $subChildEntity->setCreatedAt(new \DateTimeImmutable());
+
+        $childEntity = new SelfReferencingEntityClass();
+        $childEntity->setNumber(2);
+        $childEntity->setText('testText2');
+        $childEntity->setCreatedAt(new \DateTimeImmutable());
+        $childEntity->addChildren($subChildEntity);
+
+        $parentEntity = new SelfReferencingEntityClass();
+        $parentEntity->setNumber(1);
+        $parentEntity->setText('testText1');
+        $parentEntity->setCreatedAt(new \DateTimeImmutable());
+        $parentEntity->addChildren($childEntity);
+
+        return $parentEntity;
+    }
 }
