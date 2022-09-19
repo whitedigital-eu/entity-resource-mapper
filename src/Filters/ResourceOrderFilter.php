@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace WhiteDigital\EntityResourceMapper\Filters;
 
-use ApiPlatform\Core\Bridge\Doctrine\Common\Filter\OrderFilterInterface;
-use ApiPlatform\Core\Bridge\Doctrine\Orm\Filter\FilterInterface;
-use ApiPlatform\Core\Bridge\Doctrine\Orm\Filter\OrderFilter;
-use ApiPlatform\Core\Bridge\Doctrine\Orm\Util\QueryNameGeneratorInterface;
+use ApiPlatform\Doctrine\Common\Filter\OrderFilterInterface;
+use ApiPlatform\Doctrine\Orm\Filter\FilterInterface;
+use ApiPlatform\Doctrine\Orm\Filter\OrderFilter;
+use ApiPlatform\Doctrine\Orm\Util\QueryNameGeneratorInterface;
+use ApiPlatform\Metadata\Operation;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LoggerInterface;
@@ -40,11 +41,11 @@ class ResourceOrderFilter implements FilterInterface
      * @param QueryBuilder $queryBuilder
      * @param QueryNameGeneratorInterface $queryNameGenerator
      * @param string $resourceClass
-     * @param string|null $operationName
+     * @param string|Operation|null $operation
      * @param array<string, mixed> $context
      * @return void
      */
-    public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string $operationName = null, array $context = []): void
+    public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation $operation = null, array $context = []): void
     {
         if (!array_key_exists('order', $context['filters'])) {
             return;
@@ -60,13 +61,12 @@ class ResourceOrderFilter implements FilterInterface
         }
         $orderFilter = new OrderFilter(
             $this->managerRegistry,
-            null,
             $this->orderParameterName,
             $this->logger,
             $this->properties,
             $this->nameConverter
         );
-        $orderFilter->apply($queryBuilder, $queryNameGenerator, $resourceClass, $operationName, $context);
+        $orderFilter->apply($queryBuilder, $queryNameGenerator, $resourceClass, $operation, $context);
     }
 
     /**

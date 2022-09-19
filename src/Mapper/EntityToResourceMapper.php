@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace WhiteDigital\EntityResourceMapper\Mapper;
 
-use ApiPlatform\Core\Exception\ResourceClassNotFoundException;
-use ApiPlatform\Core\Metadata\Resource\Factory\ResourceMetadataFactoryInterface;
+use ApiPlatform\Exception\ResourceClassNotFoundException;
+use ApiPlatform\Metadata\Resource\Factory\ResourceMetadataCollectionFactoryInterface;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\PersistentCollection;
 use Doctrine\Persistence\Proxy;
@@ -22,7 +22,7 @@ class EntityToResourceMapper
 
     public function __construct(
         private readonly ClassMapper                      $classMapper,
-        private readonly ResourceMetadataFactoryInterface $resourceMetadataFactory,
+        private readonly ResourceMetadataCollectionFactoryInterface $resourceMetadataFactory,
         private readonly AuthorizationService             $authorizationService,
     )
     {
@@ -216,7 +216,7 @@ class EntityToResourceMapper
     {
         $output = [];
         $resourceMetadata = $this->resourceMetadataFactory->create($dtoClass);
-
+        // TODO ResourceMetadataFactory has changed in 3.0 !!
         if (null !== $normalizationContext = $resourceMetadata->getAttribute('normalization_context')) {
             $output = $normalizationContext['groups'] ?? [];
         }
