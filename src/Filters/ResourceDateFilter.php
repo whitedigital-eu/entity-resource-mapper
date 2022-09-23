@@ -63,7 +63,6 @@ class ResourceDateFilter implements FilterInterface, DateFilterInterface
         }
         $dateFilter = new DateFilter(
             $this->managerRegistry,
-            null,
             $this->logger,
             $this->properties,
             $this->nameConverter,

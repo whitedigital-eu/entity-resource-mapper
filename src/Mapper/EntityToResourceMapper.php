@@ -217,7 +217,7 @@ class EntityToResourceMapper
         $output = [];
         $resourceMetadata = $this->resourceMetadataFactory->create($dtoClass);
         // TODO ResourceMetadataFactory has changed in 3.0 !!
-        if (null !== $normalizationContext = $resourceMetadata->getAttribute('normalization_context')) {
+        if (null !== $normalizationContext = $resourceMetadata->getOperation()->getNormalizationContext()) {
             $output = $normalizationContext['groups'] ?? [];
         }
 

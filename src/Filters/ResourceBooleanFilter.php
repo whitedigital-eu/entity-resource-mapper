@@ -52,7 +52,6 @@ final class ResourceBooleanFilter implements FilterInterface
         $resourceClass = $this->classMapper->byResource($resourceClass);
         $booleanFilter = new BooleanFilter(
           $this->managerRegistry,
-          null,
           $this->logger,
           $this->properties,
           $this->nameConverter,  

@@ -62,7 +62,10 @@ final class ResourceEnumFilter implements SearchFilterInterface, FilterInterface
             }
             $this->properties[$property] = self::STRATEGY_EXACT;
         }
-        $resourceClass = $this->classMapper->byResource($resourceClass);
+        if (array_key_exists('filters', $context) && 0 === count($context['filters'])) {
+            return;
+        }
+        $resourceClass = $this->classMapper->byResource($resourceClass, $resourceClass);
 
         $searchFilter = new SearchFilter(
             $this->managerRegistry,
