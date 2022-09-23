@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace WhiteDigital\EntityResourceMapper\Filters;
 
-use ApiPlatform\Core\Bridge\Doctrine\Orm\Filter\BooleanFilter;
-use ApiPlatform\Core\Bridge\Doctrine\Orm\Filter\FilterInterface;
-use ApiPlatform\Core\Bridge\Doctrine\Orm\Util\QueryNameGeneratorInterface;
+use ApiPlatform\Doctrine\Orm\Filter\BooleanFilter;
+use ApiPlatform\Doctrine\Orm\Filter\FilterInterface;
+use ApiPlatform\Doctrine\Orm\Util\QueryNameGeneratorInterface;
+use ApiPlatform\Metadata\Operation;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Serializer\NameConverter\NameConverterInterface;
 use WhiteDigital\EntityResourceMapper\Mapper\AccessClassMapperTrait;
 
@@ -38,11 +38,11 @@ final class ResourceBooleanFilter implements FilterInterface
      * @param QueryBuilder $queryBuilder
      * @param QueryNameGeneratorInterface $queryNameGenerator
      * @param string $resourceClass
-     * @param string|null $operationName
+     * @param string|Operation|null $operation
      * @param array<string, mixed>|null $context
      * @return void
      */
-    public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string $operationName = null, array $context = null): void
+    public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation $operation = null, array $context = null): void
     {
         foreach ($context['filters'] as $property => $filter) {
             if (!array_key_exists($property, $this->properties)) {
@@ -52,12 +52,11 @@ final class ResourceBooleanFilter implements FilterInterface
         $resourceClass = $this->classMapper->byResource($resourceClass);
         $booleanFilter = new BooleanFilter(
           $this->managerRegistry,
-          null,
           $this->logger,
           $this->properties,
           $this->nameConverter,  
         );
-        $booleanFilter->apply($queryBuilder, $queryNameGenerator, $resourceClass, $operationName, $context);
+        $booleanFilter->apply($queryBuilder, $queryNameGenerator, $resourceClass, $operation, $context);
     }
 
     /**

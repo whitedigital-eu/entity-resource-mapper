@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace WhiteDigital\EntityResourceMapper\Serializer;
 
-use ApiPlatform\Core\Exception\ResourceClassNotFoundException;
+use ApiPlatform\Exception\ResourceClassNotFoundException;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
 use Symfony\Component\Serializer\Normalizer\NormalizerAwareInterface;
@@ -47,7 +47,7 @@ class EntityNormalizer implements NormalizerInterface, NormalizerAwareInterface
      * @param array<string> $context
      * @return float|array<BaseResource>|\ArrayObject<int, BaseResource>|bool|int|string|null
      * @throws ResourceClassNotFoundException
-     * @throws ExceptionInterface
+     * @throws ExceptionInterface|\ReflectionException
      */
     public function normalize(mixed $object, string $format = null, array $context = []): float|array|\ArrayObject|bool|int|string|null
     {

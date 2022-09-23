@@ -4,19 +4,18 @@ declare(strict_types=1);
 
 namespace WhiteDigital\EntityResourceMapper\Filters;
 
-use ApiPlatform\Core\Bridge\Doctrine\Orm\Filter\FilterInterface;
-use ApiPlatform\Core\Bridge\Doctrine\Orm\Filter\NumericFilter;
-use ApiPlatform\Core\Bridge\Doctrine\Orm\Util\QueryNameGeneratorInterface;
+
+use ApiPlatform\Doctrine\Orm\Filter\FilterInterface;
+use ApiPlatform\Doctrine\Orm\Filter\NumericFilter;
+use ApiPlatform\Doctrine\Orm\Util\QueryNameGeneratorInterface;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Serializer\NameConverter\NameConverterInterface;
 use WhiteDigital\EntityResourceMapper\Mapper\AccessClassMapperTrait;
 
 final class ResourceNumericFilter implements FilterInterface
 {
-
     use AccessClassMapperTrait;
 
     /**
@@ -42,7 +41,7 @@ final class ResourceNumericFilter implements FilterInterface
      * @param array<string, mixed>|null $context
      * @return void
      */
-    public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string $operationName = null, ?array $context = null): void
+    public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|\ApiPlatform\Metadata\Operation $operation = null, ?array $context = null): void
     {
         foreach ($context['filters'] as $property => $value) {
             if (!array_key_exists($property, $this->properties)) {
@@ -51,7 +50,9 @@ final class ResourceNumericFilter implements FilterInterface
             }
             if (!is_array($value) && !is_numeric($value)) {
                 throw new \RuntimeException("Non numeric value ($value) for numeric filter on property $property");
-            } else if (is_array($value)) {
+            }
+
+            if (is_array($value)) {
                 foreach ($value as $element) {
                     if (!is_numeric($element)) {
                         throw new \RuntimeException("Non numeric value ($element) for numeric filter on property $property");
@@ -62,12 +63,11 @@ final class ResourceNumericFilter implements FilterInterface
         $resourceClass = $this->classMapper->byResource($resourceClass);
         $numericFilter = new NumericFilter(
             $this->managerRegistry,
-            null,
             $this->logger,
             $this->properties,
             $this->nameConverter
         );
-        $numericFilter->apply($queryBuilder, $queryNameGenerator, $resourceClass, $operationName, $context);
+        $numericFilter->apply($queryBuilder, $queryNameGenerator, $resourceClass, $operation, $context);
     }
 
     /**

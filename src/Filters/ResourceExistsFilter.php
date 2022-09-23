@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace WhiteDigital\EntityResourceMapper\Filters;
 
-use ApiPlatform\Core\Bridge\Doctrine\Common\Filter\ExistsFilterInterface;
-use ApiPlatform\Core\Bridge\Doctrine\Orm\Filter\ExistsFilter;
-use ApiPlatform\Core\Bridge\Doctrine\Orm\Filter\FilterInterface;
-use ApiPlatform\Core\Bridge\Doctrine\Orm\Util\QueryNameGeneratorInterface;
+use ApiPlatform\Doctrine\Common\Filter\ExistsFilterInterface;
+use ApiPlatform\Doctrine\Orm\Filter\ExistsFilter;
+use ApiPlatform\Doctrine\Orm\Filter\FilterInterface;
+use ApiPlatform\Doctrine\Orm\Util\QueryNameGeneratorInterface;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Serializer\NameConverter\NameConverterInterface;
 use WhiteDigital\EntityResourceMapper\Mapper\AccessClassMapperTrait;
 
@@ -45,7 +44,7 @@ final class ResourceExistsFilter implements ExistsFilterInterface, FilterInterfa
      * @param array<string, mixed>|null $context
      * @return void
      */
-    public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string $operationName = null, array $context = null): void
+    public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|\ApiPlatform\Metadata\Operation $operation = null, array $context = null): void
     {
         if (!array_key_exists('exists', $context['filters'])) {
             return;
@@ -58,13 +57,12 @@ final class ResourceExistsFilter implements ExistsFilterInterface, FilterInterfa
         $resourceClass = $this->classMapper->byResource($resourceClass);
         $existsFilter = new ExistsFilter(
             $this->managerRegistry,
-            null,
             $this->logger,
             $this->properties,
             $this->existsParameterName,
             $this->nameConverter
         );
-        $existsFilter->apply($queryBuilder, $queryNameGenerator, $resourceClass, $operationName, $context);
+        $existsFilter->apply($queryBuilder, $queryNameGenerator, $resourceClass, $operation, $context);
     }
 
     /**

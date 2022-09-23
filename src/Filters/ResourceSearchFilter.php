@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace WhiteDigital\EntityResourceMapper\Filters;
 
-use ApiPlatform\Core\Api\IdentifiersExtractorInterface;
-use ApiPlatform\Core\Api\IriConverterInterface;
-use ApiPlatform\Core\Bridge\Doctrine\Common\Filter\SearchFilterInterface;
-use ApiPlatform\Core\Bridge\Doctrine\Orm\Filter\FilterInterface;
-use ApiPlatform\Core\Bridge\Doctrine\Orm\Filter\SearchFilter;
-use ApiPlatform\Core\Bridge\Doctrine\Orm\Util\QueryNameGeneratorInterface;
+use ApiPlatform\Api\IdentifiersExtractorInterface;
+use ApiPlatform\Api\IriConverterInterface;
+use ApiPlatform\Doctrine\Common\Filter\SearchFilterInterface;
+use ApiPlatform\Doctrine\Orm\Filter\FilterInterface;
+use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use ApiPlatform\Doctrine\Orm\Util\QueryNameGeneratorInterface;
+use ApiPlatform\Metadata\Operation;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
 use Symfony\Component\Serializer\NameConverter\NameConverterInterface;
 use WhiteDigital\EntityResourceMapper\Mapper\AccessClassMapperTrait;
@@ -23,7 +23,6 @@ final class ResourceSearchFilter implements SearchFilterInterface, FilterInterfa
     use AccessClassMapperTrait;
 
     private const CASE_INSENSITIVE_PREFIX = 'i';
-
 
     /**
      * @param ManagerRegistry $managerRegistry
@@ -45,7 +44,6 @@ final class ResourceSearchFilter implements SearchFilterInterface, FilterInterfa
     )
     {
     }
-
 
     /**
      * @param string $resourceClass
@@ -88,25 +86,24 @@ final class ResourceSearchFilter implements SearchFilterInterface, FilterInterfa
         ];
     }
 
-
     protected function normalizePropertyName(string $property): string
     {
         if (!$this->nameConverter instanceof NameConverterInterface) {
             return $property;
         }
 
-        return implode('.', array_map([$this->nameConverter, 'normalize'], explode('.', (string)$property)));
+        return implode('.', array_map([$this->nameConverter, 'normalize'], explode('.', $property)));
     }
 
     /**
      * @param QueryBuilder $queryBuilder
      * @param QueryNameGeneratorInterface $queryNameGenerator
      * @param string $resourceClass
-     * @param string|null $operationName
+     * @param string|Operation|null $operation
      * @param array<string, mixed>|null $context
      * @return void
      */
-    public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string $operationName = null, array $context = null): void
+    public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation $operation = null, array $context = null): void
     {
         foreach ($context['filters'] as $property => $filter) {
             if (!array_key_exists($property, $this->properties)) {
@@ -116,17 +113,20 @@ final class ResourceSearchFilter implements SearchFilterInterface, FilterInterfa
             $this->properties[$property] = key($filter) ?? self::STRATEGY_PARTIAL;
             $context['filters'][$property] = current($filter);
         }
-        $resourceClass = $this->classMapper->byResource($resourceClass);
+        if (array_key_exists('filters', $context) && 0 === count($context['filters'])) {
+            return;
+        }
+
+        $resourceClass = $this->classMapper->byResource($resourceClass, $resourceClass);
         
         $searchFilter = new SearchFilter(
             $this->managerRegistry,
-            null,
             $this->iriConverter,
             $this->propertyAccessor,
             $this->logger,
             $this->properties,
             $this->identifiersExtractor,
             $this->nameConverter);
-        $searchFilter->apply($queryBuilder, $queryNameGenerator, $resourceClass, $operationName, $context);
+        $searchFilter->apply($queryBuilder, $queryNameGenerator, $resourceClass, $operation, $context);
     }
 }

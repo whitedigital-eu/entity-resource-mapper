@@ -4,15 +4,16 @@ declare(strict_types=1);
 
 namespace WhiteDigital\EntityResourceMapper\Filters;
 
-use ApiPlatform\Core\Bridge\Doctrine\Common\Filter\OrderFilterInterface;
-use ApiPlatform\Core\Bridge\Doctrine\Orm\Filter\AbstractContextAwareFilter;
-use ApiPlatform\Core\Bridge\Doctrine\Orm\Util\QueryNameGeneratorInterface;
+use ApiPlatform\Doctrine\Common\Filter\OrderFilterInterface;
+use ApiPlatform\Doctrine\Orm\Filter\AbstractFilter;
+use ApiPlatform\Doctrine\Orm\Util\QueryNameGeneratorInterface;
+use ApiPlatform\Metadata\Operation;
 use Doctrine\ORM\QueryBuilder;
 
 /**
  * Order filter which will order by custom SELECT fields, which are not included in root alias nor joins.
  */
-class ResourceOrderCustomFilter extends AbstractContextAwareFilter
+class ResourceOrderCustomFilter extends AbstractFilter
 {
     private string $orderParameterName = 'order';
 
@@ -22,10 +23,11 @@ class ResourceOrderCustomFilter extends AbstractContextAwareFilter
      * @param QueryBuilder $queryBuilder
      * @param QueryNameGeneratorInterface $queryNameGenerator
      * @param string $resourceClass
-     * @param string|null $operationName
+     * @param string|Operation|null $operation
+     * @param array|null $context
      * @return void
      */
-    protected function filterProperty(string $property, mixed $value, QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string $operationName = null): void
+    protected function filterProperty(string $property, mixed $value, QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation $operation = null, array $context = null): void
     {
         if (!is_array($value)) {
             return;
