@@ -15,16 +15,12 @@ class ResourceToEntityMapper
 {
     public const CONDITION_CONTEXT = 'condition_context';
 
-    private \DateTimeZone $timeZone;
-
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly ClassMapper            $classMapper,
     )
     {
         BaseEntity::setResourceToEntityMapper($this);
-        // We are using PHP configured timezone (Europe/Riga)
-        $this->timeZone = new \DateTimeZone(date_default_timezone_get());
     }
 
     /**
@@ -55,11 +51,10 @@ class ResourceToEntityMapper
                 $propertyValue = null;
             }
 
-            //  0. Set correct Timezone, as database does not store TZ info
-            if (in_array($propertyType, [\DateTimeInterface::class, \DateTimeImmutable::class, \DateTime::class], true)
-                && null !== $propertyValue) {
-                /** @var \DateTimeImmutable $propertyValue */
-                $propertyValue = $propertyValue->setTimezone($this->timeZone);
+            //  DateTimeInterface implementations are converted to DateTimeImmutable in entities
+            if (is_subclass_of($propertyType, \DateTimeInterface::class)
+                && $propertyValue instanceof \DateTimeInterface) {
+                $propertyValue = \DateTimeImmutable::createFromInterface($propertyValue);
             }
 
             // For existing entities, lets not update anything, if value not changed
@@ -204,9 +199,8 @@ class ResourceToEntityMapper
         if ($value1 === $value2) {
             return true;
         }
-        // \DateTime or \DateTimeImmutable
+        // \DateTimeInterface implementations
         if ($value1 instanceof \DateTimeInterface && $value2 instanceof \DateTimeInterface) {
-            //TODO Timezones are not equal ??
             return $value1->getTimestamp() === $value2->getTimestamp();
         }
         // Doctrine Collection and array, both empty
@@ -220,13 +214,13 @@ class ResourceToEntityMapper
         if ($value1 instanceof PersistentCollection && is_array($value2) && count($value1) === count($value2)) {
             /** @var BaseEntity[] $firstSet */
             $firstSet = $value1->getValues();
-            /** @var BaseEntity[] $secondSet */
+            /** @var BaseResource[] $secondSet */
             $secondSet = $value2;
             $equal = true;
             for ($i = 0, $iMax = count($firstSet); $i < $iMax; $i++) {
                 $classesAreEqual = get_class($firstSet[$i]) === $this->classMapper->byResource(get_class($secondSet[$i]), get_class($firstSet[$i]));
                 $idsAreEqual = $firstSet[$i]->getId() === $secondSet[$i]->id;
-                $equal = $equal && $classesAreEqual && $idsAreEqual;
+                $equal = $classesAreEqual && $idsAreEqual;
                 if (!$equal) {
                     break;
                 }

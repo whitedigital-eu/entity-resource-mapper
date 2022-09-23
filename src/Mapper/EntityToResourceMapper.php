@@ -11,6 +11,7 @@ use Doctrine\ORM\PersistentCollection;
 use Doctrine\Persistence\Proxy;
 use Symfony\Component\Serializer\Annotation\Ignore;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
+use WhiteDigital\EntityResourceMapper\Attribute\SkipCircularReferenceCheck;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 use WhiteDigital\EntityResourceMapper\Security\Attribute\AuthorizeResource;
@@ -19,6 +20,7 @@ use WhiteDigital\EntityResourceMapper\Security\AuthorizationService;
 class EntityToResourceMapper
 {
     public const PARENT_CLASSES = 'parent_classes';
+    public const ROOT_ENTITY_RECEIVED = 'ROOT_ENTITY_RECEIVED';
 
     public function __construct(
         private readonly ClassMapper                      $classMapper,
@@ -44,6 +46,8 @@ class EntityToResourceMapper
      */
     public function map(BaseEntity $object, array $context = []): BaseResource
     {
+        $isRootEntity = $this->checkIfRootEntityReceived($context);
+
         $reflection = $this->loadReflection($object);
 
         $targetResourceClass = $this->classMapper->byEntity($reflection->getName());
@@ -116,7 +120,7 @@ class EntityToResourceMapper
                 ) {
                     continue;
                 }
-                if (in_array($targetClass, $context[self::PARENT_CLASSES], true)) {
+                if ($this->isCircularReference($isRootEntity, $targetClass, $context, $resourceReflection, $propertyName)) {
                     continue;
                 }
                 foreach ($propertyValue->getValues() as $value) { // Doctrine lazy loading happens here
@@ -136,7 +140,7 @@ class EntityToResourceMapper
                 ) {
                     continue;
                 }
-                if (in_array($targetClass, $context[self::PARENT_CLASSES], true)) {
+                if ($this->isCircularReference($isRootEntity, $targetClass, $context, $resourceReflection, $propertyName)) {
                     continue;
                 }
                 $this->setResourceProperty($output, $propertyName, $this->map($propertyValue, $context));
@@ -288,5 +292,33 @@ class EntityToResourceMapper
                 $output[] = $node;
             }
         }
+    }
+
+    /**
+     * Check if root entity has been received, required for circular reference management
+     */
+    private function checkIfRootEntityReceived(array &$context): bool
+    {
+        if (isset($context[self::ROOT_ENTITY_RECEIVED])) {
+            return false;
+        }
+        $this->addElementIfNotExists($context[self::ROOT_ENTITY_RECEIVED], true);
+        return true;
+    }
+
+    /**
+     * Checks of reference to another api resource is circular
+     * @throws \ReflectionException
+     */
+    private function isCircularReference(
+        bool $isRootEntity,
+        string $targetClass,
+        array $context,
+        \ReflectionClass $resourceReflection,
+        string $propertyName
+    ): bool
+    {
+        return in_array($targetClass, $context[self::PARENT_CLASSES], true)
+            && (!$isRootEntity || empty($resourceReflection->getProperty($propertyName)->getAttributes(SkipCircularReferenceCheck::class)));
     }
 }
