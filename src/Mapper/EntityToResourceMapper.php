@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WhiteDigital\EntityResourceMapper\Mapper;
 
 use ApiPlatform\Exception\ResourceClassNotFoundException;
+use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Resource\Factory\ResourceMetadataCollectionFactoryInterface;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\PersistentCollection;
@@ -23,9 +24,9 @@ class EntityToResourceMapper
     public const ROOT_ENTITY_RECEIVED = 'ROOT_ENTITY_RECEIVED';
 
     public function __construct(
-        private readonly ClassMapper                      $classMapper,
+        private readonly ClassMapper                                $classMapper,
         private readonly ResourceMetadataCollectionFactoryInterface $resourceMetadataFactory,
-        private readonly AuthorizationService             $authorizationService,
+        private readonly AuthorizationService                       $authorizationService,
     )
     {
         BaseResource::setEntityToResourceMapper($this);
@@ -211,32 +212,22 @@ class EntityToResourceMapper
 
 
     /**
-     * @param string $dtoClass
+     * @param class-string $resourceClass
      * @param array<string, mixed> $context
      * @return array<string>
      * @throws ResourceClassNotFoundException
      */
-    private function getNormalizationGroups(string $dtoClass, array $context): array
+    private function getNormalizationGroups(string $resourceClass, array $context): array
     {
         $output = [];
-        $resourceMetadata = $this->resourceMetadataFactory->create($dtoClass);
-        // TODO ResourceMetadataFactory has changed in 3.0 !!
-        if (null !== $normalizationContext = $resourceMetadata->getOperation()->getNormalizationContext()) {
-            $output = $normalizationContext['groups'] ?? [];
+
+        if (array_key_exists('groups', $context)) {
+            $output = $context['groups'];
         }
 
-        // Override specific operation normalization group
-        if (array_key_exists('operation_type', $context) && 'item' === $context['operation_type']) {
-            $operationContext = $resourceMetadata->getItemOperationAttribute($context['item_operation_name'], 'normalization_context');
-            if (null !== $operationContext) {
-                $output = $operationContext['groups'] ?? [];
-            }
-        }
-        if (array_key_exists('operation_type', $context) && 'collection' === $context['operation_type']) {
-            $operationContext = $resourceMetadata->getCollectionOperationAttribute($context['collection_operation_name'], 'normalization_context');
-            if (null !== $operationContext) {
-                $output = $operationContext['groups'] ?? [];
-            }
+        $resourceMetadata = $this->resourceMetadataFactory->create($resourceClass);
+        if (null !== $normalizationContext = $resourceMetadata->getOperation()->getNormalizationContext()) {
+            $output = array_merge($output, $normalizationContext['groups']);
         }
 
         return $output;
@@ -311,11 +302,11 @@ class EntityToResourceMapper
      * @throws \ReflectionException
      */
     private function isCircularReference(
-        bool $isRootEntity,
-        string $targetClass,
-        array $context,
+        bool             $isRootEntity,
+        string           $targetClass,
+        array            $context,
         \ReflectionClass $resourceReflection,
-        string $propertyName
+        string           $propertyName
     ): bool
     {
         return in_array($targetClass, $context[self::PARENT_CLASSES], true)
