@@ -81,16 +81,22 @@ class ResourceDateFilter implements FilterInterface, DateFilterInterface
     public function getDescription(string $resourceClass): array
     {
         $description = [];
-        if (null === $this->properties)
+        if (null === $this->properties) {
             throw new Exception(sprintf('Please explicitly mark properties for %s class', self::class));
+        }
         $reflection = new \ReflectionClass($resourceClass);
 
         foreach ($this->properties as $property => $nullManagement) {
-            $property_reflection = $reflection->getProperty($property);
-            $type = $property_reflection->getType();
-            /** @phpstan-ignore-next-line */
-            if ($type->getName() !== \DateTimeInterface::class)
+            $propertyReflection = $reflection->getProperty($property);
+            $propertyType = $propertyReflection->getType();
+            if ($propertyType instanceof \ReflectionNamedType) {
+                $typeName = $propertyType->getName();
+            } else {
+                throw new \RuntimeException('Type without name encountered.');
+            }
+            if (!is_subclass_of($typeName, \DateTimeInterface::class)) {
                 continue;
+            }
 
             $description += $this->getFilterDescription($property, self::PARAMETER_BEFORE);
             $description += $this->getFilterDescription($property, self::PARAMETER_STRICTLY_BEFORE);
