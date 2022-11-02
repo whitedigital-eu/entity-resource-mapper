@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace WhiteDigital\EntityResourceMapper\Mapper;
 
 use ApiPlatform\Exception\ResourceClassNotFoundException;
-use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Resource\Factory\ResourceMetadataCollectionFactoryInterface;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\PersistentCollection;
 use Doctrine\Persistence\Proxy;
+use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Serializer\Annotation\Ignore;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
 use WhiteDigital\EntityResourceMapper\Attribute\SkipCircularReferenceCheck;
@@ -54,7 +54,6 @@ class EntityToResourceMapper
         $targetResourceClass = $this->classMapper->byEntity($reflection->getName());
 
         $this->addElementIfNotExists($context[self::PARENT_CLASSES], $targetResourceClass);
-        $currentNormalizationGroups = $this->getNormalizationGroups($targetResourceClass, $context);
 
         $properties = $reflection->getProperties();
         $output = new $targetResourceClass();
@@ -113,9 +112,10 @@ class EntityToResourceMapper
                 /** @var  PersistentCollection $propertyValue */
                 $collectionElementType = $propertyValue->getTypeClass()->getName();
                 $targetClass = $this->classMapper->byEntity($collectionElementType);
-                $targetNormalizationGroups = $this->getNormalizationGroups($targetClass, $context);
+                $targetNormalizationGroups = $this->getNormalizationGroups($targetClass, []);
+                $propertyNormalizationGroup = $this->getResourcePropertyNormalizationGroups($resourceReflection, $propertyName);
                 if (array_key_exists('groups', $context)
-                    && !$this->haveCommonElements($currentNormalizationGroups, $context['groups'])
+                    && !$this->haveCommonElements($propertyNormalizationGroup, $context['groups'])
                     && !$this->haveCommonElements($targetNormalizationGroups, $context['groups'])
                     && !in_array($propertyName, $normalizeForAuthorization, true)
                 ) {
@@ -133,9 +133,10 @@ class EntityToResourceMapper
             // 2B. Normalize relations for Entity property
             if ($this->isPropertyBaseEntity($propertyType)) {
                 $targetClass = $this->classMapper->byEntity($propertyType);
-                $targetNormalizationGroups = $this->getNormalizationGroups($targetClass, $context);
+                $targetNormalizationGroups = $this->getNormalizationGroups($targetClass, []);
+                $propertyNormalizationGroup = $this->getResourcePropertyNormalizationGroups($resourceReflection, $propertyName);
                 if (array_key_exists('groups', $context)
-                    && !$this->haveCommonElements($currentNormalizationGroups, $context['groups'])
+                    && !$this->haveCommonElements($propertyNormalizationGroup, $context['groups'])
                     && !$this->haveCommonElements($targetNormalizationGroups, $context['groups'])
                     && !in_array($propertyName, $normalizeForAuthorization, true)
                 ) {
@@ -225,9 +226,11 @@ class EntityToResourceMapper
             $output = $context['groups'];
         }
 
-        $resourceMetadata = $this->resourceMetadataFactory->create($resourceClass);
-        if (null !== $normalizationContext = $resourceMetadata->getOperation()->getNormalizationContext()) {
-            $output = array_merge($output, $normalizationContext['groups']);
+        if (empty($output)) {
+            $resourceMetadata = $this->resourceMetadataFactory->create($resourceClass);
+            if (null !== $normalizationContext = $resourceMetadata->getOperation()->getNormalizationContext()) {
+                $output = array_merge($output, $normalizationContext['groups']);
+            }
         }
 
         return $output;
@@ -287,6 +290,7 @@ class EntityToResourceMapper
 
     /**
      * Check if root entity has been received, required for circular reference management
+     * @param array<string, mixed> $context
      */
     private function checkIfRootEntityReceived(array &$context): bool
     {
@@ -299,6 +303,11 @@ class EntityToResourceMapper
 
     /**
      * Checks of reference to another api resource is circular
+     *
+     * @param class-string $targetClass
+     * @param array<string, mixed> $context
+     * @param \ReflectionClass<BaseResource> $resourceReflection
+     *
      * @throws \ReflectionException
      */
     private function isCircularReference(
@@ -311,5 +320,21 @@ class EntityToResourceMapper
     {
         return in_array($targetClass, $context[self::PARENT_CLASSES], true)
             && (!$isRootEntity || empty($resourceReflection->getProperty($propertyName)->getAttributes(SkipCircularReferenceCheck::class)));
+    }
+
+    /**
+     * @param \ReflectionClass<BaseResource> $reflection
+     * @param string $propertyName
+     * @return string[]
+     * @throws \ReflectionException
+     */
+    private function getResourcePropertyNormalizationGroups(\ReflectionClass $reflection, string $propertyName): array
+    {
+        $property = $reflection->getProperty($propertyName);
+        $groupAttributes = $property->getAttributes(Groups::class);
+        if (1 === count($groupAttributes)) {
+            return $groupAttributes[0]->getArguments()[0];
+        }
+        return [];
     }
 }
