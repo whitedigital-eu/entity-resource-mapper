@@ -8,15 +8,11 @@ use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 
-#[Autoconfigure(configurator: '@App\Service\Configurator\ClassMapperConfigurator')]
+#[Autoconfigure(configurator: '@WhiteDigital\EntityResourceMapper\Mapper\ClassMapperConfiguratorInterface')]
 class ClassMapper
 {
-    private array $map;
-
-
-    public function __construct()
+    public function __construct(private array $map = [])
     {
-        $this->map = [];
     }
 
     /**

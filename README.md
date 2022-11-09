@@ -26,9 +26,10 @@ namespace App\Service;
 use App\Dto\CustumerDto;
 use App\Entity\Customer;
 
-use WhiteDigital\EntityResourceMapperBundle\Mapper\ClassMapper;
+use WhiteDigital\EntityResourceMapper\Mapper\ClassMapperConfiguratorInterface;
+use WhiteDigital\EntityResourceMapper\Mapper\ClassMapper;
 
-class ClassMapperConfigurator
+class ClassMapperConfigurator implements ClassMapperConfiguratorInterface
 {
     public function __invoke(ClassMapper $classMapper)
     {
@@ -39,8 +40,8 @@ class ClassMapperConfigurator
 ```
 and register it as configurator for ClassMapper service in your services.yaml file:
 ```yaml
-    WhiteDigital\EntityResourceMapper\Mapper\ClassMapper:
-        configurator: '@App\Service\ClassMapperConfigurator'
+    WhiteDigital\EntityResourceMapper\Mapper\ClassMapperConfiguratorInterface:
+      class: App\Service\ClassMapperConfigurator
 ```
 ### Doctrine ###
 
@@ -101,7 +102,9 @@ AuthorizationService Configurator must be implemented.
 ```php
 // src/Service/Configurator/AuthorizationServiceConfigurator.php
 
-final class AuthorizationServiceConfigurator
+use WhiteDigital\EntityResourceMapper\Security\AuthorizationServiceConfiguratorInterface;
+
+final class AuthorizationServiceConfigurator implements AuthorizationServiceConfiguratorInterface
 {
     public function __invoke(AuthorizationService $service): void
     {
@@ -126,6 +129,11 @@ final class AuthorizationServiceConfigurator
                  ]);
     }
 }
+```
+register it as service:
+```
+WhiteDigital\EntityResourceMapper\Security\AuthorizationServiceConfiguratorInterface:
+    class: AuthorizationServiceConfigurator
 ```
 Use following methods:  
 - In DataProvider, getCollection:

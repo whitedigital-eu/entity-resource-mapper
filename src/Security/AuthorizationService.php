@@ -25,7 +25,7 @@ use WhiteDigital\EntityResourceMapper\Security\Enum\GrantType;
  * - 5. data persister - authorize PUT/PATCH + DELETE
  * - 6. Check individual resources in EntityToResourceMapper
  */
-#[Autoconfigure(configurator: '@App\Service\Configurator\AuthorizationServiceConfigurator')]
+#[Autoconfigure(configurator: '@WhiteDigital\EntityResourceMapper\Security\AuthorizationServiceConfiguratorInterface')]
 final class AuthorizationService
 {
     public const COL_GET = 'collection-get';
