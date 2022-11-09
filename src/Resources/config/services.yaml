@@ -1,6 +1,7 @@
 services:
   WhiteDigital\EntityResourceMapper\Mapper\ClassMapper:
     autowire: true
+    autoconfigure: true
   WhiteDigital\EntityResourceMapper\Mapper\EntityToResourceMapper:
     autowire: true
   WhiteDigital\EntityResourceMapper\Mapper\ResourceToEntityMapper:
