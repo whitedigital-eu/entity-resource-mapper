@@ -3,7 +3,6 @@
   "description": "Bundle to map Doctrine entity object to and from API resource object.",
   "type": "symfony-bundle",
   "license": "MIT",
-  "version": "0.18.2",
   "authors": [
     {
       "name": "Raitis Rasmanis",
@@ -12,6 +11,10 @@
     {
       "name": "Andis Cirulis",
       "email": "andis.cirulis@whitedigital.eu"
+    },
+    {
+      "name": "Davis Zalitis",
+      "email": "davis.zalitis@whitedigital.eu"
     }
   ],
   "autoload": {
@@ -44,5 +47,10 @@
     "symfony/http-kernel": "^6.1",
     "composer": "^2.2",
     "symfony/yaml": "^6.1"
+  },
+  "extra": {
+    "branch-alias": {
+      "dev-main": "0.x-dev"
+    }
   }
 }
