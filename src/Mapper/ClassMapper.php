@@ -23,12 +23,29 @@ class ClassMapper
      */
     public function registerMapping(string $dtoClass, string $entityClass, ?string $condition = null): void
     {
-        //TODO validate if dto class is based on BaseResource and entity class based on BaseEntity
+        $this->validate($dtoClass, $entityClass);
+
         $this->map[] = [
             'dto' => $dtoClass,
             'entity' => $entityClass,
-            'condition' => $condition
+            'condition' => $condition,
         ];
+    }
+
+    private function validate(string $dtoClass, string $entityClass): void
+    {
+        if (!is_subclass_of($dtoClass, BaseResource::class)) {
+            throw new InvalidArgumentException(sprintf('%s must extend %s', $dtoClass, BaseResource::class));
+        }
+
+        if (!is_subclass_of($entityClass, BaseEntity::class)) {
+            throw new InvalidArgumentException(sprintf('%s must extend %s', $entityClass, BaseEntity::class));
+        }
+    }
+
+    public function getMap(): array
+    {
+        return $this->map;
     }
 
     /**
