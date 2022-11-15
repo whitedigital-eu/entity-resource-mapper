@@ -15,3 +15,6 @@ services:
   WhiteDigital\EntityResourceMapper\Serializer\EntityNormalizer:
     autowire: true
     autoconfigure: true
+  WhiteDigital\EntityResourceMapper\Service\MenuBuilderService:
+    autowire: true
+    autoconfigure: true
