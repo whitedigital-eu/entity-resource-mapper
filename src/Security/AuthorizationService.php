@@ -41,9 +41,6 @@ final class AuthorizationService
     /** @var array<class-string, array<string, mixed>> */
     private array $resources = [];
 
-    /** @var array<int, array<string, mixed>> }> */
-    private array $menuStructure = [];
-
     public function __construct(
         private readonly Security    $security,
         private readonly ClassMapper $classMapper,
@@ -59,15 +56,6 @@ final class AuthorizationService
     public function setResources(array $resources): void
     {
         $this->resources = $resources;
-    }
-
-    /**
-     * @param array<int, array{name: string, mainResource?: string, roles?: string[], children?: array<int, mixed> }> $menuStructure
-     * @return void
-     */
-    public function setMenuStructure(array $menuStructure): void
-    {
-        $this->menuStructure = $menuStructure;
     }
 
     /**
@@ -265,49 +253,13 @@ final class AuthorizationService
     }
 
     /**
-     * @param array<int, mixed>|null $menu
-     * @return array<int, array{name: string, children: array<int, mixed>}>
-     */
-    public function limitMenuStructure(?array $menu = null, int $parent = 0): array
-    {
-        if (empty($this->menuStructure)) {
-            throw new \RuntimeException(__CLASS__ . " must be configured by AuthorizationServiceConfigurator. Menu structure permissions not set.");
-        }
-        $i = 1;
-        return array_values(array_filter(array_map(function ($menuItem) use ($parent, &$i) {
-            $included = false; // Decision if menuItem will be included in final output
-
-            if (array_key_exists('mainResource', $menuItem)) {
-                $grantType = $this->calculateFinalGrantType($menuItem['mainResource'], self::COL_GET);
-                $included = (in_array($grantType, [GrantType::OWN, GrantType::GROUP, GrantType::ALL], true));
-            }
-            if (!$included && array_key_exists('roles', $menuItem)) {
-                $user = $this->security->getUser();
-                $included = (0 < count(array_intersect($user?->getRoles(), $menuItem['roles'])));
-            }
-
-            $childrenMenu = [];
-            if (!empty($menuItem['children'])) {
-                $childrenMenu = $this->limitMenuStructure($menuItem['children'], $i);
-                $included = !empty($childrenMenu);
-            }
-
-            return $included ? [
-                'id' => $parent * 100 + $i++,
-                'name' => $menuItem['name'],
-                'children' => $childrenMenu,
-            ] : null;
-        }, $menu ?? $this->menuStructure)));
-    }
-
-    /**
      * Calculate the highest grant level based on Resource permissions for specific operation merged with ALL.
      * @param class-string $resourceClass
      * @param string $operation
      * @param string[]|null $forceRoles
      * @return GrantType
      */
-    private function calculateFinalGrantType(string $resourceClass, string $operation, ?array $forceRoles = null): GrantType
+    public function calculateFinalGrantType(string $resourceClass, string $operation, ?array $forceRoles = null): GrantType
     {
         if (empty($this->resources)) {
             return GrantType::ALL;

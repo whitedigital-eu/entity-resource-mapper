@@ -171,6 +171,59 @@ Same class must also set following property with correct normalization group:
     #[ApiProperty(attributes: ["openapi_context" => ["description" => "If Authorization GrantType::OWN or GROUP is calculated, resource can be restricted."]])]
     public bool $isRestricted = false;
 ```
+
+### Menu Builder ### 
+
+This package ships with a menu builder functionality, that allows to define the overall menu structure and allows for
+dynamic menu building based on current user limitations (authorization, rules)
+
+To use menu builder service, you must first create a configurator class for this service that implements 
+WhiteDigital\EntityResourceMapper\Interface\MenuBuilderServiceConfiguratorInterface
+
+```php
+
+use WhiteDigital\EntityResourceMapper\MenuBuilder\Interface\MenuBuilderServiceConfiguratorInterface;
+use WhiteDigital\EntityResourceMapper\MenuBuilder\Services\MenuBuilderService;
+
+final class MenuBuilderServiceConfigurator implements MenuBuilderServiceConfiguratorInterface
+{
+    public function __invoke(MenuBuilderService $service): void
+    {
+        //either mainResource or roles key must be set
+        $service->setMenuStructure(
+                [
+                    [
+                        'name' => 'ACTIVITIES',
+                        'mainResource' => ActivityResource::class,
+                    ],
+                    [
+                        'name' => 'REPORTS',
+                        'roles' => ['ROLE_SUPER_ADMIN', 'ROLE_KAM'],
+                    ],
+                 ]);
+    }
+}
+```
+Register the configurator class as a service:
+```
+WhiteDigital\EntityResourceMapper\MenuBuilder\Interface\MenuBuilderServiceConfiguratorInterface:
+    class: MenuBuilderServiceConfigurator
+```
+And finally you can use the menubuilder and retrieve the filtered menu by calling the MenuBuilderService like so:
+
+```php
+
+use WhiteDigital\EntityResourceMapper\MenuBuilder\Services\MenuBuilderService;
+
+class SomeClass
+{
+    public function someFunction(MenuBuilderService $service): void
+    {
+        $data = $service->getMenuForCurrentUser();
+    }
+}
+```
+
 ## Tests
 
 Run tests by:
