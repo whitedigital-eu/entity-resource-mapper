@@ -89,7 +89,8 @@ Available operation types:
 - `AuthorizationService::COL_GET` Collection GET 
 - `AuthorizationService::ITEM_GET` Item GET
 - `AuthorizationService::COL_POST` Collection POST
-- `AuthorizationService::ITEM_WRITE` Item PUT + PATCH + DELETE
+- `AuthorizationService::ITEM_PATCH` Item PUT + PATCH
+- `AuthorizationService::ITEM_DELETE` Item DELETE
 
 Available grant types:
 - `GrantType::ALL` resource fully available  
@@ -114,7 +115,8 @@ final class AuthorizationServiceConfigurator implements AuthorizationServiceConf
                 AuthorizationService::COL_GET => [, 'ROLE_JUNIOR_KAM' => GrantType::OWN],
                 AuthorizationService::ITEM_GET => [, 'ROLE_JUNIOR_KAM' => GrantType::GROUP],
                 AuthorizationService::COL_POST => [],
-                AuthorizationService::ITEM_WRITE => [],
+                AuthorizationService::ITEM_PATCH => [],
+                AuthorizationService::ITEM_DELETE => [],
             ]]);
     
         //either mainResource or roles key must be set
@@ -146,13 +148,13 @@ $this->authorizationService->authorizeSingleObject($entity, AuthorizationService
 ```
 - In DataPersister, persist:
 ```php
-$this->authorizationService->authorizeSingleObject($data, AuthorizationService::ITEM_WRITE); // This will throw AccessDeniedException if not authorized
+$this->authorizationService->authorizeSingleObject($data, AuthorizationService::ITEM_PATCH); // This will throw AccessDeniedException if not authorized
 // or
 $this->authorizationService->authorizeSingleObject($data, AuthorizationService::COL_POST; // This will throw AccessDeniedException if not authorized
 ```
 - In DataPersister, remove:
 ```php
-$this->authorizationService->authorizeSingleObject($data, AuthorizationService::ITEM_WRITE); // This will throw AccessDeniedException if not authorized
+$this->authorizationService->authorizeSingleObject($data, AuthorizationService::ITEM_DELETE); // This will throw AccessDeniedException if not authorized
 ```
 - In any Resource, if you want to limit output for non-OWN or non-GROUP properties, add attribute to the resource class:
 ```php

@@ -22,8 +22,9 @@ use WhiteDigital\EntityResourceMapper\Security\Enum\GrantType;
  * - 2. Data provider - limit collection get output
  * - 3. Data provider - authorize item get output
  * - 4. data persister - authorize collection POST
- * - 5. data persister - authorize PUT/PATCH + DELETE
- * - 6. Check individual resources in EntityToResourceMapper
+ * - 5. data persister - authorize item PUT/PATCH
+ * - 6. data persister - authorize item DELETE
+ * - 7. Check individual resources in EntityToResourceMapper
  */
 #[Autoconfigure(configurator: '@WhiteDigital\EntityResourceMapper\Security\AuthorizationServiceConfiguratorInterface')]
 final class AuthorizationService
@@ -31,7 +32,8 @@ final class AuthorizationService
     public const COL_GET = 'collection-get';
     public const COL_POST = 'collection-post';
     public const ITEM_GET = 'item-get';
-    public const ITEM_WRITE = 'item-write'; // Includes PATCH, PUT, DELETE
+    public const ITEM_PATCH = 'item-patch'; // Includes PUT
+    public const ITEM_DELETE = 'item-delete';
     public const ALL = 'all'; // Includes all of the above
 
     public const ACCESS_DENIED_MESSAGE = 'Pieeja liegta. Lūdzu sazinieties ar sistēmas administratoru.';
@@ -51,7 +53,7 @@ final class AuthorizationService
 
 
     /**
-     * @param array<class-string, array{ all: array<string, GrantType>, collection-get: array<string, GrantType>, collection-post: array<string, GrantType>, item-get: array<string, GrantType>, item-write: array<string, GrantType>}> $resources
+     * @param array<class-string, array{ all: array<string, GrantType>, collection-get: array<string, GrantType>, collection-post: array<string, GrantType>, item-get: array<string, GrantType>, item-patch: array<string, GrantType>, item-delete: array<string, GrantType>}> $resources
      * @return void
      */
     public function setResources(array $resources): void
@@ -254,7 +256,8 @@ final class AuthorizationService
                     self::COL_GET => $this->calculateFinalGrantType($resource, self::COL_GET, $forcedRoles),
                     self::ITEM_GET => $this->calculateFinalGrantType($resource, self::ITEM_GET, $forcedRoles),
                     self::COL_POST => $this->calculateFinalGrantType($resource, self::COL_POST, $forcedRoles),
-                    self::ITEM_WRITE => $this->calculateFinalGrantType($resource, self::ITEM_WRITE, $forcedRoles),
+                    self::ITEM_PATCH => $this->calculateFinalGrantType($resource, self::ITEM_PATCH, $forcedRoles),
+                    self::ITEM_DELETE => $this->calculateFinalGrantType($resource, self::ITEM_DELETE, $forcedRoles),
                 ]
             ];
         }
