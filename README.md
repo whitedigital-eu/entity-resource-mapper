@@ -180,8 +180,8 @@ WhiteDigital\EntityResourceMapper\Interface\MenuBuilderServiceConfiguratorInterf
 
 ```php
 
-use WhiteDigital\EntityResourceMapper\Interface\MenuBuilderServiceConfiguratorInterface;
-use WhiteDigital\EntityResourceMapper\Services\MenuBuilderService;
+use WhiteDigital\EntityResourceMapper\MenuBuilder\Interface\MenuBuilderServiceConfiguratorInterface;
+use WhiteDigital\EntityResourceMapper\MenuBuilder\Services\MenuBuilderService;
 
 final class MenuBuilderServiceConfigurator implements MenuBuilderServiceConfiguratorInterface
 {
@@ -204,14 +204,14 @@ final class MenuBuilderServiceConfigurator implements MenuBuilderServiceConfigur
 ```
 Register the configurator class as a service:
 ```
-WhiteDigital\EntityResourceMapper\Interface\MenuBuilderServiceConfiguratorInterface:
+WhiteDigital\EntityResourceMapper\MenuBuilder\Interface\MenuBuilderServiceConfiguratorInterface:
     class: MenuBuilderServiceConfigurator
 ```
 And finally you can use the menubuilder and retrieve the filtered menu by calling the MenuBuilderService like so:
 
 ```php
 
-use WhiteDigital\EntityResourceMapper\Services\MenuBuilderService;
+use WhiteDigital\EntityResourceMapper\MenuBuilder\Services\MenuBuilderService;
 
 class SomeClass
 {

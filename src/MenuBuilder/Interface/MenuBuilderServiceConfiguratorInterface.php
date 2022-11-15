@@ -2,9 +2,9 @@
 
 declare(strict_types = 1);
 
-namespace WhiteDigital\EntityResourceMapper\Interface;
+namespace WhiteDigital\EntityResourceMapper\MenuBuilder\Interface;
 
-use WhiteDigital\EntityResourceMapper\Service\MenuBuilderService;
+use WhiteDigital\EntityResourceMapper\MenuBuilder\Service\MenuBuilderService;
 
 interface MenuBuilderServiceConfiguratorInterface
 {

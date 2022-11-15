@@ -2,7 +2,7 @@
 
 declare(strict_types = 1);
 
-namespace WhiteDigital\EntityResourceMapper\Service;
+namespace WhiteDigital\EntityResourceMapper\MenuBuilder\Service;
 
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use Symfony\Component\Security\Core\Security;
@@ -16,7 +16,7 @@ use WhiteDigital\EntityResourceMapper\Security\Enum\GrantType;
  * The full menu item structure should be configured by using a configurator class, that implements the Interface
  * provided in Autoconfigure attribute
  */
-#[Autoconfigure(configurator: '@WhiteDigital\EntityResourceMapper\Interface\MenuBuilderServiceConfiguratorInterface')]
+#[Autoconfigure(configurator: '@WhiteDigital\EntityResourceMapper\MenuBuilder\Interface\MenuBuilderServiceConfiguratorInterface')]
 class MenuBuilderService
 {
     /** @var array<int, array<string, mixed>> }> */
