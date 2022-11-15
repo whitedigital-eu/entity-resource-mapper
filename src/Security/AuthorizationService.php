@@ -18,12 +18,11 @@ use WhiteDigital\EntityResourceMapper\Security\Enum\GrantType;
 
 /**
  * Data used in following places:
- * - 1. Menu structure generator - outputs menu items available by current role
- * - 2. Data provider - limit collection get output
- * - 3. Data provider - authorize item get output
- * - 4. data persister - authorize collection POST
- * - 5. data persister - authorize PUT/PATCH + DELETE
- * - 6. Check individual resources in EntityToResourceMapper
+ * - 1. Data provider - limit collection get output
+ * - 2. Data provider - authorize item get output
+ * - 3. data persister - authorize collection POST
+ * - 4. data persister - authorize PUT/PATCH + DELETE
+ * - 5. Check individual resources in EntityToResourceMapper
  */
 #[Autoconfigure(configurator: '@WhiteDigital\EntityResourceMapper\Security\AuthorizationServiceConfiguratorInterface')]
 final class AuthorizationService
@@ -38,9 +37,6 @@ final class AuthorizationService
 
     /** @var array<class-string, array<string, mixed>> */
     private array $resources = [];
-
-    /** @var array<int, array<string, mixed>> }> */
-    private array $menuStructure = [];
 
     public function __construct(
         private readonly Security    $security,
@@ -57,15 +53,6 @@ final class AuthorizationService
     public function setResources(array $resources): void
     {
         $this->resources = $resources;
-    }
-
-    /**
-     * @param array<int, array{name: string, mainResource?: string, roles?: string[], children?: array<int, mixed> }> $menuStructure
-     * @return void
-     */
-    public function setMenuStructure(array $menuStructure): void
-    {
-        $this->menuStructure = $menuStructure;
     }
 
     /**
@@ -262,49 +249,13 @@ final class AuthorizationService
     }
 
     /**
-     * @param array<int, mixed>|null $menu
-     * @return array<int, array{name: string, children: array<int, mixed>}>
-     */
-    public function limitMenuStructure(?array $menu = null, int $parent = 0): array
-    {
-        if (empty($this->menuStructure)) {
-            throw new \RuntimeException(__CLASS__ . " must be configured by AuthorizationServiceConfigurator. Menu structure permissions not set.");
-        }
-        $i = 1;
-        return array_values(array_filter(array_map(function ($menuItem) use ($parent, &$i) {
-            $included = false; // Decision if menuItem will be included in final output
-
-            if (array_key_exists('mainResource', $menuItem)) {
-                $grantType = $this->calculateFinalGrantType($menuItem['mainResource'], self::COL_GET);
-                $included = (in_array($grantType, [GrantType::OWN, GrantType::GROUP, GrantType::ALL], true));
-            }
-            if (!$included && array_key_exists('roles', $menuItem)) {
-                $user = $this->security->getUser();
-                $included = (0 < count(array_intersect($user?->getRoles(), $menuItem['roles'])));
-            }
-
-            $childrenMenu = [];
-            if (!empty($menuItem['children'])) {
-                $childrenMenu = $this->limitMenuStructure($menuItem['children'], $i);
-                $included = !empty($childrenMenu);
-            }
-
-            return $included ? [
-                'id' => $parent * 100 + $i++,
-                'name' => $menuItem['name'],
-                'children' => $childrenMenu,
-            ] : null;
-        }, $menu ?? $this->menuStructure)));
-    }
-
-    /**
      * Calculate the highest grant level based on Resource permissions for specific operation merged with ALL.
      * @param class-string $resourceClass
      * @param string $operation
      * @param string[]|null $forceRoles
      * @return GrantType
      */
-    private function calculateFinalGrantType(string $resourceClass, string $operation, ?array $forceRoles = null): GrantType
+    public function calculateFinalGrantType(string $resourceClass, string $operation, ?array $forceRoles = null): GrantType
     {
         if (empty($this->resources)) {
             return GrantType::ALL;
