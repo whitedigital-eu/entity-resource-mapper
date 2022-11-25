@@ -83,7 +83,7 @@ final class AuthorizationService
             if (self::COL_POST === $operation) {
                 return true; // no need to check owner if it is POST, as no owner property exists
             }
-            $accessDecision = $this->isResourceOrOperationAuthorizedForUser($resourceClass, $object);
+            $accessDecision = $this->isResourceAuthorizedForUser($resourceClass, $object);
         }
         if ($throwException && !$accessDecision) {
             throw new AccessDeniedException($this->translator->trans(self::ACCESS_DENIED_MESSAGE));
@@ -112,16 +112,16 @@ final class AuthorizationService
      * @param BaseResource|BaseEntity $object
      * @return bool
      */
-    private function isResourceOrOperationAuthorizedForUser(
+    private function isResourceAuthorizedForUser(
         string                  $resourceClass,
         BaseResource|BaseEntity $object
     ): bool
     {
-        $property = $this->getAuthorizeAttributeValue($resourceClass, 'ownerProperty');
-        if (!$property) {
+        $ownerProperty = $this->getAuthorizeAttributeOwnerProperty($resourceClass);
+        if (!$ownerProperty) {
             throw new \RuntimeException('GrantType::OWN but $ownerProperty not set at ' . __CLASS__);
         }
-        [$topElement, $isCollection] = $this->parseOwnerProperty($object, $property);
+        [$topElement, $isCollection] = $this->parseOwnerProperty($object, $ownerProperty);
         if ($isCollection) {
             /** @var  Collection<int, BaseEntity> $topElement */
             return $topElement->contains($this->security->getUser());
@@ -162,70 +162,15 @@ final class AuthorizationService
      */
     public function limitGetCollection(string $resourceClass, QueryBuilder $queryBuilder, GrantType $forceGrantType = null): void
     {
-
         $highestGrantType = $forceGrantType ?? $this->calculateFinalGrantType($resourceClass, self::COL_GET);
-
         if (GrantType::ALL === $highestGrantType) {
             return;
         }
-
         if (GrantType::NONE === $highestGrantType) {
-            throw new AccessDeniedException(self::ACCESS_DENIED_MESSAGE);
+            throw new AccessDeniedException($this->translator->trans(self::ACCESS_DENIED_MESSAGE));
         }
-
-        $property = '';
-        $authorizedValue = null;
-        $paramName = '';
         if (GrantType::OWN === $highestGrantType) {
-            if (!$property = $this->getAuthorizeAttributeValue($resourceClass, 'ownerProperty')) {
-                throw new \RuntimeException('GrantType::OWN but $ownerProperty not set at ' . __CLASS__);
-            }
-            $authorizedValue = $this->security->getUser();
-            $paramName = 'ownerValue';
-        }
-
-        if (GrantType::GROUP === $highestGrantType) {
-            if (!$property = $this->getAuthorizeAttributeValue($resourceClass, 'groupProperty')) {
-                throw new \RuntimeException('GrantType::GROUP but $departmentProperty not set at ' . __CLASS__);
-            }
-            $exploded = explode('.', $property);
-            $groupProperty = end($exploded);
-            $getter = $this->makeGetter($groupProperty);
-            $authorizedValue = $this->security->getUser()->{$getter}();
-            $paramName = 'groupValue';
-        }
-
-        $rootAlias = $queryBuilder->getRootAliases()[0];
-        if (str_contains($property, '.')) { // Nested, we need to add joins to query builder
-            $joins = explode('.', $property);
-            if (count($joins) > 2) {
-                throw new \RuntimeException('More than two nested properties are currently not supported: ' . $property);
-            }
-            $lastJoin = array_pop($joins);
-            foreach ($joins as $join) {
-                // check if join already exists
-                foreach ($queryBuilder->getDQLPart('join') as $joinPart) {
-                    if ($joinPart[0]->getJoin() === "$rootAlias.$join") {
-                        continue 2;
-                    }
-                }
-                $queryBuilder->join("$rootAlias.$join", $join);
-            }
-            $queryBuilder->andWhere("$property = :$paramName");
-        } else {
-            if (str_ends_with($property, '[]')) { // many-to-many relation
-                $collectionProperty = substr($property, 0, -2);
-                $queryBuilder->join("$rootAlias.$collectionProperty", $collectionProperty);
-                $queryBuilder->andWhere("$collectionProperty = :$paramName");
-            } else {
-                $queryBuilder->andWhere("$rootAlias.$property = :$paramName");
-            }
-        }
-        $queryBuilder->setParameter($paramName, $authorizedValue);
-
-        // IF User has OWN permission, groups must be checked also:
-        if (GrantType::OWN === $highestGrantType && $this->getAuthorizeAttributeValue($resourceClass, 'groupProperty')) {
-            $this->limitGetCollection($resourceClass, $queryBuilder, GrantType::GROUP);
+            $this->applyConstraintsToQueryBuilder($resourceClass, $queryBuilder);
         }
     }
 
@@ -345,10 +290,9 @@ final class AuthorizationService
     /**
      * Extract data from Resource class attribute AuthorizeResource
      * @param class-string<BaseResource> $resourceClass
-     * @param string $attribute
-     * @return string|array<string>|null
+     * @return string|null
      */
-    private function getAuthorizeAttributeValue(string $resourceClass, string $attribute): string|array|null
+    private function getAuthorizeAttributeOwnerProperty(string $resourceClass): string|null
     {
         try {
             $reflection = new \ReflectionClass($resourceClass);
@@ -357,6 +301,72 @@ final class AuthorizationService
             return null;
         }
         $authorizeAttribute = $reflection->getAttributes(AuthorizeResource::class)[0] ?? null;
-        return $authorizeAttribute?->getArguments()[$attribute] ?? null;
+        return $authorizeAttribute?->getArguments()['ownerProperty'] ?? null;
+    }
+
+    private function applyConstraintsToQueryBuilder(string $resourceClass, QueryBuilder $queryBuilder): void
+    {
+        $ownerProperty = $this->getAuthorizeAttributeOwnerProperty($resourceClass);
+        if (!$ownerProperty) {
+            throw new \RuntimeException('GrantType::OWN but $ownerProperty not set at ' . __CLASS__);
+        }
+        if ($this->isOwnerPropertyNested($ownerProperty)) {
+            $this->applyNestedPropertyConstraints($ownerProperty, $queryBuilder);
+        } else if ($this->isOwnerPropertyToManyRelation($ownerProperty)) {
+            $this->applyToManyPropertyConstraints($ownerProperty, $queryBuilder);
+        } else {
+            $this->applyRegularPropertyConstraints($ownerProperty, $queryBuilder);
+        }
+        $queryBuilder->setParameter('ownerValue', $this->security->getUser());
+    }
+
+    private function isOwnerPropertyNested(string $property): bool
+    {
+        return str_contains($property, '.');
+    }
+
+    private function isOwnerPropertyToManyRelation(string $ownerProperty): bool
+    {
+        return str_ends_with($ownerProperty, '[]');
+    }
+
+    /**
+     * Because owner property value is a nested property, we need to add joins to query builder
+     */
+    private function applyNestedPropertyConstraints(string $ownerProperty, QueryBuilder $queryBuilder): void
+    {
+        $rootAlias = $queryBuilder->getRootAliases()[0];
+        $joins = explode('.', $ownerProperty);
+        if (count($joins) > 2) {
+            throw new \RuntimeException('More than two nested properties are currently not supported: ' . $ownerProperty);
+        }
+        array_pop($joins);
+        foreach ($joins as $join) {
+            // check if join already exists
+            foreach ($queryBuilder->getDQLPart('join') as $joinPart) {
+                if ($joinPart[0]->getJoin() === "$rootAlias.$join") {
+                    continue 2;
+                }
+            }
+            $queryBuilder->join("$rootAlias.$join", $join);
+        }
+        $queryBuilder->andWhere("$ownerProperty = :ownerValue");
+    }
+
+    /**
+     * Because owner property value is a to-many association property, we need to add join to query builder
+     */
+    private function applyToManyPropertyConstraints(string $ownerProperty, QueryBuilder $queryBuilder): void
+    {
+        $rootAlias = $queryBuilder->getRootAliases()[0];
+        $collectionProperty = substr($ownerProperty, 0, -2);
+        $queryBuilder->join("$rootAlias.$collectionProperty", $collectionProperty);
+        $queryBuilder->andWhere("$collectionProperty = :ownerValue");
+    }
+
+    private function applyRegularPropertyConstraints(string $ownerProperty, QueryBuilder $queryBuilder): void
+    {
+        $rootAlias = $queryBuilder->getRootAliases()[0];
+        $queryBuilder->andWhere("$rootAlias.$ownerProperty = :ownerValue");
     }
 }
