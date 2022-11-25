@@ -80,7 +80,7 @@ class MenuBuilderService
         if (array_key_exists('mainResource', $menuItem)) {
             $grantType = $this->authorizationService->calculateFinalGrantType($menuItem['mainResource'],
                 AuthorizationService::COL_GET);
-            return in_array($grantType, [GrantType::OWN, GrantType::GROUP, GrantType::ALL], true);
+            return in_array($grantType, [GrantType::OWN, GrantType::ALL], true);
         }
         return false;
     }

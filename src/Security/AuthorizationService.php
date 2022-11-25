@@ -10,6 +10,7 @@ use Doctrine\Persistence\Proxy;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Symfony\Component\Security\Core\Security;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Mapper\ClassMapper;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
@@ -36,18 +37,18 @@ final class AuthorizationService
     public const ITEM_DELETE = 'item-delete';
     public const ALL = 'all'; // Includes all of the above
 
-    public const ACCESS_DENIED_MESSAGE = 'Pieeja liegta. Lūdzu sazinieties ar sistēmas administratoru.';
+    public const ACCESS_DENIED_MESSAGE = 'Access Denied.';
 
     /** @var array<class-string, array<string, mixed>> */
     private array $resources = [];
 
     public function __construct(
-        private readonly Security    $security,
-        private readonly ClassMapper $classMapper,
+        private readonly Security            $security,
+        private readonly ClassMapper         $classMapper,
+        private readonly TranslatorInterface $translator,
     )
     {
     }
-
 
     /**
      * @param array<class-string, array{ all: array<string, GrantType>, collection-get: array<string, GrantType>, collection-post: array<string, GrantType>, item-get: array<string, GrantType>, item-patch: array<string, GrantType>, item-delete: array<string, GrantType>}> $resources
@@ -62,96 +63,96 @@ final class AuthorizationService
      * @param BaseEntity|BaseResource $object
      * @param string $operation
      * @param bool $throwException
+     * @param GrantType|null $forcedGrantType
      * @return bool
      */
-    public function authorizeSingleObject(BaseEntity|BaseResource $object, string $operation, bool $throwException = true, GrantType $forcedGrantType = null): bool
+    public function authorizeSingleObject(
+        BaseEntity|BaseResource $object,
+        string                  $operation,
+        bool                    $throwException = true,
+        GrantType               $forcedGrantType = null
+    ): bool
     {
         $accessDecision = false;
+        $resourceClass = $this->getAuthorizableObjectResourceClassname($object);
+        $highestGrantType = $forcedGrantType ?? $this->calculateFinalGrantType($resourceClass, $operation);
+        if (GrantType::ALL === $highestGrantType) {
+            return true;
+        }
+        if (GrantType::OWN === $highestGrantType) {
+            if (self::COL_POST === $operation) {
+                return true; // no need to check owner if it is POST, as no owner property exists
+            }
+            $accessDecision = $this->isResourceOrOperationAuthorizedForUser($resourceClass, $object);
+        }
+        if ($throwException && !$accessDecision) {
+            throw new AccessDeniedException($this->translator->trans(self::ACCESS_DENIED_MESSAGE));
+        }
+        return $accessDecision;
+    }
 
+    /**
+     * @param BaseResource|BaseEntity $object
+     * @return string
+     */
+    private function getAuthorizableObjectResourceClassname(BaseResource|BaseEntity $object): string
+    {
         if ($object instanceof BaseEntity) {
             $reflection = new \ReflectionClass($object);
             if ($object instanceof Proxy) { //get real object behind Doctrine proxy object
                 $reflection = $reflection->getParentClass();
             }
-            $resourceClass = $this->classMapper->byEntity($reflection->getName());
-        } else {
-            $resourceClass = $object::class;
+            return $this->classMapper->byEntity($reflection->getName());
         }
-
-        $highestGrantType = $forcedGrantType ?? $this->calculateFinalGrantType($resourceClass, $operation);
-
-        if (GrantType::ALL === $highestGrantType) {
-            $accessDecision = true;
-        }
-
-        if (in_array($highestGrantType, [GrantType::OWN, GrantType::GROUP], true) && $operation === self::COL_POST) {
-            $accessDecision = true; // POST is allowed for ALL and OWN, and GROUP grant types.
-        }
-
-        if (GrantType::NONE === $highestGrantType) {
-            $accessDecision = false;
-        }
-
-        if (!$accessDecision
-            && ($property = $this->getAuthorizeAttributeValue($resourceClass, 'publicProperty'))
-            && $operation === self::ITEM_GET) {
-            $accessDecision = (bool)$this->accessValue($object, $property);
-        }
-
-        $property = '';
-        $authorizedValue = null;
-        if (!$accessDecision && GrantType::OWN === $highestGrantType) {
-            if (!$property = $this->getAuthorizeAttributeValue($resourceClass, 'ownerProperty')) {
-                throw new \RuntimeException('GrantType::OWN but $ownerProperty not set at ' . __CLASS__);
-            }
-            $authorizedValue = $this->security->getUser();
-        }
-
-        if (!$accessDecision && GrantType::GROUP === $highestGrantType) {
-            if (!$property = $this->getAuthorizeAttributeValue($resourceClass, 'groupProperty')) {
-                throw new \RuntimeException('GrantType::GROUP but $departmentProperty not set at ' . __CLASS__);
-            }
-            $exploded = explode('.', $property);
-            $groupProperty = end($exploded);
-            $getter = $this->makeGetter($groupProperty);
-            $authorizedValue = $this->security->getUser()->{$getter}();
-        }
-
-        if (!$accessDecision && in_array($highestGrantType, [GrantType::GROUP, GrantType::OWN], true)) {
-            $topElement = $object;
-            $isCollection = false;
-            foreach (explode('.', $property) as $node) {
-                if (str_ends_with($node, '[]')  // Collection as NON-LAST item in property chain
-                    && !str_ends_with($property, $node)) {
-                    throw new \RuntimeException('Collection is not supported as non-last element.');
-                }
-                if (str_ends_with($node, '[]')) {
-                    $node = substr($node, 0, -2);
-                    $isCollection = true;
-                }
-                $topElement = $this->accessValue($topElement, $node);
-            }
-            if ($isCollection) {
-                /** @var  Collection<int, BaseEntity> $topElement */
-                $accessDecision = $topElement->contains($authorizedValue);
-                //TODO WHat if top element is BaseResource?
-            } else {
-                $isObject = is_object($topElement); // handle scalar or object
-                $authorizedValueId = $this->accessValue($authorizedValue, 'id');
-                $accessDecision = $isObject ? ($this->accessValue($topElement, 'id') === $authorizedValueId) : ($topElement === $authorizedValueId);
-                // If OWN grant type is successful, then we must check also GROUP if set:
-                if ($accessDecision && GrantType::OWN === $highestGrantType && $this->getAuthorizeAttributeValue($resourceClass, 'groupProperty')) {
-                    $accessDecision = $this->authorizeSingleObject($object, $operation, $throwException, GrantType::GROUP);
-                }
-            }
-        }
-
-        if ($throwException && !$accessDecision) {
-            throw new AccessDeniedException(self::ACCESS_DENIED_MESSAGE);
-        }
-        return $accessDecision;
+        return $object::class;
     }
 
+    /**
+     * @param string $resourceClass
+     * @param BaseResource|BaseEntity $object
+     * @return bool
+     */
+    private function isResourceOrOperationAuthorizedForUser(
+        string                  $resourceClass,
+        BaseResource|BaseEntity $object
+    ): bool
+    {
+        $property = $this->getAuthorizeAttributeValue($resourceClass, 'ownerProperty');
+        if (!$property) {
+            throw new \RuntimeException('GrantType::OWN but $ownerProperty not set at ' . __CLASS__);
+        }
+        [$topElement, $isCollection] = $this->parseOwnerProperty($object, $property);
+        if ($isCollection) {
+            /** @var  Collection<int, BaseEntity> $topElement */
+            return $topElement->contains($this->security->getUser());
+        }
+        $authorizedValueId = $this->accessValue($this->security->getUser(), 'id');
+        return is_object($topElement) ? ($this->accessValue($topElement, 'id') === $authorizedValueId)
+            : ($topElement === $authorizedValueId);
+    }
+
+    /**
+     * @param BaseResource|BaseEntity $object
+     * @param string $property
+     * @return array{0: mixed, 1: boolean}
+     */
+    private function parseOwnerProperty(BaseResource|BaseEntity $object, string $property): array
+    {
+        $topElement = $object;
+        $isCollection = false;
+        foreach (explode('.', $property) as $node) {
+            if (str_ends_with($node, '[]')  // Collection as NON-LAST item in property chain
+                && !str_ends_with($property, $node)) {
+                throw new \RuntimeException('Collection is not supported as non-last element.');
+            }
+            if (str_ends_with($node, '[]')) {
+                $node = substr($node, 0, -2);
+                $isCollection = true;
+            }
+            $topElement = $this->accessValue($topElement, $node);
+        }
+        return [$topElement, $isCollection];
+    }
 
     /**
      * @param class-string $resourceClass
@@ -276,6 +277,8 @@ final class AuthorizationService
         $availableRoles = $forceRoles ?: $user->getRoles();
 
         $allowedRoles = array_merge($this->resources[$resourceClass][$operation], $this->resources[$resourceClass][self::ALL]);
+
+        //IF OPERATION DOESN'T EXIST OR ROLE DOESN'T EXIST IN RESOURCE return NONE
         $highestGrantType = GrantType::NONE;
         foreach ($allowedRoles as $role => $grantType) {
             if (in_array($role, $availableRoles, true)) {
@@ -296,7 +299,6 @@ final class AuthorizationService
         $order = [
             GrantType::NONE->value => 10,
             GrantType::OWN->value => 20,
-            GrantType::GROUP->value => 25,
             GrantType::ALL->value => 30,
         ];
         if ($order[$expectedGrantType->value] > $order[$currentGrantType->value]) {
