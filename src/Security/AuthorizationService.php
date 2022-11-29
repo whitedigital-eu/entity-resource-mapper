@@ -57,9 +57,8 @@ final class AuthorizationService
     /**
      * If closure returns true, authorization system will be disabled (returning GrantType::ALL)
      *
-     * @param string[] $foo
      */
-    public function setAuthorizationOverride(\Closure $closure, array $foo): void
+    public function setAuthorizationOverride(\Closure $closure): void
     {
         $this->authorizationOverride = $closure;
     }
