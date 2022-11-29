@@ -42,11 +42,26 @@ final class AuthorizationService
     /** @var array<int, array<string, mixed>> }> */
     private array $menuStructure = [];
 
+    /**
+     * If closure returns true, authorization system will be disabled (return GrantType::ALL)
+     */
+    private ?\Closure $authorizationOverride = null;
+
     public function __construct(
         private readonly Security    $security,
         private readonly ClassMapper $classMapper,
     )
     {
+    }
+
+    /**
+     * If closure returns true, authorization system will be disabled (returning GrantType::ALL)
+     *
+     * @param string[] $foo
+     */
+    public function setAuthorizationOverride(\Closure $closure, array $foo): void
+    {
+        $this->authorizationOverride = $closure;
     }
 
 
@@ -72,10 +87,14 @@ final class AuthorizationService
      * @param BaseEntity|BaseResource $object
      * @param string $operation
      * @param bool $throwException
+     * @param GrantType|null $forcedGrantType
      * @return bool
      */
     public function authorizeSingleObject(BaseEntity|BaseResource $object, string $operation, bool $throwException = true, GrantType $forcedGrantType = null): bool
     {
+        if (null !== $this->authorizationOverride && ($this->authorizationOverride)()) {
+            return true;
+        }
         $accessDecision = false;
 
         if ($object instanceof BaseEntity) {
@@ -171,6 +190,9 @@ final class AuthorizationService
      */
     public function limitGetCollection(string $resourceClass, QueryBuilder $queryBuilder, GrantType $forceGrantType = null): void
     {
+        if (null !== $this->authorizationOverride && ($this->authorizationOverride)()) {
+            return;
+        }
 
         $highestGrantType = $forceGrantType ?? $this->calculateFinalGrantType($resourceClass, self::COL_GET);
 
