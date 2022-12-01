@@ -33,20 +33,20 @@
     "api-platform/core": "^3.0",
     "doctrine/annotations": "^1.0",
     "doctrine/orm": "^2.10",
-    "symfony/serializer": "^6.1",
-    "symfony/security-http": "6.1.*",
-    "symfony/validator": "6.1.*",
-    "symfony/dependency-injection": "6.1.x",
-    "symfony/config": "6.1.x",
+    "symfony/serializer": "^6.1|^6.2",
+    "symfony/security-http": "^6.1|^6.2",
+    "symfony/validator": "^6.1|^6.2",
+    "symfony/dependency-injection": "^6.1|^6.2",
+    "symfony/config": "^6.1|^6.2",
     "phpdocumentor/reflection-docblock": "^5.3"
   },
   "require-dev": {
     "roave/security-advisories": "dev-latest",
     "phpunit/phpunit": "9.*",
     "symfony/test-pack": "dev-main",
-    "symfony/http-kernel": "^6.1",
+    "symfony/http-kernel": "^6.1|^6.2",
     "composer": "^2.2",
-    "symfony/yaml": "^6.1"
+    "symfony/yaml": "^6.1|^6.2"
   },
   "extra": {
     "branch-alias": {
