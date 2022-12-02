@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace WhiteDigital\EntityResourceMapper\DBAL\Functions;
 
@@ -16,21 +16,17 @@ class JsonGetText extends FunctionNode
     public Node|null $rightHandSide = null;
 
     /**
-     * @param SqlWalker $sqlWalker
-     * @return string
      * @throws ASTException
      */
     public function getSql(SqlWalker $sqlWalker): string
     {
         return sprintf('%s->>%s',
             $this->leftHandSide->dispatch($sqlWalker),
-            $this->rightHandSide->dispatch($sqlWalker)
+            $this->rightHandSide->dispatch($sqlWalker),
         );
     }
 
     /**
-     * @param Parser $parser
-     * @return void
      * @throws QueryException
      */
     public function parse(Parser $parser): void

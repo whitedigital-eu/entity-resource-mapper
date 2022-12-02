@@ -1,6 +1,6 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace WhiteDigital\EntityResourceMapper\Filters;
 
@@ -18,29 +18,6 @@ class ResourceOrderCustomFilter extends AbstractFilter
     private string $orderParameterName = 'order';
 
     /**
-     * @param string $property
-     * @param mixed $value
-     * @param QueryBuilder $queryBuilder
-     * @param QueryNameGeneratorInterface $queryNameGenerator
-     * @param string $resourceClass
-     * @param string|Operation|null $operation
-     * @param array|null $context
-     * @return void
-     */
-    protected function filterProperty(string $property, mixed $value, QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation $operation = null, array $context = null): void
-    {
-        if (!is_array($value)) {
-            return;
-        }
-        foreach ($value as $propertyName => $direction) {
-            if (array_key_exists($propertyName, $this->properties)) {
-                $queryBuilder->addOrderBy($propertyName, $direction);
-            }
-        }
-    }
-
-    /**
-     * @param string $resourceClass
      * @return array<string, mixed>
      */
     public function getDescription(string $resourceClass): array
@@ -67,4 +44,15 @@ class ResourceOrderCustomFilter extends AbstractFilter
         return $description;
     }
 
+    protected function filterProperty(string $property, mixed $value, QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation $operation = null, ?array $context = null): void
+    {
+        if (!is_array($value)) {
+            return;
+        }
+        foreach ($value as $propertyName => $direction) {
+            if (array_key_exists($propertyName, $this->properties)) {
+                $queryBuilder->addOrderBy($propertyName, $direction);
+            }
+        }
+    }
 }

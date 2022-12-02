@@ -1,8 +1,10 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace WhiteDigital\EntityResourceMapper\Security\Attribute;
+
+use Attribute;
 
 /**
  * If AuthorizeResource attribute is set, each resource instance will be checked against current permission set during serialization.
@@ -11,35 +13,25 @@ namespace WhiteDigital\EntityResourceMapper\Security\Attribute;
  * If no visibleProperties are set, only ID will be returned for non-allowed instances.
  * If $publicProperty is set, and if TRUE, resource will be granted GrantType::ALL for ITEM_GET operation.
  */
-#[\Attribute(\Attribute::TARGET_CLASS)]
+#[Attribute(Attribute::TARGET_CLASS)]
 final class AuthorizeResource
 {
     /**
-     * @param string|null $ownerProperty
-     * @param string|null $groupProperty
      * @param string[] $visibleProperties
-     * @param string|null $publicProperty
      */
     public function __construct(
         private readonly ?string $ownerProperty = null,
         private readonly ?string $groupProperty = null,
-        private readonly array   $visibleProperties = [],
+        private readonly array $visibleProperties = [],
         private readonly ?string $publicProperty = null,
-    )
-    {
+    ) {
     }
 
-    /**
-     * @return string|null
-     */
     public function getPublicProperty(): ?string
     {
         return $this->publicProperty;
     }
 
-    /**
-     * @return string|null
-     */
     public function getGroupProperty(): ?string
     {
         return $this->groupProperty;
