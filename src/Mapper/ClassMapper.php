@@ -1,12 +1,14 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace WhiteDigital\EntityResourceMapper\Mapper;
 
+use InvalidArgumentException;
+use RuntimeException;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
-use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
+use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 
 #[Autoconfigure(configurator: '@WhiteDigital\EntityResourceMapper\Mapper\ClassMapperConfiguratorInterface')]
 class ClassMapper
@@ -16,10 +18,8 @@ class ClassMapper
     }
 
     /**
-     * @param string $dtoClass Resource resource class
+     * @param string $dtoClass    Resource resource class
      * @param string $entityClass Entity class
-     * @param string|null $condition
-     * @return void
      */
     public function registerMapping(string $dtoClass, string $entityClass, ?string $condition = null): void
     {
@@ -32,6 +32,35 @@ class ClassMapper
         ];
     }
 
+    public function getMap(): array
+    {
+        return $this->map;
+    }
+
+    /**
+     * @return class-string<BaseEntity>
+     */
+    public function byResource(string $resourceClass, ?string $condition = null): string
+    {
+        if (empty($this->map)) {
+            throw new RuntimeException(sprintf('%s not configured for Resource mapping. Please set up Configurator service or map classes manually.', __CLASS__));
+        }
+
+        return $this->lookup($resourceClass, 'dto', 'entity', $condition);
+    }
+
+    /**
+     * @return class-string<BaseResource>
+     */
+    public function byEntity(string $entityClass, ?string $condition = null): string
+    {
+        if (empty($this->map)) {
+            throw new RuntimeException(sprintf('%s not configured for Entity mapping. Please set up Configurator service or map classes manually.', __CLASS__));
+        }
+
+        return $this->lookup($entityClass, 'entity', 'dto', $condition);
+    }
+
     private function validate(string $dtoClass, string $entityClass): void
     {
         if (!is_subclass_of($dtoClass, BaseResource::class)) {
@@ -41,37 +70,6 @@ class ClassMapper
         if (!is_subclass_of($entityClass, BaseEntity::class)) {
             throw new InvalidArgumentException(sprintf('%s must extend %s', $entityClass, BaseEntity::class));
         }
-    }
-
-    public function getMap(): array
-    {
-        return $this->map;
-    }
-
-    /**
-     * @param string $resourceClass
-     * @param string|null $condition
-     * @return class-string<BaseEntity>
-     */
-    public function byResource(string $resourceClass, ?string $condition = null): string
-    {
-        if (empty($this->map)) {
-            throw new \RuntimeException(sprintf('%s not configured for Resource mapping. Please set up Configurator service or map classes manually.', __CLASS__));
-        }
-        return $this->lookup($resourceClass, 'dto', 'entity', $condition);
-    }
-
-    /**
-     * @param string $entityClass
-     * @param string|null $condition
-     * @return class-string<BaseResource>
-     */
-    public function byEntity(string $entityClass, ?string $condition = null): string
-    {
-        if (empty($this->map)) {
-            throw new \RuntimeException(sprintf('%s not configured for Entity mapping. Please set up Configurator service or map classes manually.', __CLASS__));
-        }
-        return $this->lookup($entityClass, 'entity', 'dto', $condition);
     }
 
     private function lookup(string $className, string $searchKey, string $returnKey, ?string $condition): string
@@ -91,8 +89,8 @@ class ClassMapper
             }
         }
         if (count($potentialMatches) > 1) {
-            throw new \RuntimeException("Mapping found but condition not matched for {$className}.");
+            throw new RuntimeException("Mapping found but condition not matched for $className.");
         }
-        throw new \RuntimeException("Mapping for class {$className} not found.");
+        throw new RuntimeException("Mapping for class $className not found.");
     }
 }

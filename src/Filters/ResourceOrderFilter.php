@@ -1,6 +1,6 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace WhiteDigital\EntityResourceMapper\Filters;
 
@@ -18,32 +18,22 @@ use WhiteDigital\EntityResourceMapper\Mapper\AccessClassMapperTrait;
 class ResourceOrderFilter implements FilterInterface
 {
     use AccessClassMapperTrait;
+    use Traits\PropertyNameNormalizer;
 
     /**
-     * @param ManagerRegistry $managerRegistry
-     * @param string $orderParameterName
-     * @param LoggerInterface|null $logger
      * @param array<string, mixed>|null $properties
-     * @param NameConverterInterface|null $nameConverter
      */
     public function __construct(
         private readonly ManagerRegistry $managerRegistry,
         private readonly string $orderParameterName = 'order',
         private readonly ?LoggerInterface $logger = null,
-        private ?array $properties = null,
-        private readonly ?NameConverterInterface $nameConverter = null
-    )
-    {
-
+        private readonly ?array $properties = null,
+        private readonly ?NameConverterInterface $nameConverter = null,
+    ) {
     }
 
     /**
-     * @param QueryBuilder $queryBuilder
-     * @param QueryNameGeneratorInterface $queryNameGenerator
-     * @param string $resourceClass
-     * @param string|Operation|null $operation
      * @param array<string, mixed> $context
-     * @return void
      */
     public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation $operation = null, array $context = []): void
     {
@@ -56,7 +46,8 @@ class ResourceOrderFilter implements FilterInterface
         if (str_contains($property, '->>')) { // Order by json field, for example data->>'created'
             [$field, $jsonAttribute] = explode('->>', $property);
             $alias = $queryBuilder->getRootAliases()[0];
-            $queryBuilder->addOrderBy(sprintf("JSON_GET_TEXT(%s.%s,%s)", $alias, $field, $jsonAttribute), $direction);
+            $queryBuilder->addOrderBy(sprintf('JSON_GET_TEXT(%s.%s,%s)', $alias, $field, $jsonAttribute), $direction);
+
             return;
         }
         $orderFilter = new OrderFilter(
@@ -64,19 +55,17 @@ class ResourceOrderFilter implements FilterInterface
             $this->orderParameterName,
             $this->logger,
             $this->properties,
-            $this->nameConverter
+            $this->nameConverter,
         );
         $orderFilter->apply($queryBuilder, $queryNameGenerator, $resourceClass, $operation, $context);
     }
 
     /**
-     * @param string $resourceClass
      * @return array<string, mixed>
      */
     public function getDescription(string $resourceClass): array
     {
         $description = [];
-
 
         foreach ($this->properties as $property => $options) {
             if (isset($options['display_name'])) {
@@ -99,15 +88,5 @@ class ResourceOrderFilter implements FilterInterface
         }
 
         return $description;
-    }
-
-
-    protected function normalizePropertyName(string $property): string
-    {
-        if (!$this->nameConverter instanceof NameConverterInterface) {
-            return $property;
-        }
-
-        return implode('.', array_map([$this->nameConverter, 'normalize'], explode('.', (string)$property)));
     }
 }

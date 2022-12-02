@@ -1,10 +1,12 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace WhiteDigital\EntityResourceMapper\Serializer;
 
 use ApiPlatform\Exception\ResourceClassNotFoundException;
+use ArrayObject;
+use ReflectionException;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
 use Symfony\Component\Serializer\Normalizer\NormalizerAwareInterface;
@@ -23,36 +25,34 @@ class EntityNormalizer implements NormalizerInterface, NormalizerAwareInterface
 
     public function __construct(
         private readonly EntityToResourceMapper $entityToResourceMapper,
-    )
-    {
+    ) {
     }
 
     /**
-     * @param mixed $data
-     * @param string|null $format
      * @param string[] $context
-     * @return bool
      */
-    public function supportsNormalization(mixed $data, string $format = null, array $context = []): bool
+    public function supportsNormalization(mixed $data, ?string $format = null, array $context = []): bool
     {
         if (isset($context[self::ALREADY_CALLED])) {
             return false;
         }
+
         return $data instanceof BaseEntity;
     }
 
     /**
-     * @param mixed $object
-     * @param string|null $format
      * @param array<string> $context
-     * @return float|array<BaseResource>|\ArrayObject<int, BaseResource>|bool|int|string|null
+     *
+     * @return float|array<BaseResource>|ArrayObject<int, BaseResource>|bool|int|string|null
+     *
      * @throws ResourceClassNotFoundException
-     * @throws ExceptionInterface|\ReflectionException
+     * @throws ExceptionInterface|ReflectionException
      */
-    public function normalize(mixed $object, string $format = null, array $context = []): float|array|\ArrayObject|bool|int|string|null
+    public function normalize(mixed $object, ?string $format = null, array $context = []): float|array|ArrayObject|bool|int|string|null
     {
         $apiResource = $this->entityToResourceMapper->map($object, $context);
         $context[self::ALREADY_CALLED] = true;
+
         return $this->normalizer->normalize($apiResource, $format, $context);
     }
 }

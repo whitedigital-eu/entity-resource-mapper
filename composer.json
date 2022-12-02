@@ -1,56 +1,62 @@
 {
-  "name": "whitedigital-eu/entity-resource-mapper-bundle",
-  "description": "Bundle to map Doctrine entity object to and from API resource object.",
-  "type": "symfony-bundle",
-  "license": "MIT",
-  "authors": [
-    {
-      "name": "Raitis Rasmanis",
-      "email": "raitis.rasmanis@whitedigital.eu"
+    "name": "whitedigital-eu/entity-resource-mapper-bundle",
+    "description": "Bundle to map Doctrine entity object to and from API resource object.",
+    "type": "symfony-bundle",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Raitis Rasmanis",
+            "email": "raitis.rasmanis@whitedigital.eu"
+        },
+        {
+            "name": "Andis Cirulis",
+            "email": "andis.cirulis@whitedigital.eu"
+        },
+        {
+            "name": "Davis Zalitis",
+            "email": "davis.zalitis@whitedigital.eu"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "WhiteDigital\\EntityResourceMapper\\": "src/"
+        }
     },
-    {
-      "name": "Andis Cirulis",
-      "email": "andis.cirulis@whitedigital.eu"
+    "autoload-dev": {
+        "psr-4": {
+            "WhiteDigital\\Tests\\": "tests/"
+        }
     },
-    {
-      "name": "Davis Zalitis",
-      "email": "davis.zalitis@whitedigital.eu"
+    "minimum-stability": "stable",
+    "require": {
+        "php": ">=8.1",
+        "api-platform/core": "^3.0",
+        "doctrine/common": "^3.2",
+        "doctrine/dbal": "^3.4",
+        "doctrine/orm": "^2.10",
+        "psr/log": "*",
+        "symfony/doctrine-bridge": "^6.1|^6.2",
+        "symfony/config": "^6.1|^6.2",
+        "symfony/dependency-injection": "^6.1|^6.2",
+        "symfony/http-kernel": "^6.1|^6.2",
+        "symfony/property-access": "^6.1|^6.2",
+        "symfony/property-info": "^6.1|^6.2",
+        "symfony/security-core": "^6.1|^6.2",
+        "symfony/security-bundle": "^6.1|^6.2",
+        "symfony/serializer": "^6.1|^6.2",
+        "symfony/string": "^6.1|^6.2",
+        "symfony/service-contracts": "*",
+        "symfony/yaml": "^6.1|^6.2"
+    },
+    "require-dev": {
+        "roave/security-advisories": "dev-latest",
+        "phpdocumentor/reflection-docblock": "*",
+        "phpunit/phpunit": "9.*",
+        "symfony/test-pack": "dev-main"
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-main": "0.x-dev"
+        }
     }
-  ],
-  "autoload": {
-    "psr-4": {
-      "WhiteDigital\\EntityResourceMapper\\": "src/"
-    }
-  },
-  "autoload-dev": {
-    "psr-4": {
-      "WhiteDigital\\Tests\\": "tests/"
-    }
-  },
-  "minimum-stability": "stable",
-  "require": {
-    "php": ">=8.1",
-    "api-platform/core": "^3.0",
-    "doctrine/annotations": "^1.0",
-    "doctrine/orm": "^2.10",
-    "symfony/serializer": "^6.1|^6.2",
-    "symfony/security-http": "^6.1|^6.2",
-    "symfony/validator": "^6.1|^6.2",
-    "symfony/dependency-injection": "^6.1|^6.2",
-    "symfony/config": "^6.1|^6.2",
-    "phpdocumentor/reflection-docblock": "^5.3"
-  },
-  "require-dev": {
-    "roave/security-advisories": "dev-latest",
-    "phpunit/phpunit": "9.*",
-    "symfony/test-pack": "dev-main",
-    "symfony/http-kernel": "^6.1|^6.2",
-    "composer": "^2.2",
-    "symfony/yaml": "^6.1|^6.2"
-  },
-  "extra": {
-    "branch-alias": {
-      "dev-main": "0.x-dev"
-    }
-  }
 }

@@ -1,6 +1,6 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace WhiteDigital\EntityResourceMapper\Filters;
 
@@ -21,39 +21,26 @@ use WhiteDigital\EntityResourceMapper\Mapper\AccessClassMapperTrait;
 
 final class ResourceEnumFilter implements SearchFilterInterface, FilterInterface
 {
-
     use AccessClassMapperTrait;
 
     /**
-     * @param ManagerRegistry $managerRegistry
-     * @param IriConverterInterface $iriConverter
-     * @param PropertyAccessorInterface|null $propertyAccessor
-     * @param LoggerInterface|null $logger
      * @param array<string, mixed>|null $properties
-     * @param IdentifiersExtractorInterface|null $identifiersExtractor
-     * @param NameConverterInterface|null $nameConverter
      */
     public function __construct(
-        private readonly ManagerRegistry                $managerRegistry,
-        private readonly IriConverterInterface          $iriConverter,
-        private readonly ?PropertyAccessorInterface     $propertyAccessor = null,
-        private readonly ?LoggerInterface               $logger = null,
-        private ?array                                  $properties = null,
+        private readonly ManagerRegistry $managerRegistry,
+        private readonly IriConverterInterface $iriConverter,
+        private readonly ?PropertyAccessorInterface $propertyAccessor = null,
+        private readonly ?LoggerInterface $logger = null,
+        private ?array $properties = null,
         private readonly ?IdentifiersExtractorInterface $identifiersExtractor = null,
-        private readonly ?NameConverterInterface        $nameConverter = null
-    )
-    {
+        private readonly ?NameConverterInterface $nameConverter = null,
+    ) {
     }
 
     /**
-     * @param QueryBuilder $queryBuilder
-     * @param QueryNameGeneratorInterface $queryNameGenerator
-     * @param string $resourceClass
-     * @param string|Operation|null $operationName
      * @param array<string, mixed>|null $context
-     * @return void
      */
-    public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|\ApiPlatform\Metadata\Operation $operationName = null, array $context = null): void
+    public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation $operationName = null, ?array $context = null): void
     {
         foreach ($context['filters'] as $property => $filter) {
             if (!array_key_exists($property, $this->properties)) {
@@ -62,9 +49,11 @@ final class ResourceEnumFilter implements SearchFilterInterface, FilterInterface
             }
             $this->properties[$property] = self::STRATEGY_EXACT;
         }
-        if (array_key_exists('filters', $context) && 0 === count($context['filters'])) {
+
+        if ([] === $context['filters'] ?? []) {
             return;
         }
+
         $resourceClass = $this->classMapper->byResource($resourceClass, $resourceClass);
 
         $searchFilter = new SearchFilter(
@@ -74,12 +63,11 @@ final class ResourceEnumFilter implements SearchFilterInterface, FilterInterface
             $this->logger,
             $this->properties,
             $this->identifiersExtractor,
-            $this->nameConverter);
+            $this->nameConverter, );
         $searchFilter->apply($queryBuilder, $queryNameGenerator, $resourceClass, $operationName, $context);
     }
 
     /**
-     * @param string $resourceClass
      * @return array<mixed, string>
      */
     public function getDescription(string $resourceClass): array

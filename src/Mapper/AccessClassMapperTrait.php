@@ -1,11 +1,10 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace WhiteDigital\EntityResourceMapper\Mapper;
 
 use Symfony\Contracts\Service\Attribute\Required;
-
 
 trait AccessClassMapperTrait
 {

@@ -1,40 +1,66 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace WhiteDigital\EntityResourceMapper\Filters;
 
 use ApiPlatform\Doctrine\Orm\Filter\AbstractFilter;
 use ApiPlatform\Doctrine\Orm\Util\QueryNameGeneratorInterface;
 use ApiPlatform\Metadata\Operation;
+use DateTimeInterface;
 use Doctrine\DBAL\Exception;
 use Doctrine\ORM\QueryBuilder;
+use ReflectionClass;
+use ReflectionException;
 
 /*
  * Api Platform does not support Json Filter yet,
  * follow: https://github.com/api-platform/core/issues/2274
  */
-
 class ResourceJsonFilter extends AbstractFilter
 {
+    /**
+     * @return array<string, mixed>
+     *
+     * @throws Exception
+     * @throws ReflectionException
+     */
+    public function getDescription(string $resourceClass): array
+    {
+        $description = [];
+        $properties = $this->getProperties();
+        if (null === $properties) {
+            throw new Exception(sprintf('Please explicitly mark properties for %s class', self::class));
+        }
+        $reflection = new ReflectionClass($resourceClass);
+
+        foreach ($properties as $property => $nullManagement) {
+            if (!str_contains($property, '.')) {
+                $property_reflection = $reflection->getProperty($property);
+                $type = $property_reflection->getType();
+                /* @phpstan-ignore-next-line */
+                if (DateTimeInterface::class === $type->getName()) {
+                    continue;
+                }
+            }
+
+            $description += $this->getFilterDescription($property);
+        }
+
+        return $description;
+    }
 
     /**
-     * @param string $property
-     * @param mixed $value
-     * @param QueryBuilder $queryBuilder
-     * @param QueryNameGeneratorInterface $queryNameGenerator
-     * @param string $resourceClass
-     * @param string|Operation|null $operation
      * @param array<string, mixed>|null $context
-     * @return void
      */
-    protected function filterProperty(string $property, mixed $value, QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation $operation = null, array $context = null): void
+    protected function filterProperty(string $property, mixed $value, QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation $operation = null, ?array $context = null): void
     {
         if (!array_key_exists($property, $this->properties)) {
             return;
         }
         $property = sprintf('%s.%s', $queryBuilder->getRootAliases()[0], $property);
         $searchSpecificKey = false;
+        $keyName = '';
         if (is_array($value) && 1 === count($value)) {
             $searchSpecificKey = true;
             $keyName = key($value);
@@ -58,45 +84,11 @@ class ResourceJsonFilter extends AbstractFilter
              * @ like_regex "authVar"   value contains 'authVar'
              * flag "i"                 case-insensitive flag
              */
-
             $queryBuilder->andWhere(sprintf('JSONB_PATH_EXISTS(%s, \'$.** ? (@.type() == "string" && @ like_regex "%s" flag "i")\') = TRUE', $property, $value));
         }
     }
 
     /**
-     * @param string $resourceClass
-     * @return array<string, mixed>
-     * @throws Exception
-     * @throws \ReflectionException
-     */
-    public function getDescription(string $resourceClass): array
-    {
-        $description = [];
-        $properties = $this->getProperties();
-        if (null === $properties) {
-            throw new Exception(sprintf('Please explicitly mark properties for %s class', self::class));
-        }
-        $reflection = new \ReflectionClass($resourceClass);
-
-        foreach ($properties as $property => $nullManagement) {
-            if (!str_contains($property, '.')) {
-                $property_reflection = $reflection->getProperty($property);
-                $type = $property_reflection->getType();
-                /** @phpstan-ignore-next-line  */
-                if (\DateTimeInterface::class === $type->getName()) {
-                    continue;
-                }
-
-            }
-
-            $description += $this->getFilterDescription($property);
-        }
-
-        return $description;
-    }
-
-    /**
-     * @param string $property
      * @return array<string, mixed>
      */
     private function getFilterDescription(string $property): array
