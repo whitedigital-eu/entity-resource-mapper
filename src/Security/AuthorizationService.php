@@ -1,12 +1,16 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace WhiteDigital\EntityResourceMapper\Security;
 
+use Closure;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\Proxy;
+use ReflectionClass;
+use ReflectionException;
+use RuntimeException;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Symfony\Component\Security\Core\Security;
@@ -42,6 +46,11 @@ final class AuthorizationService
     /** @var array<class-string, array<string, mixed>> */
     private array $resources = [];
 
+    /**
+     * If closure returns true, authorization system will be disabled (return GrantType::ALL).
+     */
+    private ?Closure $authorizationOverride = null;
+
     public function __construct(
         private readonly Security            $security,
         private readonly ClassMapper         $classMapper,
@@ -60,6 +69,14 @@ final class AuthorizationService
     }
 
     /**
+     * If closure returns true, authorization system will be disabled (returning GrantType::ALL).
+     */
+    public function setAuthorizationOverride(Closure $closure): void
+    {
+        $this->authorizationOverride = $closure;
+    }
+
+    /**
      * @param BaseEntity|BaseResource $object
      * @param string $operation
      * @param bool $throwException
@@ -73,6 +90,9 @@ final class AuthorizationService
         GrantType               $forcedGrantType = null
     ): bool
     {
+        if (null !== $this->authorizationOverride && ($this->authorizationOverride)()) {
+            return true;
+        }
         $accessDecision = false;
         $resourceClass = $this->getAuthorizableObjectResourceClassname($object);
         $highestGrantType = $forcedGrantType ?? $this->calculateFinalGrantType($resourceClass, $operation);
@@ -98,7 +118,7 @@ final class AuthorizationService
     private function getAuthorizableObjectResourceClassname(BaseResource|BaseEntity $object): string
     {
         if ($object instanceof BaseEntity) {
-            $reflection = new \ReflectionClass($object);
+            $reflection = new ReflectionClass($object);
             if ($object instanceof Proxy) { //get real object behind Doctrine proxy object
                 $reflection = $reflection->getParentClass();
             }
@@ -119,7 +139,7 @@ final class AuthorizationService
     {
         $ownerProperty = $this->getAuthorizeAttributeOwnerProperty($resourceClass);
         if (!$ownerProperty) {
-            throw new \RuntimeException('GrantType::OWN but $ownerProperty not set at ' . __CLASS__);
+            throw new RuntimeException('GrantType::OWN but $ownerProperty not set at ' . __CLASS__);
         }
         [$topElement, $isCollection] = $this->parseOwnerProperty($object, $ownerProperty);
         if ($isCollection) {
@@ -143,7 +163,7 @@ final class AuthorizationService
         foreach (explode('.', $property) as $node) {
             if (str_ends_with($node, '[]')  // Collection as NON-LAST item in property chain
                 && !str_ends_with($property, $node)) {
-                throw new \RuntimeException('Collection is not supported as non-last element.');
+                throw new RuntimeException('Collection is not supported as non-last element.');
             }
             if (str_ends_with($node, '[]')) {
                 $node = substr($node, 0, -2);
@@ -160,8 +180,15 @@ final class AuthorizationService
      * @param GrantType|null $forceGrantType
      * @return void
      */
-    public function limitGetCollection(string $resourceClass, QueryBuilder $queryBuilder, GrantType $forceGrantType = null): void
+    public function limitGetCollection(
+        string       $resourceClass,
+        QueryBuilder $queryBuilder,
+        ?GrantType   $forceGrantType = null
+    ): void
     {
+        if (null !== $this->authorizationOverride && ($this->authorizationOverride)()) {
+            return;
+        }
         $highestGrantType = $forceGrantType ?? $this->calculateFinalGrantType($resourceClass, self::COL_GET);
         if (GrantType::ALL === $highestGrantType) {
             return;
@@ -177,9 +204,9 @@ final class AuthorizationService
 
     /**
      * Return allowed (All, Own, None) operations per resource.
-     * @param ?string[] $forcedRoles
+     * @param string[]|null $forcedRoles
      * @return array<int, array<string, array<string, GrantType>>>.
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
     public function currentResourceRoles(?array $forcedRoles = null): array
     {
@@ -192,7 +219,7 @@ final class AuthorizationService
                     self::COL_POST => $this->calculateFinalGrantType($resource, self::COL_POST, $forcedRoles),
                     self::ITEM_PATCH => $this->calculateFinalGrantType($resource, self::ITEM_PATCH, $forcedRoles),
                     self::ITEM_DELETE => $this->calculateFinalGrantType($resource, self::ITEM_DELETE, $forcedRoles),
-                ]
+                ],
             ];
         }
         return $output;
@@ -205,14 +232,18 @@ final class AuthorizationService
      * @param string[]|null $forceRoles
      * @return GrantType
      */
-    public function calculateFinalGrantType(string $resourceClass, string $operation, ?array $forceRoles = null): GrantType
+    public function calculateFinalGrantType(
+        string $resourceClass,
+        string $operation,
+        ?array $forceRoles = null
+    ): GrantType
     {
         if (empty($this->resources)) {
             return GrantType::ALL;
         }
 
         if (!array_key_exists($resourceClass, $this->resources)) {
-            throw new \RuntimeException("Resource $resourceClass not configured in AuthorizationService.");
+            throw new RuntimeException("Resource $resourceClass not configured in AuthorizationService.");
         }
 
         $user = $this->security->getUser();
@@ -221,7 +252,8 @@ final class AuthorizationService
         }
         $availableRoles = $forceRoles ?: $user->getRoles();
 
-        $allowedRoles = array_merge($this->resources[$resourceClass][$operation], $this->resources[$resourceClass][self::ALL]);
+        $allowedRoles = array_merge($this->resources[$resourceClass][$operation],
+            $this->resources[$resourceClass][self::ALL]);
 
         //IF OPERATION DOESN'T EXIST OR ROLE DOESN'T EXIST IN RESOURCE return NONE
         $highestGrantType = GrantType::NONE;
@@ -256,11 +288,11 @@ final class AuthorizationService
      * Extract class name from FQCN
      * @param string $FQCN
      * @return string
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
     private function extractClassName(string $FQCN): string
     {
-        return (new \ReflectionClass($FQCN))->getShortName();
+        return (new ReflectionClass($FQCN))->getShortName();
     }
 
     /**
@@ -273,9 +305,8 @@ final class AuthorizationService
         if ($object instanceof BaseEntity) {
             $getter = $this->makeGetter($property);
             return $object->{$getter}();
-        } else {
-            return $object->{$property};
         }
+        return $object->{$property};
     }
 
     /**
@@ -295,9 +326,9 @@ final class AuthorizationService
     private function getAuthorizeAttributeOwnerProperty(string $resourceClass): string|null
     {
         try {
-            $reflection = new \ReflectionClass($resourceClass);
+            $reflection = new ReflectionClass($resourceClass);
             /** @phpstan-ignore-next-line */
-        } catch (\ReflectionException $e) {
+        } catch (ReflectionException $e) {
             return null;
         }
         $authorizeAttribute = $reflection->getAttributes(AuthorizeResource::class)[0] ?? null;
@@ -308,7 +339,7 @@ final class AuthorizationService
     {
         $ownerProperty = $this->getAuthorizeAttributeOwnerProperty($resourceClass);
         if (!$ownerProperty) {
-            throw new \RuntimeException('GrantType::OWN but $ownerProperty not set at ' . __CLASS__);
+            throw new RuntimeException('GrantType::OWN but $ownerProperty not set at ' . __CLASS__);
         }
         if ($this->isOwnerPropertyNested($ownerProperty)) {
             $this->applyNestedPropertyConstraints($ownerProperty, $queryBuilder);
@@ -338,9 +369,8 @@ final class AuthorizationService
         $rootAlias = $queryBuilder->getRootAliases()[0];
         $joins = explode('.', $ownerProperty);
         if (count($joins) > 2) {
-            throw new \RuntimeException('More than two nested properties are currently not supported: ' . $ownerProperty);
+            throw new RuntimeException('More than two nested properties are currently not supported: ' . $ownerProperty);
         }
-        array_pop($joins);
         foreach ($joins as $join) {
             // check if join already exists
             foreach ($queryBuilder->getDQLPart('join') as $joinPart) {

@@ -1,29 +1,37 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace WhiteDigital\EntityResourceMapper\Entity;
 
 use DateTimeImmutable;
 use DateTimeInterface;
 use DateTimeZone;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\ORM\Mapping\MappedSuperclass;
-use ReflectionException;
+use Exception;
 use RuntimeException;
-use Symfony\Component\Serializer\Exception\ExceptionInterface;
 use WhiteDigital\EntityResourceMapper\Mapper\ResourceToEntityMapper;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
+
+use function is_subclass_of;
 
 #[ORM\HasLifecycleCallbacks]
 #[MappedSuperclass]
 abstract class BaseEntity
 {
-    #[ORM\Column(type: 'datetime_immutable')]
+    final protected const TIMEZONE = 'UTC';
+
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     protected ?DateTimeImmutable $createdAt = null;
 
-    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     protected ?DateTimeImmutable $updatedAt = null;
+
+    private static ResourceToEntityMapper $resourceToEntityMapper;
+
+    abstract public function getId();
 
     public function getCreatedAt(): ?DateTimeImmutable
     {
@@ -33,9 +41,10 @@ abstract class BaseEntity
     /**
      * Can be used for data migrations where original created date is in the past.
      */
-    public function setCreatedAt(?DateTimeInterface $date): self
+    public function setCreatedAt(?DateTimeInterface $date): static
     {
         $this->createdAt = null === $date ? null : DateTimeImmutable::createFromInterface($date)->setTimezone(new DateTimeZone('UTC'));
+
         return $this;
     }
 
@@ -44,6 +53,9 @@ abstract class BaseEntity
         return $this->updatedAt;
     }
 
+    /**
+     * @throws Exception
+     */
     #[ORM\PrePersist]
     public function onPrePersist(): void
     {
@@ -54,15 +66,14 @@ abstract class BaseEntity
         $this->updatedAt = $now;
     }
 
+    /**
+     * @throws Exception
+     */
     #[ORM\PreUpdate]
     public function onPreUpdate(): void
     {
         $this->updatedAt = new DateTimeImmutable(timezone: new DateTimeZone('UTC'));
     }
-
-    abstract public function getId(): mixed;
-
-    private static ResourceToEntityMapper $resourceToEntityMapper;
 
     public static function setResourceToEntityMapper(ResourceToEntityMapper $mapper): void
     {
@@ -70,21 +81,18 @@ abstract class BaseEntity
     }
 
     /**
-     * Factory to create Entity from Resource by using ResourceToEntityMapper
-     * @param BaseResource $resource
+     * Factory to create Entity from Resource by using ResourceToEntityMapper.
+     *
      * @param array<string, mixed> $context
-     * @param BaseEntity|null $existingEntity
-     * @return static
-     * @throws ExceptionInterface
-     * @throws ReflectionException
      */
-    public static function create(BaseResource $resource, array $context, BaseEntity $existingEntity = null): static
+    public static function create(BaseResource $resource, array $context, ?self $existingEntity = null): static
     {
         $context[ResourceToEntityMapper::CONDITION_CONTEXT] = static::class;
         $entity = self::$resourceToEntityMapper->map($resource, $context, $existingEntity);
-        if (!$entity instanceof static) {
-            throw new RuntimeException(sprintf("Wrong type (%s instead of %s) in Entity factory", get_class($resource), static::class));
+        if (!is_subclass_of($entity, self::class)) {
+            throw new RuntimeException(sprintf('Wrong type (%s instead of %s) in Entity factory', $resource::class, static::class));
         }
+
         return $entity;
     }
 }

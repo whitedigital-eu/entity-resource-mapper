@@ -1,15 +1,17 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace WhiteDigital\EntityResourceMapper\Resource;
 
-
-use ApiPlatform\Core\Exception\ResourceClassNotFoundException;
+use ApiPlatform\Exception\ResourceClassNotFoundException;
+use ReflectionException;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
 use Symfony\Component\Serializer\Exception\RuntimeException;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Mapper\EntityToResourceMapper;
+
+use function is_subclass_of;
 
 abstract class BaseResource
 {
@@ -17,13 +19,10 @@ abstract class BaseResource
 
     public bool $isRestricted = false; // must set this property in resource class with correct Normalization group, if GrantType::OWN used on the resource
 
-
     private static EntityToResourceMapper $entityToResourceMapper;
 
     /**
      * Service is set in EntityToResourceMapper constructor itself.
-     * @param EntityToResourceMapper $mapper
-     * @return void
      */
     public static function setEntityToResourceMapper(EntityToResourceMapper $mapper): void
     {
@@ -33,9 +32,11 @@ abstract class BaseResource
     /**
      * Factory method to create a Resource from Entity, by using EntityToResourceMapper
      * If entity is array, queryBuilder object contains BaseEntity plus SQL calculated fields for merging with final resource.
+     *
      * @param BaseEntity|array<string|int, mixed> $entity
-     * @param array<string, mixed> $context // Must contain at least operation type & normalization groups
-     * @return static
+     * @param array<string, mixed>                $context // Must contain at least operation type & normalization groups
+     *
+     * @throws ReflectionException
      * @throws ExceptionInterface
      * @throws ResourceClassNotFoundException
      */
@@ -55,9 +56,10 @@ abstract class BaseResource
         } else {
             $resource = self::$entityToResourceMapper->map($entity, $context);
         }
-        if (!($resource instanceof static)) {
-            throw new \RuntimeException(sprintf("Wrong type (%s instead of %s) in Resource factory.", get_class($resource), static::class));
+        if (!is_subclass_of($resource, self::class)) {
+            throw new RuntimeException(sprintf('Wrong type (%s instead of %s) in Resource factory.', $resource::class, static::class));
         }
+
         return $resource;
     }
 }

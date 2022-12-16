@@ -1,6 +1,6 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace WhiteDigital\EntityResourceMapper\Filters;
 
@@ -9,44 +9,44 @@ use ApiPlatform\Doctrine\Orm\Filter\DateFilter;
 use ApiPlatform\Doctrine\Orm\Filter\FilterInterface;
 use ApiPlatform\Doctrine\Orm\Util\QueryNameGeneratorInterface;
 use ApiPlatform\Metadata\Operation;
+use DateTime;
+use DateTimeInterface;
+use DateTimeZone;
 use Doctrine\DBAL\Exception;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LoggerInterface;
+use ReflectionClass;
+use ReflectionException;
+use ReflectionNamedType;
+use RuntimeException;
 use Symfony\Component\Serializer\NameConverter\NameConverterInterface;
 use WhiteDigital\EntityResourceMapper\Mapper\AccessClassMapperTrait;
 
 class ResourceDateFilter implements FilterInterface, DateFilterInterface
 {
     use AccessClassMapperTrait;
+    use Traits\PropertyNameNormalizer;
 
     /**
-     * @param ManagerRegistry $managerRegistry
-     * @param LoggerInterface|null $logger
      * @param array<string, mixed>|null $properties
-     * @param NameConverterInterface|null $nameConverter
      */
     public function __construct(
-        private readonly ManagerRegistry         $managerRegistry,
-        private readonly ?LoggerInterface        $logger = null,
-        private ?array                           $properties = null,
-        private readonly ?NameConverterInterface $nameConverter = null
-    )
-    {
+        private readonly ManagerRegistry $managerRegistry,
+        private readonly ?LoggerInterface $logger = null,
+        private readonly ?array $properties = null,
+        private readonly ?NameConverterInterface $nameConverter = null,
+    ) {
     }
 
     /**
-     * @param QueryBuilder $queryBuilder
-     * @param QueryNameGeneratorInterface $queryNameGenerator
-     * @param string $resourceClass
-     * @param string|Operation|null $operation
      * @param array<string, mixed>|null $context
-     * @return void
+     *
      * @throws \Exception
      */
     public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation $operation = null, ?array $context = null): void
     {
-        $timeZone = new \DateTimeZone(date_default_timezone_get());
+        $timeZone = new DateTimeZone(date_default_timezone_get());
 
         foreach ($context['filters'] as $property => $filter) {
             if (!array_key_exists($property, $this->properties)) {
@@ -56,10 +56,9 @@ class ResourceDateFilter implements FilterInterface, DateFilterInterface
             foreach ($filter as $condition => $value) {
                 // Try to instantiate DateTime object to validate filter value, otherwise it gets ignored later.
                 // Also set default timezone if data is stored without TZ information in the database.
-                $validDateTime = new \DateTime($value);
-                $context['filters'][$property][$condition] = $validDateTime->setTimezone($timeZone)->format(\DateTimeInterface::ATOM);
+                $validDateTime = new DateTime($value);
+                $context['filters'][$property][$condition] = $validDateTime->setTimezone($timeZone)->format(DateTimeInterface::ATOM);
             }
-
         }
         $dateFilter = new DateFilter(
             $this->managerRegistry,
@@ -73,10 +72,10 @@ class ResourceDateFilter implements FilterInterface, DateFilterInterface
     }
 
     /**
-     * @param string $resourceClass
      * @return array<string, mixed>
+     *
      * @throws Exception
-     * @throws \ReflectionException
+     * @throws ReflectionException
      */
     public function getDescription(string $resourceClass): array
     {
@@ -84,17 +83,17 @@ class ResourceDateFilter implements FilterInterface, DateFilterInterface
         if (null === $this->properties) {
             throw new Exception(sprintf('Please explicitly mark properties for %s class', self::class));
         }
-        $reflection = new \ReflectionClass($resourceClass);
+        $reflection = new ReflectionClass($resourceClass);
 
         foreach ($this->properties as $property => $nullManagement) {
             $propertyReflection = $reflection->getProperty($property);
             $propertyType = $propertyReflection->getType();
-            if ($propertyType instanceof \ReflectionNamedType) {
+            if ($propertyType instanceof ReflectionNamedType) {
                 $typeName = $propertyType->getName();
             } else {
-                throw new \RuntimeException('Type without name encountered.');
+                throw new RuntimeException('Type without name encountered.');
             }
-            if (!is_subclass_of($typeName, \DateTimeInterface::class)) {
+            if (!is_subclass_of($typeName, DateTimeInterface::class)) {
                 continue;
             }
 
@@ -103,12 +102,11 @@ class ResourceDateFilter implements FilterInterface, DateFilterInterface
             $description += $this->getFilterDescription($property, self::PARAMETER_AFTER);
             $description += $this->getFilterDescription($property, self::PARAMETER_STRICTLY_AFTER);
         }
+
         return $description;
     }
 
     /**
-     * @param string $property
-     * @param string $period
      * @return array<string, mixed>
      */
     protected function getFilterDescription(string $property, string $period): array
@@ -118,18 +116,9 @@ class ResourceDateFilter implements FilterInterface, DateFilterInterface
         return [
             sprintf('%s[%s]', $propertyName, $period) => [
                 'property' => $propertyName,
-                'type' => \DateTimeInterface::class,
+                'type' => DateTimeInterface::class,
                 'required' => false,
             ],
         ];
-    }
-
-    protected function normalizePropertyName(string $property): string
-    {
-        if (!$this->nameConverter instanceof NameConverterInterface) {
-            return $property;
-        }
-
-        return implode('.', array_map([$this->nameConverter, 'normalize'], explode('.', (string)$property)));
     }
 }

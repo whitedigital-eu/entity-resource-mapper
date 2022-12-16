@@ -1,10 +1,12 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace WhiteDigital\EntityResourceMapper\Serializer;
 
-use ApiPlatform\Core\Exception\ResourceClassNotFoundException;
+use ApiPlatform\Exception\ResourceClassNotFoundException;
+use ArrayObject;
+use ReflectionException;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
 use Symfony\Component\Serializer\Exception\RuntimeException;
@@ -27,19 +29,19 @@ class ArrayNormalizer implements NormalizerInterface, NormalizerAwareInterface
 
     public function __construct(
         private readonly EntityToResourceMapper $entityToResourceMapper,
-    )
-    {
+    ) {
     }
 
     /**
-     * @param mixed $object
-     * @param string|null $format
      * @param array<string, mixed> $context
-     * @return float|array<BaseResource>|\ArrayObject<int, BaseResource>|bool|int|string|null
+     *
+     * @return float|array<BaseResource>|ArrayObject<int, BaseResource>|bool|int|string|null
+     *
+     * @throws ReflectionException
      * @throws ResourceClassNotFoundException
      * @throws ExceptionInterface
      */
-    public function normalize(mixed $object, string $format = null, array $context = []): float|array|\ArrayObject|bool|int|string|null
+    public function normalize(mixed $object, ?string $format = null, array $context = []): float|array|ArrayObject|bool|int|string|null
     {
         $context[self::ALREADY_CALLED] = true;
         $apiResource = $this->entityToResourceMapper->map($object[0], $context);
@@ -58,16 +60,14 @@ class ArrayNormalizer implements NormalizerInterface, NormalizerAwareInterface
     }
 
     /**
-     * @param mixed $data
-     * @param string|null $format
      * @param array<string, mixed> $context
-     * @return bool
      */
-    public function supportsNormalization(mixed $data, string $format = null, array $context = []): bool
+    public function supportsNormalization(mixed $data, ?string $format = null, array $context = []): bool
     {
         if (isset($context[self::ALREADY_CALLED])) {
             return false;
         }
+
         return is_array($data)
             && array_key_exists(0, $data)
             && $data[0] instanceof BaseEntity
@@ -75,9 +75,9 @@ class ArrayNormalizer implements NormalizerInterface, NormalizerAwareInterface
     }
 
     /**
-     * Checks if array has string keys, to detected custom queryBuilder fields
+     * Checks if array has string keys, to detected custom queryBuilder fields.
+     *
      * @param array<int|string, mixed> $array
-     * @return bool
      */
     private function hasStringKeys(array $array): bool
     {

@@ -1,6 +1,6 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace WhiteDigital\EntityResourceMapper\DBAL\Functions;
 
@@ -12,30 +12,24 @@ use Doctrine\ORM\Query\Parser;
 use Doctrine\ORM\Query\QueryException;
 use Doctrine\ORM\Query\SqlWalker;
 
-
 /*
  * Idea from https://github.com/boldtrn/JsonbBundle
  */
 class JsonArrayLength extends FunctionNode
 {
-
     public Node|null $leftHandSide = null;
 
     /**
-     * @param SqlWalker $sqlWalker
-     * @return string
      * @throws ASTException
      */
     public function getSql(SqlWalker $sqlWalker): string
     {
         return sprintf('json_array_length(%s::json)',
-            $this->leftHandSide->dispatch($sqlWalker)
+            $this->leftHandSide->dispatch($sqlWalker),
         );
     }
 
     /**
-     * @param Parser $parser
-     * @return void
      * @throws QueryException
      */
     public function parse(Parser $parser): void

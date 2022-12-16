@@ -1,11 +1,18 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace WhiteDigital\EntityResourceMapper\Mapper;
 
+use Countable;
+use DateTimeImmutable;
+use DateTimeInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\PersistentCollection;
+use Error;
+use ReflectionClass;
+use ReflectionException;
+use RuntimeException;
 use Symfony\Component\PropertyInfo\Extractor\PhpDocExtractor;
 use Symfony\Component\String\Inflector\EnglishInflector;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
@@ -17,22 +24,19 @@ class ResourceToEntityMapper
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly ClassMapper            $classMapper,
-    )
-    {
+        private readonly ClassMapper $classMapper,
+    ) {
         BaseEntity::setResourceToEntityMapper($this);
     }
 
     /**
-     * Api Resource mapper to convert Api Resource to Entity (existing or new)
-     * @param BaseResource $object
+     * Api Resource mapper to convert Api Resource to Entity (existing or new).
+     *
      * @param array<string, mixed> $context
-     * @param BaseEntity|null $existingEntity
-     * @return BaseEntity
      */
-    public function map(BaseResource $object, array $context, BaseEntity $existingEntity = null): BaseEntity
+    public function map(BaseResource $object, array $context, ?BaseEntity $existingEntity = null): BaseEntity
     {
-        $reflection = new \ReflectionClass($object);
+        $reflection = new ReflectionClass($object);
         $targetEntityClass = $this->classMapper->byResource($reflection->getName(), $context[self::CONDITION_CONTEXT] ?? null);
 
         $properties = $reflection->getProperties();
@@ -47,14 +51,14 @@ class ResourceToEntityMapper
             $propertyType = $property->getType()?->getName();
             try {
                 $propertyValue = $property->getValue($object);
-            } catch (\Error $e) {
+            } catch (Error) {
                 $propertyValue = null;
             }
 
             //  DateTimeInterface implementations are converted to DateTimeImmutable in entities
-            if (is_subclass_of($propertyType, \DateTimeInterface::class)
-                && $propertyValue instanceof \DateTimeInterface) {
-                $propertyValue = \DateTimeImmutable::createFromInterface($propertyValue);
+            if (is_subclass_of($propertyType, DateTimeInterface::class)
+                && $propertyValue instanceof DateTimeInterface) {
+                $propertyValue = DateTimeImmutable::createFromInterface($propertyValue);
             }
 
             // For existing entities, lets not update anything, if value not changed
@@ -63,7 +67,7 @@ class ResourceToEntityMapper
             }
 
             // 1A. Normalize relations for Array<BaseResource> properties
-            if ('array' === $propertyType && $this->isRelationProperty($object, $propertyName)) { //array of entities
+            if ('array' === $propertyType && $this->isRelationProperty($object, $propertyName)) { // array of entities
                 // First, remove all of existing collection values, then add new ones
                 foreach ($this->callMethod($output, 'get', $propertyName) as $valueToRemove) {
                     $this->callMethod($output, 'remove', $propertyName, $valueToRemove);
@@ -71,13 +75,13 @@ class ResourceToEntityMapper
                 if (null === $propertyValue || 0 === count($propertyValue)) {
                     continue;
                 }
-                $targetClass = $this->classMapper->byResource(get_class($propertyValue[0]), get_class($object)); // assume equal data types in array
+                $targetClass = $this->classMapper->byResource(get_class($propertyValue[0]), $object::class); // assume equal data types in array
                 foreach ($propertyValue as $value) {
-                    if (isset($value->id)) { //entity already exists, lets fetch it from DB
+                    if (isset($value->id)) { // entity already exists, lets fetch it from DB
                         $repository = $this->entityManager->getRepository($targetClass);
                         $entity = $repository->find($value->id);
                         if (null === $entity) {
-                            throw new \RuntimeException("{$targetClass} entity with id {$value->id} not found!");
+                            throw new RuntimeException("$targetClass entity with id $value->id not found!");
                         }
 //                        $output[$propertyName]->add($entity);
                         $this->callMethod($output, 'add', $propertyName, $entity);
@@ -89,14 +93,14 @@ class ResourceToEntityMapper
             }
 
             // 1B. Normalize relations for BaseResource properties
-            /** @var BaseResource $propertyValue */
+            /* @var BaseResource $propertyValue */
             if ($this->isPropertyBaseDto($propertyType)) {
                 $target_class = $this->classMapper->byResource($propertyType);
-                if (isset($propertyValue->id)) { //entity already exists, lets fetch it from DB
+                if (isset($propertyValue->id)) { // entity already exists, lets fetch it from DB
                     $repository = $this->entityManager->getRepository($target_class);
                     $entity = $repository->find($propertyValue->id);
                     if (null === $entity) {
-                        throw new \RuntimeException("{$target_class} entity with id {$propertyValue->id} not found!");
+                        throw new RuntimeException("$target_class entity with id $propertyValue->id not found!");
                     }
                     $this->callMethod($output, 'set', $propertyName, $entity);
                     continue;
@@ -108,41 +112,35 @@ class ResourceToEntityMapper
             }
 
             // 2. Finally, map output value to input
-            if (null !== $existingEntity || $propertyValue !== null) { // for existing entities set any value, for new entities only non-null
+            if (null !== $existingEntity || null !== $propertyValue) { // for existing entities set any value, for new entities only non-null
                 $this->callMethod($output, 'set', $propertyName, $propertyValue);
             }
-
         }
+
         return $output;
     }
 
     /**
      * Checks, if given object is inherited from BaseResource class.
-     * @param string $class
-     * @return bool
      */
     private function isPropertyBaseDto(string $class): bool
     {
         try {
-            $reflection = new \ReflectionClass($class);
-        } catch (\ReflectionException) {
+            $reflection = new ReflectionClass($class);
+        } catch (ReflectionException) {
             return false; // Property is not a (known) class
         }
         while ($reflection = $reflection->getParentClass()) {
-            if ($reflection->getName() === BaseResource::class) {
+            if (BaseResource::class === $reflection->getName()) {
                 return true;
             }
         }
+
         return false;
     }
 
-
     /**
-     * Checks DocBlock if property is child of Collection<mixed, BaseResource>
-     *
-     * @param BaseResource $object
-     * @param string $propertyName
-     * @return bool
+     * Checks DocBlock if property is child of Collection<mixed, BaseResource>.
      */
     private function isRelationProperty(BaseResource $object, string $propertyName): bool
     {
@@ -154,20 +152,15 @@ class ResourceToEntityMapper
         $type = $types[0];
         if ($type->isCollection()) {
             $collectionValueType = $type->getCollectionValueTypes()[0] ?? null;
+
             return is_subclass_of($collectionValueType?->getClassName(), BaseResource::class);
         }
 
         return false;
-
     }
 
     /**
-     * Dynamically call entity->addProperty, removeProperty, setProperty, getProperty
-     * @param BaseEntity $object
-     * @param string $method
-     * @param string $property
-     * @param mixed $value
-     * @return mixed
+     * Dynamically call entity->addProperty, removeProperty, setProperty, getProperty.
      */
     private function callMethod(BaseEntity $object, string $method, string $property, mixed $value = null): mixed
     {
@@ -179,20 +172,16 @@ class ResourceToEntityMapper
             }
         }
         try {
-            return $object->{"{$method}{$propertySingular}"}($value);
-        } catch (\Error $e) { // Catch only one type of errors
+            return $object->{"$method$propertySingular"}($value);
+        } catch (Error $e) { // Catch only one type of errors
             if (!str_contains($e->getMessage(), 'Call to undefined method')) {
                 throw $e;
             }
-            return $object->{"{$method}{$property}"}($value);
+
+            return $object->{"$method$property"}($value);
         }
     }
 
-    /**
-     * @param mixed $value1
-     * @param mixed $value2
-     * @return bool
-     */
     private function compareValues(mixed $value1, mixed $value2): bool
     {
         // Scalar types
@@ -200,14 +189,14 @@ class ResourceToEntityMapper
             return true;
         }
         // \DateTimeInterface implementations
-        if ($value1 instanceof \DateTimeInterface && $value2 instanceof \DateTimeInterface) {
+        if ($value1 instanceof DateTimeInterface && $value2 instanceof DateTimeInterface) {
             return $value1->getTimestamp() === $value2->getTimestamp();
         }
         // Doctrine Collection and array, both empty
-        if ($value1 instanceof \Countable && null === $value2) {
+        if ($value1 instanceof Countable && null === $value2) {
             $value2 = [];
         }
-        if ($value1 instanceof \Countable && (0 === count($value1) && count($value1) === count($value2))) {
+        if ($value1 instanceof Countable && (0 === count($value1) && 0 === count($value2))) {
             return true;
         }
         // Doctrine collection and array, both identical
@@ -229,6 +218,7 @@ class ResourceToEntityMapper
                 return true;
             }
         }
+
         return false;
     }
 }
