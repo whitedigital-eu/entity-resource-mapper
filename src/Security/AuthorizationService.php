@@ -139,7 +139,11 @@ final class AuthorizationService
     {
         $ownerProperty = $this->getAuthorizeAttributeOwnerProperty($resourceClass);
         if (!$ownerProperty) {
-            throw new RuntimeException('GrantType::OWN but $ownerProperty not set at ' . __CLASS__);
+            $ownerCallback = $this->getAuthorizeOwnerCallbackProperty($resourceClass);
+            if (is_callable([$object, $ownerCallback])) {
+                return $object->$ownerCallback($this->security);
+            }
+            throw new RuntimeException('GrantType::OWN but neither $ownerProperty nor $ownerCallback not set at ' . __CLASS__);
         }
         [$topElement, $isCollection] = $this->parseOwnerProperty($object, $ownerProperty);
         if ($isCollection) {
@@ -335,6 +339,23 @@ final class AuthorizationService
         return $authorizeAttribute?->getArguments()['ownerProperty'] ?? null;
     }
 
+    /**
+     * Extract data from Resource class attribute AuthorizeResource
+     * @param class-string<BaseResource> $resourceClass
+     * @return string|null
+     */
+    private function getAuthorizeOwnerCallbackProperty(string $resourceClass): string|null
+    {
+        try {
+            $reflection = new ReflectionClass($resourceClass);
+            /** @phpstan-ignore-next-line */
+        } catch (ReflectionException $e) {
+            return null;
+        }
+        $authorizeAttribute = $reflection->getAttributes(AuthorizeResource::class)[0] ?? null;
+        return $authorizeAttribute?->getArguments()['ownerCallback'] ?? null;
+    }
+
     private function applyConstraintsToQueryBuilder(string $resourceClass, QueryBuilder $queryBuilder): void
     {
         $ownerProperty = $this->getAuthorizeAttributeOwnerProperty($resourceClass);
@@ -398,5 +419,10 @@ final class AuthorizationService
     {
         $rootAlias = $queryBuilder->getRootAliases()[0];
         $queryBuilder->andWhere("$rootAlias.$ownerProperty = :ownerValue");
+    }
+
+    private function getAuthorizeOwnerCallback(BaseResource|BaseEntity $object): mixed
+    {
+
     }
 }

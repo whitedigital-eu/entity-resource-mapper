@@ -21,6 +21,7 @@ final class AuthorizeResource
      */
     public function __construct(
         private readonly ?string $ownerProperty = null,
+        private readonly ?string $ownerCallback = null,
         private readonly ?string $groupProperty = null,
         private readonly array $visibleProperties = [],
         private readonly ?string $publicProperty = null,
@@ -51,5 +52,10 @@ final class AuthorizeResource
     public function getOwnerProperty(): ?string
     {
         return $this->ownerProperty;
+    }
+
+    public function getOwnerCallback(): ?string
+    {
+        return $this->ownerCallback;
     }
 }
