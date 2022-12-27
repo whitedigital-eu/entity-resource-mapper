@@ -8,5 +8,6 @@ enum GrantType: string
 {
     case ALL = 'ALL'; // Can access all records
     case OWN = 'OWN'; // Can access records that are related to current user
+    case LIMITED = 'LIMITED';
     case NONE = 'NONE'; // No access
 }

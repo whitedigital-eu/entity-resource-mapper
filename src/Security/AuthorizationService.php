@@ -1,11 +1,10 @@
 <?php
 
-declare(strict_types = 1);
+declare(strict_types=1);
 
 namespace WhiteDigital\EntityResourceMapper\Security;
 
 use Closure;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\Proxy;
 use ReflectionClass;
@@ -20,6 +19,8 @@ use WhiteDigital\EntityResourceMapper\Mapper\ClassMapper;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 use WhiteDigital\EntityResourceMapper\Security\Attribute\AuthorizeResource;
 use WhiteDigital\EntityResourceMapper\Security\Enum\GrantType;
+use WhiteDigital\EntityResourceMapper\Security\Interface\CustomAuthorizableResourceInterface;
+use WhiteDigital\EntityResourceMapper\Security\Interface\LimitedResourceAccessResolverInterface;
 
 /**
  * Data used in following places:
@@ -99,11 +100,11 @@ final class AuthorizationService
         if (GrantType::ALL === $highestGrantType) {
             return true;
         }
-        if (GrantType::OWN === $highestGrantType) {
+        if (GrantType::LIMITED === $highestGrantType) {
             if (self::COL_POST === $operation) {
                 return true; // no need to check owner if it is POST, as no owner property exists
             }
-            $accessDecision = $this->isResourceAuthorizedForUser($resourceClass, $object);
+            $accessDecision = $this->isResourceAuthorizedForUser($object);
         }
         if ($throwException && !$accessDecision) {
             throw new AccessDeniedException($this->translator->trans(self::ACCESS_DENIED_MESSAGE));
@@ -127,55 +128,14 @@ final class AuthorizationService
         return $object::class;
     }
 
-    /**
-     * @param string $resourceClass
-     * @param BaseResource|BaseEntity $object
-     * @return bool
-     */
-    private function isResourceAuthorizedForUser(
-        string                  $resourceClass,
-        BaseResource|BaseEntity $object
-    ): bool
+    private function isResourceAuthorizedForUser(BaseResource $object): bool
     {
-        $ownerProperty = $this->getAuthorizeAttributeOwnerProperty($resourceClass);
-        if (!$ownerProperty) {
-            $ownerCallback = $this->getAuthorizeOwnerCallbackProperty($resourceClass);
-            if (is_callable([$object, $ownerCallback])) {
-                return $object->$ownerCallback($this->security);
-            }
-            throw new RuntimeException('GrantType::OWN but neither $ownerProperty nor $ownerCallback not set at ' . __CLASS__);
+        $limitedAccessResolver = $this->retrieveAuthResourceAttributeArgumentByName($object,
+            'limitedResourceAccessResolver');
+        if ($limitedAccessResolver instanceof LimitedResourceAccessResolverInterface) {
+            return $limitedAccessResolver->isItemAccessAllowed($object);
         }
-        [$topElement, $isCollection] = $this->parseOwnerProperty($object, $ownerProperty);
-        if ($isCollection) {
-            /** @var  Collection<int, BaseEntity> $topElement */
-            return $topElement->contains($this->security->getUser());
-        }
-        $authorizedValueId = $this->accessValue($this->security->getUser(), 'id');
-        return is_object($topElement) ? ($this->accessValue($topElement, 'id') === $authorizedValueId)
-            : ($topElement === $authorizedValueId);
-    }
-
-    /**
-     * @param BaseResource|BaseEntity $object
-     * @param string $property
-     * @return array{0: mixed, 1: boolean}
-     */
-    private function parseOwnerProperty(BaseResource|BaseEntity $object, string $property): array
-    {
-        $topElement = $object;
-        $isCollection = false;
-        foreach (explode('.', $property) as $node) {
-            if (str_ends_with($node, '[]')  // Collection as NON-LAST item in property chain
-                && !str_ends_with($property, $node)) {
-                throw new RuntimeException('Collection is not supported as non-last element.');
-            }
-            if (str_ends_with($node, '[]')) {
-                $node = substr($node, 0, -2);
-                $isCollection = true;
-            }
-            $topElement = $this->accessValue($topElement, $node);
-        }
-        return [$topElement, $isCollection];
+        return false;
     }
 
     /**
@@ -200,8 +160,12 @@ final class AuthorizationService
         if (GrantType::NONE === $highestGrantType) {
             throw new AccessDeniedException($this->translator->trans(self::ACCESS_DENIED_MESSAGE));
         }
-        if (GrantType::OWN === $highestGrantType) {
-            $this->applyConstraintsToQueryBuilder($resourceClass, $queryBuilder);
+        if (GrantType::LIMITED === $highestGrantType) {
+            $limitedAccessResolver = $this->retrieveAuthResourceAttributeArgumentByName($resourceClass,
+                'limitedResourceAccessResolver');
+            if ($limitedAccessResolver instanceof LimitedResourceAccessResolverInterface) {
+                $limitedAccessResolver->limitCollectionQuery($queryBuilder);
+            }
         }
     }
 
@@ -279,7 +243,7 @@ final class AuthorizationService
     {
         $order = [
             GrantType::NONE->value => 10,
-            GrantType::OWN->value => 20,
+            GrantType::LIMITED->value => 20,
             GrantType::ALL->value => 30,
         ];
         if ($order[$expectedGrantType->value] > $order[$currentGrantType->value]) {
@@ -421,8 +385,17 @@ final class AuthorizationService
         $queryBuilder->andWhere("$rootAlias.$ownerProperty = :ownerValue");
     }
 
-    private function getAuthorizeOwnerCallback(BaseResource|BaseEntity $object): mixed
+    private function retrieveAuthResourceAttributeArgumentByName(string|object $classOrObject, string $argumentName)
     {
-
+        try {
+            $reflection = new ReflectionClass($classOrObject);
+        } catch (ReflectionException $e) {
+            return null;
+        }
+        $resourceAuthAttribute = $reflection->getAttributes(AuthorizeResource::class)[0] ?? null;
+        if ($resourceAuthAttribute) {
+            return $resourceAuthAttribute->getArguments()[$argumentName] ?? null;
+        }
+        return null;
     }
 }
