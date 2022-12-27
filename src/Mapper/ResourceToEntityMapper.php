@@ -165,21 +165,16 @@ class ResourceToEntityMapper
     private function callMethod(BaseEntity $object, string $method, string $property, mixed $value = null): mixed
     {
         $property = ucfirst($property);
-        $propertySingular = '';
         foreach ((new EnglishInflector())->singularize($property) as $singularValue) {
-            if (strlen($singularValue) > strlen($propertySingular)) {
-                $propertySingular = $singularValue;
+            try {
+                return $object->{"$method$singularValue"}($value);
+            } catch (Error $e) { // Catch only one type of errors
+                if (!str_contains($e->getMessage(), 'Call to undefined method')) {
+                    throw $e;
+                }
             }
         }
-        try {
-            return $object->{"$method$propertySingular"}($value);
-        } catch (Error $e) { // Catch only one type of errors
-            if (!str_contains($e->getMessage(), 'Call to undefined method')) {
-                throw $e;
-            }
-
-            return $object->{"$method$property"}($value);
-        }
+        return $object->{"$method$property"}($value);
     }
 
     private function compareValues(mixed $value1, mixed $value2): bool
