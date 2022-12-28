@@ -18,3 +18,9 @@ services:
   WhiteDigital\EntityResourceMapper\MenuBuilder\Service\MenuBuilderService:
     autowire: true
     autoconfigure: true
+  WhiteDigital\EntityResourceMapper\Security\Interface\AccessResolverInterface:
+    autowire: true
+    autoconfigure: true
+  WhiteDigital\EntityResourceMapper\Security\AccessResolver\OwnerPropertyAccessResolver:
+    autowire: true
+    autoconfigure: true

@@ -7,20 +7,23 @@ namespace WhiteDigital\EntityResourceMapper\Security;
 use Closure;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\Proxy;
+use InvalidArgumentException;
 use ReflectionClass;
 use ReflectionException;
 use RuntimeException;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
+use Symfony\Component\DependencyInjection\Attribute\TaggedLocator;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Symfony\Component\Security\Core\Security;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Mapper\ClassMapper;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
+use WhiteDigital\EntityResourceMapper\Security\Attribute\AccessResolverConfiguration;
 use WhiteDigital\EntityResourceMapper\Security\Attribute\AuthorizeResource;
 use WhiteDigital\EntityResourceMapper\Security\Enum\GrantType;
-use WhiteDigital\EntityResourceMapper\Security\Interface\CustomAuthorizableResourceInterface;
-use WhiteDigital\EntityResourceMapper\Security\Interface\LimitedResourceAccessResolverInterface;
+use WhiteDigital\EntityResourceMapper\Security\Interface\AccessResolverInterface;
 
 /**
  * Data used in following places:
@@ -53,9 +56,10 @@ final class AuthorizationService
     private ?Closure $authorizationOverride = null;
 
     public function __construct(
-        private readonly Security            $security,
-        private readonly ClassMapper         $classMapper,
-        private readonly TranslatorInterface $translator,
+        private readonly Security                                                              $security,
+        private readonly ClassMapper                                                           $classMapper,
+        private readonly TranslatorInterface                                                   $translator,
+        #[TaggedLocator(tag: 'authorization.access_resolver')] private readonly ServiceLocator $accessResolverRepository,
     )
     {
     }
@@ -101,10 +105,7 @@ final class AuthorizationService
             return true;
         }
         if (GrantType::LIMITED === $highestGrantType) {
-            if (self::COL_POST === $operation) {
-                return true; // no need to check owner if it is POST, as no owner property exists
-            }
-            $accessDecision = $this->isResourceAuthorizedForUser($object);
+            $accessDecision = $this->isObjectAuthorizedForUser($resourceClass, $object);
         }
         if ($throwException && !$accessDecision) {
             throw new AccessDeniedException($this->translator->trans(self::ACCESS_DENIED_MESSAGE));
@@ -128,12 +129,20 @@ final class AuthorizationService
         return $object::class;
     }
 
-    private function isResourceAuthorizedForUser(BaseResource $object): bool
+    private function isObjectAuthorizedForUser(string $resourceClass, object $object): bool
     {
-        $limitedAccessResolver = $this->retrieveAuthResourceAttributeArgumentByName($object,
-            'limitedResourceAccessResolver');
-        if ($limitedAccessResolver instanceof LimitedResourceAccessResolverInterface) {
-            return $limitedAccessResolver->isItemAccessAllowed($object);
+        $accessResolverConfigList = $this->retrieveAccessResolverConfigList($resourceClass);
+        if ($accessResolverConfigList) {
+            foreach ($accessResolverConfigList as $accessResolverConfig) {
+                $accessResolver = $this->accessResolverRepository->get($accessResolverConfig->getClassName());
+                if (!$accessResolver instanceof AccessResolverInterface) {
+                    throw new InvalidArgumentException('Tagged access resolvers must implement ' . AccessResolverInterface::class);
+                }
+                if (!$accessResolver->isObjectAccessGranted($accessResolverConfig, $object)) {
+                    return false;
+                }
+            }
+            return true;
         }
         return false;
     }
@@ -161,10 +170,14 @@ final class AuthorizationService
             throw new AccessDeniedException($this->translator->trans(self::ACCESS_DENIED_MESSAGE));
         }
         if (GrantType::LIMITED === $highestGrantType) {
-            $limitedAccessResolver = $this->retrieveAuthResourceAttributeArgumentByName($resourceClass,
-                'limitedResourceAccessResolver');
-            if ($limitedAccessResolver instanceof LimitedResourceAccessResolverInterface) {
-                $limitedAccessResolver->limitCollectionQuery($queryBuilder);
+            $accessResolverConfigList = $this->retrieveAccessResolverConfigList($resourceClass);
+            if ($accessResolverConfigList) {
+                foreach ($accessResolverConfigList as $accessResolverConfig) {
+                    $accessResolver = $this->accessResolverRepository->get($accessResolverConfig->getClassName());
+                    if ($accessResolver instanceof AccessResolverInterface) {
+                        $accessResolver->limitCollectionQuery($accessResolverConfig, $queryBuilder);
+                    }
+                }
             }
         }
     }
@@ -234,7 +247,6 @@ final class AuthorizationService
     }
 
     /**
-     * Only change GrantType in elevated order: NONE -> OWN -> ALL
      * @param GrantType $currentGrantType
      * @param GrantType $expectedGrantType
      * @return GrantType
@@ -264,138 +276,20 @@ final class AuthorizationService
     }
 
     /**
-     * @param BaseEntity|BaseResource $object
-     * @param string $property
-     * @return mixed
+     * @return AccessResolverConfiguration[]|null
      */
-    private function accessValue(BaseEntity|BaseResource $object, string $property): mixed
-    {
-        if ($object instanceof BaseEntity) {
-            $getter = $this->makeGetter($property);
-            return $object->{$getter}();
-        }
-        return $object->{$property};
-    }
-
-    /**
-     * @param string $property
-     * @return string
-     */
-    private function makeGetter(string $property): string
-    {
-        return 'get' . ucfirst($property);
-    }
-
-    /**
-     * Extract data from Resource class attribute AuthorizeResource
-     * @param class-string<BaseResource> $resourceClass
-     * @return string|null
-     */
-    private function getAuthorizeAttributeOwnerProperty(string $resourceClass): string|null
+    private function retrieveAccessResolverConfigList(string $resourceClass): ?array
     {
         try {
             $reflection = new ReflectionClass($resourceClass);
-            /** @phpstan-ignore-next-line */
-        } catch (ReflectionException $e) {
-            return null;
-        }
-        $authorizeAttribute = $reflection->getAttributes(AuthorizeResource::class)[0] ?? null;
-        return $authorizeAttribute?->getArguments()['ownerProperty'] ?? null;
-    }
-
-    /**
-     * Extract data from Resource class attribute AuthorizeResource
-     * @param class-string<BaseResource> $resourceClass
-     * @return string|null
-     */
-    private function getAuthorizeOwnerCallbackProperty(string $resourceClass): string|null
-    {
-        try {
-            $reflection = new ReflectionClass($resourceClass);
-            /** @phpstan-ignore-next-line */
-        } catch (ReflectionException $e) {
-            return null;
-        }
-        $authorizeAttribute = $reflection->getAttributes(AuthorizeResource::class)[0] ?? null;
-        return $authorizeAttribute?->getArguments()['ownerCallback'] ?? null;
-    }
-
-    private function applyConstraintsToQueryBuilder(string $resourceClass, QueryBuilder $queryBuilder): void
-    {
-        $ownerProperty = $this->getAuthorizeAttributeOwnerProperty($resourceClass);
-        if (!$ownerProperty) {
-            throw new RuntimeException('GrantType::OWN but $ownerProperty not set at ' . __CLASS__);
-        }
-        if ($this->isOwnerPropertyNested($ownerProperty)) {
-            $this->applyNestedPropertyConstraints($ownerProperty, $queryBuilder);
-        } else if ($this->isOwnerPropertyToManyRelation($ownerProperty)) {
-            $this->applyToManyPropertyConstraints($ownerProperty, $queryBuilder);
-        } else {
-            $this->applyRegularPropertyConstraints($ownerProperty, $queryBuilder);
-        }
-        $queryBuilder->setParameter('ownerValue', $this->security->getUser());
-    }
-
-    private function isOwnerPropertyNested(string $property): bool
-    {
-        return str_contains($property, '.');
-    }
-
-    private function isOwnerPropertyToManyRelation(string $ownerProperty): bool
-    {
-        return str_ends_with($ownerProperty, '[]');
-    }
-
-    /**
-     * Because owner property value is a nested property, we need to add joins to query builder
-     */
-    private function applyNestedPropertyConstraints(string $ownerProperty, QueryBuilder $queryBuilder): void
-    {
-        $rootAlias = $queryBuilder->getRootAliases()[0];
-        $joins = explode('.', $ownerProperty);
-        if (count($joins) > 2) {
-            throw new RuntimeException('More than two nested properties are currently not supported: ' . $ownerProperty);
-        }
-        foreach ($joins as $join) {
-            // check if join already exists
-            foreach ($queryBuilder->getDQLPart('join') as $joinPart) {
-                if ($joinPart[0]->getJoin() === "$rootAlias.$join") {
-                    continue 2;
-                }
-            }
-            $queryBuilder->join("$rootAlias.$join", $join);
-        }
-        $queryBuilder->andWhere("$ownerProperty = :ownerValue");
-    }
-
-    /**
-     * Because owner property value is a to-many association property, we need to add join to query builder
-     */
-    private function applyToManyPropertyConstraints(string $ownerProperty, QueryBuilder $queryBuilder): void
-    {
-        $rootAlias = $queryBuilder->getRootAliases()[0];
-        $collectionProperty = substr($ownerProperty, 0, -2);
-        $queryBuilder->join("$rootAlias.$collectionProperty", $collectionProperty);
-        $queryBuilder->andWhere("$collectionProperty = :ownerValue");
-    }
-
-    private function applyRegularPropertyConstraints(string $ownerProperty, QueryBuilder $queryBuilder): void
-    {
-        $rootAlias = $queryBuilder->getRootAliases()[0];
-        $queryBuilder->andWhere("$rootAlias.$ownerProperty = :ownerValue");
-    }
-
-    private function retrieveAuthResourceAttributeArgumentByName(string|object $classOrObject, string $argumentName)
-    {
-        try {
-            $reflection = new ReflectionClass($classOrObject);
         } catch (ReflectionException $e) {
             return null;
         }
         $resourceAuthAttribute = $reflection->getAttributes(AuthorizeResource::class)[0] ?? null;
         if ($resourceAuthAttribute) {
-            return $resourceAuthAttribute->getArguments()[$argumentName] ?? null;
+            return $resourceAuthAttribute->getArguments()['accessResolvers'] ?? null;
         }
         return null;
     }
+
 }
