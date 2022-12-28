@@ -17,8 +17,6 @@ abstract class BaseResource
 {
     public mixed $id = null;
 
-    public bool $isRestricted = false; // must set this property in resource class with correct Normalization group, if GrantType::OWN used on the resource
-
     private static EntityToResourceMapper $entityToResourceMapper;
 
     /**

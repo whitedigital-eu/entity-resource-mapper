@@ -94,8 +94,7 @@ Available operation types:
 
 Available grant types:
 - `GrantType::ALL` resource fully available  
-- `GrantType::GROUP` only resources owned by same group available.
-- `GrantType::OWN` only owned resource available (MUST also have valid group!)
+- `GrantType::LIMITED` resource is available with limitations
 - `GrantType::NONE` resource not available
 
 AuthorizationService Configurator must be implemented. 
@@ -156,14 +155,13 @@ $this->authorizationService->authorizeSingleObject($data, AuthorizationService::
 ```php
 $this->authorizationService->authorizeSingleObject($data, AuthorizationService::ITEM_DELETE); // This will throw AccessDeniedException if not authorized
 ```
-- In any Resource, if you want to limit output for non-OWN or non-GROUP properties, add attribute to the resource class:
+- In any Resource, if you have defined its grant as LIMITED, you must add attribute to BaseResource class, to define access resolver configurations for each of the resource classes
 ```php
-AuthorizeResource(ownerProperty: 'owner', groupProperty: 'department', visibleProperties: ['owner']),
+#[AuthorizeResource(accessResolvers: [
+    new AccessResolverConfiguration(className: OwnerPropertyAccessResolver::class, config: ['ownerPropertyPath' => 'supervisor']),
+])]
 ```
-- In any Resource, if you want to make it public (for any authenticated user), set publicProperty to bool column in table: 
-```php
-AuthorizeResource(ownerProperty: 'owner', groupProperty: 'department', visibleProperties: ['owner'], publicProperty: 'isPublic'),
-```
+
 ```
 Same class must also set following property with correct normalization group:
 ```php
