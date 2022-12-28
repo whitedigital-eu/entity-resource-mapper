@@ -19,8 +19,6 @@ use Symfony\Component\Serializer\Exception\ExceptionInterface;
 use WhiteDigital\EntityResourceMapper\Attribute\SkipCircularReferenceCheck;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
-use WhiteDigital\EntityResourceMapper\Security\Attribute\AuthorizeResource;
-use WhiteDigital\EntityResourceMapper\Security\AuthorizationService;
 
 class EntityToResourceMapper
 {
@@ -30,7 +28,6 @@ class EntityToResourceMapper
     public function __construct(
         private readonly ClassMapper $classMapper,
         private readonly ResourceMetadataCollectionFactoryInterface $resourceMetadataFactory,
-        private readonly AuthorizationService $authorizationService,
     ) {
         BaseResource::setEntityToResourceMapper($this);
     }
@@ -60,31 +57,9 @@ class EntityToResourceMapper
         $properties = $reflection->getProperties();
         $output = new $targetResourceClass();
 
-        // Skip normalization if user has no permissions on current entity
         $resourceReflection = new ReflectionClass($targetResourceClass);
-        $visibleProperties = [];
-        $normalizeForAuthorization = [];
-        if (!empty($authorize = $resourceReflection->getAttributes(AuthorizeResource::class))) {
-            if (!$this->authorizationService->authorizeSingleObject($object, AuthorizationService::ITEM_GET, false)) {
-                $visibleProperties = $authorize[0]->getArguments()['visibleProperties'] ?? [];
-                $this->setResourceProperty($output, 'id', $object->getId());
-                $this->setResourceProperty($output, 'isRestricted', true);
-                if (empty($visibleProperties)) {
-                    return $output;
-                }
-            }
-            // if AuthorizeResource includes nested properties (like email.document.owner), they need to be normalized for later use in authorizeSingleObject()
-            $this->splitNestedProperties($authorize[0]->getArguments()['ownerProperty'] ?? null, $normalizeForAuthorization);
-            $this->splitNestedProperties($authorize[0]->getArguments()['groupProperty'] ?? null, $normalizeForAuthorization);
-        }
-
         foreach ($properties as $property) {
             $propertyName = $property->getName();
-
-            // If authorization service limited access to the resource but some properties must remain visible
-            if (!empty($visibleProperties) && !in_array($propertyName, $visibleProperties, true)) {
-                continue;
-            }
 
             /** @phpstan-ignore-next-line */
             $propertyType = $property->getType()?->getName();
@@ -119,7 +94,6 @@ class EntityToResourceMapper
                 if (array_key_exists('groups', $context)
                     && !$this->haveCommonElements($propertyNormalizationGroup, $context['groups'])
                     && !$this->haveCommonElements($targetNormalizationGroups, $context['groups'])
-                    && !in_array($propertyName, $normalizeForAuthorization, true)
                 ) {
                     continue;
                 }
@@ -140,7 +114,6 @@ class EntityToResourceMapper
                 if (array_key_exists('groups', $context)
                     && !$this->haveCommonElements($propertyNormalizationGroup, $context['groups'])
                     && !$this->haveCommonElements($targetNormalizationGroups, $context['groups'])
-                    && !in_array($propertyName, $normalizeForAuthorization, true)
                 ) {
                     continue;
                 }
@@ -259,24 +232,6 @@ class EntityToResourceMapper
             $resource->{$propertyName}[] = $propertyValue;
         } else {
             $resource->{$propertyName} = $propertyValue;
-        }
-    }
-
-    /**
-     * Parse AuthorizeResource attributes and return all nested properties.
-     * For example, document.owner will return ['document', 'owner'].
-     *
-     * @param string[] $output
-     */
-    private function splitNestedProperties(?string $attributeValue, array &$output): void
-    {
-        if (null === $attributeValue) {
-            return;
-        }
-        foreach (explode('.', $attributeValue) as $node) {
-            if (!in_array($node, $output, true)) {
-                $output[] = $node;
-            }
         }
     }
 
