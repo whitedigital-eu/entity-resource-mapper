@@ -29,7 +29,8 @@ class OwnerPropertyAccessResolver implements AccessResolverInterface
     {
         $config = $accessResolverAttribute->getConfig();
         if (null === $config || !isset($config['ownerPropertyPath'])) {
-            return false;
+            throw new InvalidArgumentException(sprintf('Access resolver configuration for "%s" does not contain required "ownerPropertyPath" entry',
+                self::class));
         }
         $topElement = $object;
         $isCollection = false;
