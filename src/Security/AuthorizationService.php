@@ -287,7 +287,10 @@ final class AuthorizationService
         }
         $resourceAuthAttribute = $reflection->getAttributes(AuthorizeResource::class)[0] ?? null;
         if ($resourceAuthAttribute) {
-            return $resourceAuthAttribute->getArguments()['accessResolvers'] ?? null;
+            $attributeInstance = $resourceAuthAttribute->newInstance();
+            if ($attributeInstance instanceof AuthorizeResource) {
+                return $attributeInstance->getAccessResolvers();
+            }
         }
         return null;
     }

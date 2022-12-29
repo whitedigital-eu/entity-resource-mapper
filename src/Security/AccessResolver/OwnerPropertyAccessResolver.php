@@ -60,7 +60,8 @@ class OwnerPropertyAccessResolver implements AccessResolverInterface
     {
         $config = $accessResolverAttribute->getConfig();
         if (null === $config || !isset($config['ownerPropertyPath'])) {
-            return;
+            throw new InvalidArgumentException(sprintf('Access resolver configuration for "%s" does not contain required "ownerPropertyPath" entry',
+                self::class));
         }
         $ownerProperty = $config['ownerPropertyPath'];
         if ($this->isOwnerPropertyNested($ownerProperty)) {

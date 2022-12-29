@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace WhiteDigital\EntityResourceMapper\Security\Attribute;
 
-use Attribute;
 use InvalidArgumentException;
 use WhiteDigital\EntityResourceMapper\Security\Interface\AccessResolverInterface;
 
-#[Attribute(Attribute::TARGET_CLASS | Attribute::IS_REPEATABLE)]
 final class AccessResolverConfiguration
 {
     public function __construct(private readonly string $className, private readonly ?array $config = null)

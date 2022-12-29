@@ -22,4 +22,12 @@ final class AuthorizeResource
             }
         }
     }
+
+    /**
+     * @return AccessResolverConfiguration[]
+     */
+    public function getAccessResolvers(): array
+    {
+        return $this->accessResolvers;
+    }
 }
