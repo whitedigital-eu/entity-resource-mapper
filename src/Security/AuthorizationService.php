@@ -45,7 +45,7 @@ final class AuthorizationService
     public const ITEM_DELETE = 'item-delete';
     public const ALL = 'all'; // Includes all of the above
 
-    public const ACCESS_DENIED_MESSAGE = 'Access Denied.';
+    public const ACCESS_DENIED_MESSAGE = 'access_denied';
 
     /** @var array<class-string, array<string, mixed>> */
     private array $resources = [];
@@ -108,7 +108,7 @@ final class AuthorizationService
             $accessDecision = $this->isObjectAuthorizedForUser($resourceClass, $object);
         }
         if ($throwException && !$accessDecision) {
-            throw new AccessDeniedException($this->translator->trans(self::ACCESS_DENIED_MESSAGE));
+            throw new AccessDeniedException($this->translator->trans(id: self::ACCESS_DENIED_MESSAGE, domain: 'entityResourceMapper'));
         }
         return $accessDecision;
     }
@@ -167,7 +167,7 @@ final class AuthorizationService
             return;
         }
         if (GrantType::NONE === $highestGrantType) {
-            throw new AccessDeniedException($this->translator->trans(self::ACCESS_DENIED_MESSAGE));
+            throw new AccessDeniedException($this->translator->trans(id: self::ACCESS_DENIED_MESSAGE, domain: 'entityResourceMapper'));
         }
         if (GrantType::LIMITED === $highestGrantType) {
             $accessResolverConfigList = $this->retrieveAccessResolverConfigList($resourceClass);
@@ -229,7 +229,7 @@ final class AuthorizationService
 
         $user = $this->security->getUser();
         if (null === $user) {
-            throw new AccessDeniedException(self::ACCESS_DENIED_MESSAGE);
+            throw new AccessDeniedException($this->translator->trans(id: self::ACCESS_DENIED_MESSAGE, domain: 'entityResourceMapper'));
         }
         $availableRoles = $forceRoles ?: $user->getRoles();
 
