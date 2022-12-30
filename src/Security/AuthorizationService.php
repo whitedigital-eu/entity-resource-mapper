@@ -108,7 +108,7 @@ final class AuthorizationService
             $accessDecision = $this->isObjectAuthorizedForUser($resourceClass, $object);
         }
         if ($throwException && !$accessDecision) {
-            throw new AccessDeniedException($this->translator->trans(id: self::ACCESS_DENIED_MESSAGE, domain: 'entityResourceMapper'));
+            throw new AccessDeniedException($this->translator->trans(id: self::ACCESS_DENIED_MESSAGE, domain: 'EntityResourceMapper'));
         }
         return $accessDecision;
     }
@@ -149,25 +149,22 @@ final class AuthorizationService
 
     /**
      * @param class-string $resourceClass
-     * @param QueryBuilder $queryBuilder
-     * @param GrantType|null $forceGrantType
-     * @return void
      */
     public function limitGetCollection(
         string       $resourceClass,
         QueryBuilder $queryBuilder,
         ?GrantType   $forceGrantType = null
-    ): void
+    ): QueryBuilder
     {
         if (null !== $this->authorizationOverride && ($this->authorizationOverride)()) {
-            return;
+            return $queryBuilder;
         }
         $highestGrantType = $forceGrantType ?? $this->calculateFinalGrantType($resourceClass, self::COL_GET);
         if (GrantType::ALL === $highestGrantType) {
-            return;
+            return $queryBuilder;
         }
         if (GrantType::NONE === $highestGrantType) {
-            throw new AccessDeniedException($this->translator->trans(id: self::ACCESS_DENIED_MESSAGE, domain: 'entityResourceMapper'));
+            throw new AccessDeniedException($this->translator->trans(id: self::ACCESS_DENIED_MESSAGE, domain: 'EntityResourceMapper'));
         }
         if (GrantType::LIMITED === $highestGrantType) {
             $accessResolverConfigList = $this->retrieveAccessResolverConfigList($resourceClass);
@@ -180,6 +177,7 @@ final class AuthorizationService
                 }
             }
         }
+        return $queryBuilder;
     }
 
 
@@ -229,7 +227,7 @@ final class AuthorizationService
 
         $user = $this->security->getUser();
         if (null === $user) {
-            throw new AccessDeniedException($this->translator->trans(id: self::ACCESS_DENIED_MESSAGE, domain: 'entityResourceMapper'));
+            throw new AccessDeniedException($this->translator->trans(id: self::ACCESS_DENIED_MESSAGE, domain: 'EntityResourceMapper'));
         }
         $availableRoles = $forceRoles ?: $user->getRoles();
 

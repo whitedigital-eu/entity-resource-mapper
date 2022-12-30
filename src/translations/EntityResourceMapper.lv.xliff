@@ -4,7 +4,7 @@
     <body>
       <trans-unit id="access_denied">
         <source>access_denied</source>
-        <target>Piekļuve Liegta</target>
+        <target>Piekļuve liegta</target>
       </trans-unit>
     </body>
   </file>

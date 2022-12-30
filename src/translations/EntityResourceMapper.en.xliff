@@ -4,7 +4,7 @@
     <body>
       <trans-unit id="access_denied">
         <source>access_denied</source>
-        <target>Access Denied</target>
+        <target>Access denied</target>
       </trans-unit>
     </body>
   </file>
