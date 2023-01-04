@@ -7,7 +7,6 @@ namespace WhiteDigital\EntityResourceMapper\Security\Enum;
 enum GrantType: string
 {
     case ALL = 'ALL'; // Can access all records
-    case OWN = 'OWN'; // Can access only self owned records
-    case GROUP = 'GROUP'; // Can access only records in the same department
+    case LIMITED = 'LIMITED'; // Can access limited set of records (access resolver is required)
     case NONE = 'NONE'; // No access
 }
