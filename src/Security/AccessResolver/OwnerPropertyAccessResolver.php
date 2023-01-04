@@ -7,13 +7,10 @@ namespace WhiteDigital\EntityResourceMapper\Security\AccessResolver;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\QueryBuilder;
 use InvalidArgumentException;
-use ReflectionClass;
-use ReflectionException;
 use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
 use Symfony\Component\Security\Core\Security;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Security\Attribute\AccessResolverConfiguration;
-use WhiteDigital\EntityResourceMapper\Security\Attribute\AuthorizeResource;
 use WhiteDigital\EntityResourceMapper\Security\Interface\AccessResolverInterface;
 
 class OwnerPropertyAccessResolver implements AccessResolverInterface
@@ -27,17 +24,12 @@ class OwnerPropertyAccessResolver implements AccessResolverInterface
 
     public function isObjectAccessGranted(AccessResolverConfiguration $accessResolverAttribute, object $object): bool
     {
-        $config = $accessResolverAttribute->getConfig();
-        if (null === $config || !isset($config['ownerPropertyPath'])) {
-            throw new InvalidArgumentException(sprintf('Access resolver configuration for "%s" does not contain required "ownerPropertyPath" entry',
-                self::class));
-        }
+        $propertyPath = $this->retrieveOwnerPropertyPathFromConfig($accessResolverAttribute->getConfig());
         $topElement = $object;
         $isCollection = false;
-        $property = $config['ownerPropertyPath'];
-        foreach (explode('.', $property) as $node) {
+        foreach (explode('.', $propertyPath) as $node) {
             if (str_ends_with($node, '[]')  // Collection as NON-LAST item in property chain
-                && !str_ends_with($property, $node)) {
+                && !str_ends_with($propertyPath, $node)) {
                 throw new InvalidArgumentException('Collection is not supported as non-last element.');
             }
             if (str_ends_with($node, '[]')) {
@@ -49,7 +41,6 @@ class OwnerPropertyAccessResolver implements AccessResolverInterface
         if ($isCollection) {
             /** @var Collection<int, BaseEntity> $topElement */
             return $topElement->contains($this->security->getUser());
-            // TODO WHat if top element is BaseResource?
         }
         $isObject = is_object($topElement); // handle scalar or object
         $authorizedValueId = $this->propertyAccessor->getValue($this->security->getUser(), 'id');
@@ -59,83 +50,77 @@ class OwnerPropertyAccessResolver implements AccessResolverInterface
 
     public function limitCollectionQuery(AccessResolverConfiguration $accessResolverAttribute, QueryBuilder $queryBuilder): void
     {
-        $config = $accessResolverAttribute->getConfig();
-        if (null === $config || !isset($config['ownerPropertyPath'])) {
-            throw new InvalidArgumentException(sprintf('Access resolver configuration for "%s" does not contain required "ownerPropertyPath" entry',
-                self::class));
-        }
-        $ownerProperty = $config['ownerPropertyPath'];
-        if ($this->isOwnerPropertyNested($ownerProperty)) {
-            $this->applyNestedPropertyConstraints($ownerProperty, $queryBuilder);
-        } else if ($this->isOwnerPropertyToManyRelation($ownerProperty)) {
-            $this->applyToManyPropertyConstraints($ownerProperty, $queryBuilder);
+        $propertyPath = $this->retrieveOwnerPropertyPathFromConfig($accessResolverAttribute->getConfig());
+        if ($this->isOwnerPropertyNested($propertyPath)) {
+            $this->applyNestedPropertyConstraints($propertyPath, $queryBuilder);
         } else {
-            $this->applyRegularPropertyConstraints($ownerProperty, $queryBuilder);
+            $this->applyRegularPropertyConstraints($propertyPath, $queryBuilder);
         }
         $queryBuilder->setParameter('ownerValue', $this->security->getUser());
     }
 
-    private function isOwnerPropertyNested(string $property): bool
+    protected function isOwnerPropertyNested(string $property): bool
     {
         return str_contains($property, '.');
-    }
-
-    private function isOwnerPropertyToManyRelation(string $ownerProperty): bool
-    {
-        return str_ends_with($ownerProperty, '[]');
     }
 
     /**
      * Because owner property value is a nested property, we need to add joins to query builder
      */
-    private function applyNestedPropertyConstraints(string $ownerProperty, QueryBuilder $queryBuilder): void
+    protected function applyNestedPropertyConstraints(string $propertyPath, QueryBuilder $queryBuilder): void
     {
-        $rootAlias = $queryBuilder->getRootAliases()[0];
-        $joins = explode('.', $ownerProperty);
-        if (count($joins) > 2) {
-            throw new InvalidArgumentException('More than two nested properties are currently not supported: ' . $ownerProperty);
-        }
+        [$propertyName, $joins] = $this->validateAndCreateJoins($propertyPath);
+        $tableAlias = $queryBuilder->getRootAliases()[0];
         foreach ($joins as $join) {
             // check if join already exists
             foreach ($queryBuilder->getDQLPart('join') as $joinPart) {
-                if ($joinPart[0]->getJoin() === "$rootAlias.$join") {
+                if ($joinPart[0]->getJoin() === "$tableAlias.$join") {
                     continue 2;
                 }
             }
-            $queryBuilder->join("$rootAlias.$join", $join);
+            $queryBuilder->join("$tableAlias.$join", $join);
+            $tableAlias = $join;
         }
-        $queryBuilder->andWhere("$ownerProperty = :ownerValue");
+        $propertyPath = str_ends_with($propertyPath, '[]') ? $tableAlias : "$tableAlias.$propertyName";
+        $queryBuilder->andWhere("$propertyPath = :ownerValue");
     }
 
-    /**
-     * Because owner property value is a to-many association property, we need to add join to query builder
-     */
-    private function applyToManyPropertyConstraints(string $ownerProperty, QueryBuilder $queryBuilder): void
+    protected function validateAndCreateJoins(string $propertyPath): array
+    {
+        $propertyName = null;
+        $joins = explode('.', $propertyPath);
+        if (!str_ends_with($propertyPath, '[]')) {
+            $propertyName = array_pop($joins);
+        }
+        foreach ($joins as &$join) {
+            if (str_ends_with($join, '[]')) {
+                if (!str_ends_with($propertyPath, $join)) {
+                    throw new InvalidArgumentException('Collection is not supported as non-last element.');
+                }
+                $join = substr($join, 0, -2);
+            }
+        }
+        return [$propertyName, $joins];
+    }
+
+    protected function applyRegularPropertyConstraints(string $propertyPath, QueryBuilder $queryBuilder): void
     {
         $rootAlias = $queryBuilder->getRootAliases()[0];
-        $collectionProperty = substr($ownerProperty, 0, -2);
-        $queryBuilder->join("$rootAlias.$collectionProperty", $collectionProperty);
-        $queryBuilder->andWhere("$collectionProperty = :ownerValue");
+        if (str_ends_with($propertyPath, '[]')) { //owner property is to-many association
+            $propertyPath = substr($propertyPath, 0, -2);
+            $queryBuilder->join("$rootAlias.$propertyPath", $propertyPath);
+            $queryBuilder->andWhere("$propertyPath = :ownerValue");
+        } else {
+            $queryBuilder->andWhere("$rootAlias.$propertyPath = :ownerValue");
+        }
     }
 
-    private function applyRegularPropertyConstraints(string $ownerProperty, QueryBuilder $queryBuilder): void
+    protected function retrieveOwnerPropertyPathFromConfig(?array $config)
     {
-        $rootAlias = $queryBuilder->getRootAliases()[0];
-        $queryBuilder->andWhere("$rootAlias.$ownerProperty = :ownerValue");
-    }
-
-
-    private function retrieveAuthResourceAttributeArgumentByName(string $resourceClassname, string $argumentName)
-    {
-        try {
-            $reflection = new ReflectionClass($resourceClassname);
-        } catch (ReflectionException $e) {
-            return null;
+        if (!$config || !isset($config['ownerPropertyPath'])) {
+            throw new InvalidArgumentException(sprintf('Access resolver configuration for "%s" does not contain required "ownerPropertyPath" entry',
+                self::class));
         }
-        $resourceAuthAttribute = $reflection->getAttributes(AuthorizeResource::class)[0] ?? null;
-        if ($resourceAuthAttribute) {
-            return $resourceAuthAttribute->getArguments()[$argumentName] ?? null;
-        }
-        return null;
+        return $config['ownerPropertyPath'];
     }
 }
