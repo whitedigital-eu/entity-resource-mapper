@@ -5,8 +5,8 @@ declare(strict_types = 1);
 namespace WhiteDigital\EntityResourceMapper\MenuBuilder\Service;
 
 use RuntimeException;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
-use Symfony\Component\Security\Core\Security;
 use Symfony\Component\Security\Core\User\UserInterface;
 use WhiteDigital\EntityResourceMapper\Security\AuthorizationService;
 use WhiteDigital\EntityResourceMapper\Security\Enum\GrantType;

@@ -11,9 +11,14 @@
 
 ## Requirements
 
-PHP 8.1+
+PHP 8.1+  
+Symfony 6.2+
 
-Symfony 6.1+
+## Installation
+The recommended way to install is via Composer:
+```bash
+composer require whitedigital-eu/entity-resource-mapper-bundle
+```
 
 ## Configuration
 
