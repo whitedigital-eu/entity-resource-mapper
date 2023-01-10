@@ -23,7 +23,7 @@ use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 class EntityToResourceMapper
 {
     public const PARENT_CLASSES = 'parent_classes';
-    public const ROOT_ENTITY_RECEIVED = 'ROOT_ENTITY_RECEIVED';
+    public const LEVEL_CURRENT = 'LEVEL_CURRENT'; // used in circular refernce checks
 
     public function __construct(
         private readonly ClassMapper $classMapper,
@@ -46,8 +46,11 @@ class EntityToResourceMapper
      */
     public function map(BaseEntity $object, array $context = []): BaseResource
     {
-        $isRootEntity = $this->checkIfRootEntityReceived($context);
-
+        if (!array_key_exists(self::LEVEL_CURRENT, $context)) {
+            $context[self::LEVEL_CURRENT] = 0;
+        } else {
+            ++$context[self::LEVEL_CURRENT];
+        }
         $reflection = $this->loadReflection($object);
 
         $targetResourceClass = $this->classMapper->byEntity($reflection->getName());
@@ -97,7 +100,7 @@ class EntityToResourceMapper
                 ) {
                     continue;
                 }
-                if ($this->isCircularReference($isRootEntity, $targetClass, $context, $resourceReflection, $propertyName)) {
+                if ($this->isCircularReference($targetClass, $context, $resourceReflection, $propertyName)) {
                     continue;
                 }
                 foreach ($propertyValue->getValues() as $value) { // Doctrine lazy loading happens here
@@ -117,7 +120,7 @@ class EntityToResourceMapper
                 ) {
                     continue;
                 }
-                if ($this->isCircularReference($isRootEntity, $targetClass, $context, $resourceReflection, $propertyName)) {
+                if ($this->isCircularReference($targetClass, $context, $resourceReflection, $propertyName)) {
                     continue;
                 }
                 $this->setResourceProperty($output, $propertyName, $this->map($propertyValue, $context));
@@ -236,21 +239,6 @@ class EntityToResourceMapper
     }
 
     /**
-     * Check if root entity has been received, required for circular reference management.
-     *
-     * @param array<string, mixed> $context
-     */
-    private function checkIfRootEntityReceived(array &$context): bool
-    {
-        if (isset($context[self::ROOT_ENTITY_RECEIVED])) {
-            return false;
-        }
-        $this->addElementIfNotExists($context[self::ROOT_ENTITY_RECEIVED], true);
-
-        return true;
-    }
-
-    /**
      * Checks of reference to another api resource is circular.
      *
      * @param class-string         $targetClass
@@ -259,14 +247,19 @@ class EntityToResourceMapper
      * @throws ReflectionException
      */
     private function isCircularReference(
-        bool $isRootEntity,
         string $targetClass,
         array $context,
         ReflectionClass $resourceReflection,
         string $propertyName,
     ): bool {
+        $attributes = $resourceReflection->getProperty($propertyName)->getAttributes(SkipCircularReferenceCheck::class);
+        $maxLevels = 0;
+        if (!empty($attributes)) {
+            $maxLevels = $attributes[0]->getArguments()['maxLevels'];
+        }
+
         return in_array($targetClass, $context[self::PARENT_CLASSES], true)
-            && (!$isRootEntity || empty($resourceReflection->getProperty($propertyName)->getAttributes(SkipCircularReferenceCheck::class)));
+            && (($maxLevels > 0 && $context[self::LEVEL_CURRENT] > $maxLevels) || empty($attributes));
     }
 
     /**
