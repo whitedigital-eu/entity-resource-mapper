@@ -5,8 +5,11 @@ declare(strict_types = 1);
 namespace WhiteDigital\EntityResourceMapper\Mapper;
 
 use InvalidArgumentException;
+use ReflectionClass;
+use ReflectionException;
 use RuntimeException;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
+use WhiteDigital\EntityResourceMapper\Attribute\Mapping;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 
@@ -42,6 +45,10 @@ class ClassMapper
      */
     public function byResource(string $resourceClass, ?string $condition = null): string
     {
+        if (null !== $result = $this->mapFromAttribute($resourceClass, $condition)) {
+            return $result;
+        }
+
         if (empty($this->map)) {
             throw new RuntimeException(sprintf('%s not configured for Resource mapping. Please set up Configurator service or map classes manually.', __CLASS__));
         }
@@ -54,6 +61,10 @@ class ClassMapper
      */
     public function byEntity(string $entityClass, ?string $condition = null): string
     {
+        if (null !== $result = $this->mapFromAttribute($entityClass, $condition)) {
+            return $result;
+        }
+
         if (empty($this->map)) {
             throw new RuntimeException(sprintf('%s not configured for Entity mapping. Please set up Configurator service or map classes manually.', __CLASS__));
         }
@@ -92,5 +103,27 @@ class ClassMapper
             throw new RuntimeException("Mapping found but condition not matched for $className.");
         }
         throw new RuntimeException("Mapping for class $className not found.");
+    }
+
+    private function mapFromAttribute(string $class, ?string $condition = null): ?string
+    {
+        try {
+            $reflection = new ReflectionClass($class);
+            if ([] !== $attributes = $reflection->getAttributes(Mapping::class)) {
+                if (1 === count($attributes)) {
+                    return $attributes[0]->newInstance()->getMappedClass();
+                }
+
+                foreach ($attributes as $attribute) {
+                    if ($condition === ($new = $attribute->newInstance())->getCondition()) {
+                        return $new->getMappedClass();
+                    }
+                }
+            }
+        } catch (ReflectionException) {
+            return null;
+        }
+
+        return null;
     }
 }
