@@ -255,7 +255,7 @@ class EntityToResourceMapper
         $attributes = $resourceReflection->getProperty($propertyName)->getAttributes(SkipCircularReferenceCheck::class);
         $maxLevels = 0;
         if (!empty($attributes)) {
-            $maxLevels = $attributes[0]->getArguments()['maxLevels'];
+            $maxLevels = $attributes[0]->newInstance()->getMaxLevels();
         }
 
         return in_array($targetClass, $context[self::PARENT_CLASSES], true)
