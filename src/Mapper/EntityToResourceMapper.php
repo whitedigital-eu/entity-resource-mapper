@@ -259,7 +259,7 @@ class EntityToResourceMapper
         }
 
         return in_array($targetClass, $context[self::PARENT_CLASSES], true)
-            && (($maxLevels > 0 && $context[self::LEVEL_CURRENT] > $maxLevels) || empty($attributes));
+            && (($maxLevels > 0 && $context[self::LEVEL_CURRENT] >= $maxLevels) || empty($attributes));
     }
 
     /**
