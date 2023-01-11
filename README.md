@@ -48,6 +48,23 @@ and register it as configurator for ClassMapper service in your services.yaml fi
     WhiteDigital\EntityResourceMapper\Mapper\ClassMapperConfiguratorInterface:
       class: App\Service\ClassMapperConfigurator
 ```
+Additionally, you can use Mapping attribute to register mapping:
+```php
+use App\Dto\CustumerDto;
+use Doctrine\ORM\Mapping as ORM;
+use WhiteDigital\EntityResourceMapper\Attribute\Mapping;
+
+#[ORM\Entity]
+#[Mapping(CustumerDto::class)]
+class Customer ...
+```
+```php
+use WhiteDigital\EntityResourceMapper\Attribute\Mapping;
+use App\Entity\Customer;
+
+#[Mapping(Customer::class)]
+class CustumerDto ...
+```
 ### Doctrine ###
 
 Doctrine configuration should be updated with mappings:

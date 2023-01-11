@@ -5,9 +5,13 @@ declare(strict_types = 1);
 namespace WhiteDigital\EntityResourceMapper\Mapper;
 
 use InvalidArgumentException;
+use ReflectionClass;
+use ReflectionException;
 use RuntimeException;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
+use WhiteDigital\EntityResourceMapper\Attribute\Mapping;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
+use WhiteDigital\EntityResourceMapper\Exception\MappingNotFoundException;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 
 #[Autoconfigure(configurator: '@WhiteDigital\EntityResourceMapper\Mapper\ClassMapperConfiguratorInterface')]
@@ -42,11 +46,15 @@ class ClassMapper
      */
     public function byResource(string $resourceClass, ?string $condition = null): string
     {
-        if (empty($this->map)) {
+        try {
+            return $this->lookup($resourceClass, 'dto', 'entity', $condition);
+        } catch (MappingNotFoundException) {
+            if (null !== $result = $this->mapFromAttribute($resourceClass, $condition)) {
+                return $result;
+            }
+
             throw new RuntimeException(sprintf('%s not configured for Resource mapping. Please set up Configurator service or map classes manually.', __CLASS__));
         }
-
-        return $this->lookup($resourceClass, 'dto', 'entity', $condition);
     }
 
     /**
@@ -54,11 +62,15 @@ class ClassMapper
      */
     public function byEntity(string $entityClass, ?string $condition = null): string
     {
-        if (empty($this->map)) {
+        try {
+            return $this->lookup($entityClass, 'entity', 'dto', $condition);
+        } catch (MappingNotFoundException) {
+            if (null !== $result = $this->mapFromAttribute($entityClass, $condition)) {
+                return $result;
+            }
+
             throw new RuntimeException(sprintf('%s not configured for Entity mapping. Please set up Configurator service or map classes manually.', __CLASS__));
         }
-
-        return $this->lookup($entityClass, 'entity', 'dto', $condition);
     }
 
     private function validate(string $dtoClass, string $entityClass): void
@@ -91,6 +103,28 @@ class ClassMapper
         if (count($potentialMatches) > 1) {
             throw new RuntimeException("Mapping found but condition not matched for $className.");
         }
-        throw new RuntimeException("Mapping for class $className not found.");
+        throw new MappingNotFoundException("Mapping for class $className not found.");
+    }
+
+    private function mapFromAttribute(string $class, ?string $condition = null): ?string
+    {
+        try {
+            $reflection = new ReflectionClass($class);
+            if ([] !== $attributes = $reflection->getAttributes(Mapping::class)) {
+                if (1 === count($attributes)) {
+                    return $attributes[0]->newInstance()->getMappedClass();
+                }
+
+                foreach ($attributes as $attribute) {
+                    if ($condition === ($new = $attribute->newInstance())->getCondition()) {
+                        return $new->getMappedClass();
+                    }
+                }
+            }
+        } catch (ReflectionException) {
+            return null;
+        }
+
+        return null;
     }
 }
