@@ -49,6 +49,10 @@ class ResourceToEntityMapper
             }
             /** @phpstan-ignore-next-line */
             $propertyType = $property->getType()?->getName();
+            if ('self' === $propertyType) {
+                $propertyType = $object::class;
+            }
+
             try {
                 $propertyValue = $property->getValue($object);
             } catch (Error) {
