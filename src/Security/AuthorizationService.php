@@ -189,7 +189,7 @@ final class AuthorizationService
         }
         $availableRoles = $forceRoles ?: $user->getRoles();
 
-        $allowedRoles = array_merge($this->resources[$resourceClass][$operation],
+        $allowedRoles = array_merge($this->resources[$resourceClass][$operation] ?? [],
             $this->resources[$resourceClass][self::ALL]);
 
         // IF OPERATION DOESN'T EXIST OR ROLE DOESN'T EXIST IN RESOURCE return NONE
