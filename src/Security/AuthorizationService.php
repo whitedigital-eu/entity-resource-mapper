@@ -12,8 +12,10 @@ use ReflectionClass;
 use ReflectionException;
 use RuntimeException;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use Symfony\Component\DependencyInjection\Attribute\TaggedLocator;
+use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -24,6 +26,9 @@ use WhiteDigital\EntityResourceMapper\Security\Attribute\AccessResolverConfigura
 use WhiteDigital\EntityResourceMapper\Security\Attribute\AuthorizeResource;
 use WhiteDigital\EntityResourceMapper\Security\Enum\GrantType;
 use WhiteDigital\EntityResourceMapper\Security\Interface\AccessResolverInterface;
+
+use function array_keys;
+use function array_merge;
 
 /**
  * Data used in following places:
@@ -45,6 +50,14 @@ final class AuthorizationService
     public const ITEM_DELETE = 'item-delete';
     public const ALL = 'all'; // Includes all of the above
 
+    public const OPERATIONS = [
+        self::COL_GET,
+        self::COL_POST,
+        self::ITEM_GET,
+        self::ITEM_PATCH,
+        self::ITEM_DELETE,
+    ];
+
     public const ACCESS_DENIED_MESSAGE = 'access_denied';
 
     /** @var array<class-string, array<string, mixed>> */
@@ -55,12 +68,18 @@ final class AuthorizationService
      */
     private ?Closure $authorizationOverride = null;
 
+    private array $requiredRoles;
+
+    /** @noinspection PhpInapplicableAttributeTargetDeclarationInspection */
     public function __construct(
         private readonly Security $security,
         private readonly ClassMapper $classMapper,
         private readonly TranslatorInterface $translator,
-        #[TaggedLocator(tag: 'authorization.access_resolver')] private readonly ServiceLocator $accessResolverRepository,
+        #[TaggedLocator(tag: 'authorization.access_resolver')]
+        private readonly ServiceLocator $accessResolverRepository,
+        ParameterBagInterface $bag,
     ) {
+        $this->requiredRoles = $bag->get('whitedigital.entity_resource_mapper.roles');
     }
 
     /**
@@ -68,6 +87,12 @@ final class AuthorizationService
      */
     public function setResources(array $resources): void
     {
+        foreach ($resources as $class => $resource) {
+            foreach (self::OPERATIONS as $operation) {
+                $this->validateAllRolesSet(array_keys(array_merge($resource[$operation] ?? [], $resource[self::ALL])), $class, $operation);
+            }
+        }
+
         $this->resources = $resources;
     }
 
@@ -203,6 +228,13 @@ final class AuthorizationService
         return $highestGrantType;
     }
 
+    private function validateAllRolesSet(array $allowedRoles, string $class, string $operation): void
+    {
+        if (0 !== count($missing = array_diff($this->requiredRoles, $allowedRoles))) {
+            throw new InvalidConfigurationException(sprintf('Not all defined roles mapped for %s %s. Given: "%s", missing: "%s"', $class, $operation, implode(', ', $allowedRoles), implode(', ', $missing)));
+        }
+    }
+
     private function getAuthorizableObjectResourceClassname(BaseResource|BaseEntity $object): string
     {
         if ($object instanceof BaseEntity) {
@@ -268,7 +300,7 @@ final class AuthorizationService
     {
         try {
             $reflection = new ReflectionClass($resourceClass);
-        } catch (ReflectionException $e) {
+        } catch (ReflectionException) {
             return null;
         }
         $resourceAuthAttribute = $reflection->getAttributes(AuthorizeResource::class)[0] ?? null;
