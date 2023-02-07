@@ -12,7 +12,6 @@ use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Security\Attribute\AccessResolverConfiguration;
 use WhiteDigital\EntityResourceMapper\Security\Interface\AccessResolverInterface;
-use function dump;
 
 abstract class AbstractAccessResolver implements AccessResolverInterface
 {
