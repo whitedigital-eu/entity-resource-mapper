@@ -17,8 +17,7 @@ final class AuthorizeResource
     {
         foreach ($this->accessResolvers as $accessResolver) {
             if (!$accessResolver instanceof AccessResolverConfiguration) {
-                throw new InvalidArgumentException(sprintf('AuthorizeResource attribute accessResolvers can only be instances of "%s".',
-                    AccessResolverConfiguration::class));
+                throw new InvalidArgumentException(sprintf('AuthorizeResource attribute accessResolvers can only be instances of "%s".', AccessResolverConfiguration::class));
             }
         }
     }

@@ -1,6 +1,6 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace WhiteDigital\EntityResourceMapper\Security;
 
@@ -33,7 +33,7 @@ use WhiteDigital\EntityResourceMapper\Security\Interface\AccessResolverInterface
  * - 4. data persister - authorize collection POST
  * - 5. data persister - authorize item PUT/PATCH
  * - 6. data persister - authorize item DELETE
- * - 7. Check individual resources in EntityToResourceMapper
+ * - 7. Check individual resources in EntityToResourceMapper.
  */
 #[Autoconfigure(configurator: '@WhiteDigital\EntityResourceMapper\Security\AuthorizationServiceConfiguratorInterface')]
 final class AuthorizationService
@@ -56,17 +56,15 @@ final class AuthorizationService
     private ?Closure $authorizationOverride = null;
 
     public function __construct(
-        private readonly Security                                                              $security,
-        private readonly ClassMapper                                                           $classMapper,
-        private readonly TranslatorInterface                                                   $translator,
+        private readonly Security $security,
+        private readonly ClassMapper $classMapper,
+        private readonly TranslatorInterface $translator,
         #[TaggedLocator(tag: 'authorization.access_resolver')] private readonly ServiceLocator $accessResolverRepository,
-    )
-    {
+    ) {
     }
 
     /**
      * @param array<class-string, array{ all: array<string, GrantType>, collection-get: array<string, GrantType>, collection-post: array<string, GrantType>, item-get: array<string, GrantType>, item-patch: array<string, GrantType>, item-delete: array<string, GrantType>}> $resources
-     * @return void
      */
     public function setResources(array $resources): void
     {
@@ -81,20 +79,12 @@ final class AuthorizationService
         $this->authorizationOverride = $closure;
     }
 
-    /**
-     * @param BaseEntity|BaseResource $object
-     * @param string $operation
-     * @param bool $throwException
-     * @param GrantType|null $forcedGrantType
-     * @return bool
-     */
     public function authorizeSingleObject(
         BaseEntity|BaseResource $object,
-        string                  $operation,
-        bool                    $throwException = true,
-        GrantType               $forcedGrantType = null
-    ): bool
-    {
+        string $operation,
+        bool $throwException = true,
+        ?GrantType $forcedGrantType = null,
+    ): bool {
         if (null !== $this->authorizationOverride && ($this->authorizationOverride)()) {
             return true;
         }
@@ -110,52 +100,18 @@ final class AuthorizationService
         if ($throwException && !$accessDecision) {
             throw new AccessDeniedException($this->translator->trans(id: self::ACCESS_DENIED_MESSAGE, domain: 'EntityResourceMapper'));
         }
+
         return $accessDecision;
-    }
-
-    /**
-     * @param BaseResource|BaseEntity $object
-     * @return string
-     */
-    private function getAuthorizableObjectResourceClassname(BaseResource|BaseEntity $object): string
-    {
-        if ($object instanceof BaseEntity) {
-            $reflection = new ReflectionClass($object);
-            if ($object instanceof Proxy) { //get real object behind Doctrine proxy object
-                $reflection = $reflection->getParentClass();
-            }
-            return $this->classMapper->byEntity($reflection->getName());
-        }
-        return $object::class;
-    }
-
-    private function isObjectAuthorizedForUser(string $resourceClass, object $object): bool
-    {
-        $accessResolverConfigList = $this->retrieveAccessResolverConfigList($resourceClass);
-        if ($accessResolverConfigList) {
-            foreach ($accessResolverConfigList as $accessResolverConfig) {
-                $accessResolver = $this->accessResolverRepository->get($accessResolverConfig->getClassName());
-                if (!$accessResolver instanceof AccessResolverInterface) {
-                    throw new InvalidArgumentException('Tagged access resolvers must implement ' . AccessResolverInterface::class);
-                }
-                if (!$accessResolver->isObjectAccessGranted($accessResolverConfig, $object)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        return false;
     }
 
     /**
      * @param class-string $resourceClass
      */
     public function limitGetCollection(
-        string       $resourceClass,
+        string $resourceClass,
         QueryBuilder $queryBuilder,
-        ?GrantType   $forceGrantType = null
-    ): QueryBuilder
-    {
+        ?GrantType $forceGrantType = null,
+    ): QueryBuilder {
         if (null !== $this->authorizationOverride && ($this->authorizationOverride)()) {
             return $queryBuilder;
         }
@@ -177,14 +133,17 @@ final class AuthorizationService
                 }
             }
         }
+
         return $queryBuilder;
     }
 
-
     /**
      * Return allowed (All, Own, None) operations per resource.
+     *
      * @param string[]|null $forcedRoles
-     * @return array<int, array<string, array<string, GrantType>>>.
+     *
+     * @return array<int, array<string, array<string, GrantType>>>
+     *
      * @throws ReflectionException
      */
     public function currentResourceRoles(?array $forcedRoles = null): array
@@ -201,22 +160,21 @@ final class AuthorizationService
                 ],
             ];
         }
+
         return $output;
     }
 
     /**
      * Calculate the highest grant level based on Resource permissions for specific operation merged with ALL.
-     * @param class-string $resourceClass
-     * @param string $operation
+     *
+     * @param class-string  $resourceClass
      * @param string[]|null $forceRoles
-     * @return GrantType
      */
     public function calculateFinalGrantType(
         string $resourceClass,
         string $operation,
-        ?array $forceRoles = null
-    ): GrantType
-    {
+        ?array $forceRoles = null,
+    ): GrantType {
         if (empty($this->resources)) {
             return GrantType::ALL;
         }
@@ -234,21 +192,51 @@ final class AuthorizationService
         $allowedRoles = array_merge($this->resources[$resourceClass][$operation],
             $this->resources[$resourceClass][self::ALL]);
 
-        //IF OPERATION DOESN'T EXIST OR ROLE DOESN'T EXIST IN RESOURCE return NONE
+        // IF OPERATION DOESN'T EXIST OR ROLE DOESN'T EXIST IN RESOURCE return NONE
         $highestGrantType = GrantType::NONE;
         foreach ($allowedRoles as $role => $grantType) {
             if (in_array($role, $availableRoles, true)) {
                 $highestGrantType = $this->elevateGrantType($highestGrantType, $grantType);
             }
         }
+
         return $highestGrantType;
     }
 
-    /**
-     * @param GrantType $currentGrantType
-     * @param GrantType $expectedGrantType
-     * @return GrantType
-     */
+    private function getAuthorizableObjectResourceClassname(BaseResource|BaseEntity $object): string
+    {
+        if ($object instanceof BaseEntity) {
+            $reflection = new ReflectionClass($object);
+            if ($object instanceof Proxy) { // get real object behind Doctrine proxy object
+                $reflection = $reflection->getParentClass();
+            }
+
+            return $this->classMapper->byEntity($reflection->getName());
+        }
+
+        return $object::class;
+    }
+
+    private function isObjectAuthorizedForUser(string $resourceClass, object $object): bool
+    {
+        $accessResolverConfigList = $this->retrieveAccessResolverConfigList($resourceClass);
+        if ($accessResolverConfigList) {
+            foreach ($accessResolverConfigList as $accessResolverConfig) {
+                $accessResolver = $this->accessResolverRepository->get($accessResolverConfig->getClassName());
+                if (!$accessResolver instanceof AccessResolverInterface) {
+                    throw new InvalidArgumentException('Tagged access resolvers must implement ' . AccessResolverInterface::class);
+                }
+                if (!$accessResolver->isObjectAccessGranted($accessResolverConfig, $object)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
     private function elevateGrantType(GrantType $currentGrantType, GrantType $expectedGrantType): GrantType
     {
         $order = [
@@ -259,13 +247,13 @@ final class AuthorizationService
         if ($order[$expectedGrantType->value] > $order[$currentGrantType->value]) {
             return $expectedGrantType;
         }
+
         return $currentGrantType;
     }
 
     /**
-     * Extract class name from FQCN
-     * @param string $FQCN
-     * @return string
+     * Extract class name from FQCN.
+     *
      * @throws ReflectionException
      */
     private function extractClassName(string $FQCN): string
@@ -290,7 +278,7 @@ final class AuthorizationService
                 return $attributeInstance->getAccessResolvers();
             }
         }
+
         return null;
     }
-
 }

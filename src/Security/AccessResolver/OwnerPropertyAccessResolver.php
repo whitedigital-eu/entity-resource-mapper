@@ -1,6 +1,6 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace WhiteDigital\EntityResourceMapper\Security\AccessResolver;
 
@@ -16,10 +16,9 @@ use WhiteDigital\EntityResourceMapper\Security\Interface\AccessResolverInterface
 class OwnerPropertyAccessResolver implements AccessResolverInterface
 {
     public function __construct(
-        private readonly Security                  $security,
+        private readonly Security $security,
         private readonly PropertyAccessorInterface $propertyAccessor,
-    )
-    {
+    ) {
     }
 
     public function isObjectAccessGranted(AccessResolverConfiguration $accessResolverAttribute, object $object): bool
@@ -39,11 +38,12 @@ class OwnerPropertyAccessResolver implements AccessResolverInterface
             $topElement = $this->propertyAccessor->getValue($topElement, $node);
         }
         if ($isCollection) {
-            /** @var Collection<int, BaseEntity> $topElement */
+            /* @var Collection<int, BaseEntity> $topElement */
             return $topElement->contains($this->security->getUser());
         }
         $isObject = is_object($topElement); // handle scalar or object
         $authorizedValueId = $this->propertyAccessor->getValue($this->security->getUser(), 'id');
+
         return $isObject ? ($this->propertyAccessor->getValue($topElement, 'id') === $authorizedValueId)
             : ($topElement === $authorizedValueId);
     }
@@ -65,7 +65,7 @@ class OwnerPropertyAccessResolver implements AccessResolverInterface
     }
 
     /**
-     * Because owner property value is a nested property, we need to add joins to query builder
+     * Because owner property value is a nested property, we need to add joins to query builder.
      */
     protected function applyNestedPropertyConstraints(string $propertyPath, QueryBuilder $queryBuilder): void
     {
@@ -100,13 +100,14 @@ class OwnerPropertyAccessResolver implements AccessResolverInterface
                 $join = substr($join, 0, -2);
             }
         }
+
         return [$propertyName, $joins];
     }
 
     protected function applyRegularPropertyConstraints(string $propertyPath, QueryBuilder $queryBuilder): void
     {
         $rootAlias = $queryBuilder->getRootAliases()[0];
-        if (str_ends_with($propertyPath, '[]')) { //owner property is to-many association
+        if (str_ends_with($propertyPath, '[]')) { // owner property is to-many association
             $propertyPath = substr($propertyPath, 0, -2);
             $queryBuilder->join("$rootAlias.$propertyPath", $propertyPath);
             $queryBuilder->andWhere("$propertyPath = :ownerValue");
@@ -118,9 +119,9 @@ class OwnerPropertyAccessResolver implements AccessResolverInterface
     protected function retrieveOwnerPropertyPathFromConfig(?array $config)
     {
         if (!$config || !isset($config['ownerPropertyPath'])) {
-            throw new InvalidArgumentException(sprintf('Access resolver configuration for "%s" does not contain required "ownerPropertyPath" entry',
-                self::class));
+            throw new InvalidArgumentException(sprintf('Access resolver configuration for "%s" does not contain required "ownerPropertyPath" entry', self::class));
         }
+
         return $config['ownerPropertyPath'];
     }
 }

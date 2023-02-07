@@ -1,20 +1,21 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace WhiteDigital\Tests;
 
+use PHPUnit\Framework\TestCase;
+use RuntimeException;
+use WhiteDigital\EntityResourceMapper\Mapper\ClassMapper;
+use WhiteDigital\Tests\Fixtures\EntityClass;
+use WhiteDigital\Tests\Fixtures\EntityClass2;
 use WhiteDigital\Tests\Fixtures\ResourceClass;
 use WhiteDigital\Tests\Fixtures\ResourceClass2;
 use WhiteDigital\Tests\Fixtures\ResourceClass3;
-use WhiteDigital\Tests\Fixtures\EntityClass;
-use WhiteDigital\Tests\Fixtures\EntityClass2;
-use PHPUnit\Framework\TestCase;
-use WhiteDigital\EntityResourceMapper\Mapper\ClassMapper;
 
 class ClassMapperTest extends TestCase
 {
     public function testClassMapperWithoutConfig(): void
     {
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(RuntimeException::class);
         $classMapper = new ClassMapper();
         $classMapper->byResource('AnyClass');
     }
@@ -39,7 +40,7 @@ class ClassMapperTest extends TestCase
     {
         $classMapper = new ClassMapper();
         $classMapper->registerMapping(ResourceClass::class, EntityClass::class);
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(RuntimeException::class);
         $classMapper->byEntity('AnyClass');
     }
 

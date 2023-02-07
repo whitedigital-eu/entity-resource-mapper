@@ -178,6 +178,7 @@ class ResourceToEntityMapper
                 }
             }
         }
+
         return $object->{"$method$property"}($value);
     }
 
