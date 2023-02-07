@@ -16,10 +16,6 @@ use Doctrine\DBAL\Exception;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LoggerInterface;
-use ReflectionClass;
-use ReflectionException;
-use ReflectionNamedType;
-use RuntimeException;
 use Symfony\Component\Serializer\NameConverter\NameConverterInterface;
 use WhiteDigital\EntityResourceMapper\Mapper\AccessClassMapperTrait;
 
@@ -75,7 +71,6 @@ class ResourceDateFilter implements FilterInterface, DateFilterInterface
      * @return array<string, mixed>
      *
      * @throws Exception
-     * @throws ReflectionException
      */
     public function getDescription(string $resourceClass): array
     {
@@ -83,20 +78,8 @@ class ResourceDateFilter implements FilterInterface, DateFilterInterface
         if (null === $this->properties) {
             throw new Exception(sprintf('Please explicitly mark properties for %s class', self::class));
         }
-        $reflection = new ReflectionClass($resourceClass);
 
-        foreach ($this->properties as $property => $nullManagement) {
-            $propertyReflection = $reflection->getProperty($property);
-            $propertyType = $propertyReflection->getType();
-            if ($propertyType instanceof ReflectionNamedType) {
-                $typeName = $propertyType->getName();
-            } else {
-                throw new RuntimeException('Type without name encountered.');
-            }
-            if (!is_subclass_of($typeName, DateTimeInterface::class)) {
-                continue;
-            }
-
+        foreach ($this->properties as $property => $options) {
             $description += $this->getFilterDescription($property, self::PARAMETER_BEFORE);
             $description += $this->getFilterDescription($property, self::PARAMETER_STRICTLY_BEFORE);
             $description += $this->getFilterDescription($property, self::PARAMETER_AFTER);

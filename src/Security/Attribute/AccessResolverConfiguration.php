@@ -1,6 +1,6 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace WhiteDigital\EntityResourceMapper\Security\Attribute;
 
@@ -12,8 +12,7 @@ final class AccessResolverConfiguration
     public function __construct(private readonly string $className, private readonly ?array $config = null)
     {
         if (!is_a($this->className, AccessResolverInterface::class, true)) {
-            throw new InvalidArgumentException(sprintf('The access resolver class "%s" does not implement "%s".',
-                $this->className, AccessResolverInterface::class));
+            throw new InvalidArgumentException(sprintf('The access resolver class "%s" does not implement "%s".', $this->className, AccessResolverInterface::class));
         }
     }
 

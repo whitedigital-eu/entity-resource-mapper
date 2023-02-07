@@ -1,9 +1,10 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace WhiteDigital\Tests\Fixtures;
 
 use ApiPlatform\Core\Annotation\ApiFilter;
 use ApiPlatform\Core\Annotation\ApiResource;
+use DateTimeImmutable;
 use WhiteDigital\EntityResourceMapper\Filters\ResourceSearchFilter;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 
@@ -15,7 +16,7 @@ class ResourceClass extends BaseResource
     public mixed $id = null;
     public int $number;
     public string $text;
-    public ?\DateTimeImmutable $created = null;
+    public ?DateTimeImmutable $created = null;
     public ?ResourceClass2 $dtoClass2;
 
     /** @var ResourceClass2[] */

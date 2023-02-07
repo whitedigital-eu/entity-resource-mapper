@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace WhiteDigital\Tests;
 
@@ -16,8 +16,7 @@ class ResourceNormalizerTest extends TestCase
 {
     private ResourceToEntityMapper $resourceToEntityMapper;
 
-
-    public function setUp(): void
+    protected function setUp(): void
     {
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->method('getRepository')->willReturn(new RepositoryClass());
@@ -25,7 +24,7 @@ class ResourceNormalizerTest extends TestCase
         $classMapper = new ClassMapper();
         $this->resourceToEntityMapper = new ResourceToEntityMapper(
             $entityManager,
-            $classMapper
+            $classMapper,
         );
         $classMapper->registerMapping(ResourceClass::class, EntityClass::class);
         $classMapper->registerMapping(ResourceClass2::class, EntityClass2::class);
@@ -55,6 +54,6 @@ class ResourceNormalizerTest extends TestCase
         $this->assertEquals('testText1', $result->getText());
         $this->assertEquals('testText2', $result->getDtoClass2()->getText());
         $this->assertEquals(EntityClass2::class, get_class($result->getDtoClass2()));
-        $this->assertEquals(EntityClass::class, get_class($result));
+        $this->assertEquals(EntityClass::class, $result::class);
     }
 }

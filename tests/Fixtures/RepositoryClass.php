@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types = 1);
 
 namespace WhiteDigital\Tests\Fixtures;
 
@@ -24,6 +24,7 @@ class RepositoryClass
         $entity->setNumber(2);
         $entity->setText('testText1');
         $entity->setDtoClass2($ec2);
+
         return $entity;
     }
 
@@ -32,7 +33,7 @@ class RepositoryClass
         $entity = new EntityClass2();
         $entity->id = 1;
         $entity->text = 'testText2';
+
         return $entity;
     }
-
 }

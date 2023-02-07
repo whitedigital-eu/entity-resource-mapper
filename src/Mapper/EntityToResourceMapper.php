@@ -49,7 +49,7 @@ class EntityToResourceMapper
         if (!array_key_exists(self::LEVEL_CURRENT, $context)) {
             $context[self::LEVEL_CURRENT] = 0;
         } else {
-            ++$context[self::LEVEL_CURRENT];
+            $context[self::LEVEL_CURRENT]++;
         }
         $reflection = $this->loadReflection($object);
 
