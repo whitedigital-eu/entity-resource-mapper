@@ -13,6 +13,7 @@ class OwnerPropertyAccessResolver extends AbstractAccessResolver
         if (!$config || !isset($config['ownerPropertyPath'])) {
             throw new InvalidArgumentException(sprintf('Access resolver configuration for "%s" does not contain required "ownerPropertyPath" entry', self::class));
         }
+
         return $config['ownerPropertyPath'];
     }
 

@@ -1,6 +1,6 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace WhiteDigital\EntityResourceMapper\Security\AccessResolver;
 
@@ -11,13 +11,11 @@ class RoleBasedOwnerPropertyAccessResolver extends AbstractAccessResolver
     protected function retrievePropertyPathFromConfig(?array $config): string
     {
         if (!$config) {
-            throw new InvalidArgumentException(sprintf('Access resolver configuration for "%s" does not exist',
-                self::class));
+            throw new InvalidArgumentException(sprintf('Access resolver configuration for "%s" does not exist', self::class));
         }
         $roles = $this->security->getUser()?->getRoles();
         if (!$roles) {
-            throw new InvalidArgumentException(sprintf('Current user does not have roles to check for access resolver "%s"',
-                self::class));
+            throw new InvalidArgumentException(sprintf('Current user does not have roles to check for access resolver "%s"', self::class));
         }
         $propertyPath = null;
         foreach ($roles as $role) {
@@ -27,9 +25,9 @@ class RoleBasedOwnerPropertyAccessResolver extends AbstractAccessResolver
             }
         }
         if (!$propertyPath) {
-            throw new InvalidArgumentException(sprintf('None of user roles ("%s") have been configured for access resolver "%s"',
-                implode(', ', $roles), self::class));
+            throw new InvalidArgumentException(sprintf('None of user roles ("%s") have been configured for access resolver "%s"', implode(', ', $roles), self::class));
         }
+
         return $propertyPath;
     }
 

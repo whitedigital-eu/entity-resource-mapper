@@ -1,6 +1,6 @@
 <?php
 
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace WhiteDigital\EntityResourceMapper\Security\AccessResolver;
 
@@ -16,13 +16,10 @@ use WhiteDigital\EntityResourceMapper\Security\Interface\AccessResolverInterface
 abstract class AbstractAccessResolver implements AccessResolverInterface
 {
     public function __construct(
-        protected readonly Security                  $security,
+        protected readonly Security $security,
         protected readonly PropertyAccessorInterface $propertyAccessor,
-    )
-    {
+    ) {
     }
-
-    abstract protected function retrievePropertyPathFromConfig(?array $config);
 
     public function isObjectAccessGranted(AccessResolverConfiguration $accessResolverAttribute, object $object): bool
     {
@@ -41,16 +38,15 @@ abstract class AbstractAccessResolver implements AccessResolverInterface
             $topElement = $this->propertyAccessor->getValue($topElement, $node);
         }
         if ($isCollection) {
-            /** @var Collection<int, BaseEntity> $topElement */
+            /* @var Collection<int, BaseEntity> $topElement */
             return $topElement->contains($this->security->getUser());
         }
         $isObject = is_object($topElement); // handle scalar or object
         $authorizedValueId = $this->getAuthorizedValueId($topElement);
+
         return $isObject ? ($this->propertyAccessor->getValue($topElement, 'id') === $authorizedValueId)
             : ($topElement === $authorizedValueId);
     }
-
-    abstract protected function getAuthorizedValueId(mixed $topElement): null|int|object;
 
     public function limitCollectionQuery(AccessResolverConfiguration $accessResolverAttribute, QueryBuilder $queryBuilder): void
     {
@@ -63,6 +59,10 @@ abstract class AbstractAccessResolver implements AccessResolverInterface
         $queryBuilder->setParameter('ownerValue', $this->security->getUser());
     }
 
+    abstract protected function retrievePropertyPathFromConfig(?array $config);
+
+    abstract protected function getAuthorizedValueId(mixed $topElement): null|int|object;
+
     protected function isOwnerPropertyNested(string $property): bool
     {
         return str_contains($property, '.');
@@ -71,7 +71,7 @@ abstract class AbstractAccessResolver implements AccessResolverInterface
     protected function applyRegularPropertyConstraints(string $propertyPath, QueryBuilder $queryBuilder): void
     {
         $rootAlias = $queryBuilder->getRootAliases()[0];
-        if (str_ends_with($propertyPath, '[]')) { //owner property is to-many association
+        if (str_ends_with($propertyPath, '[]')) { // owner property is to-many association
             $propertyPath = substr($propertyPath, 0, -2);
             $queryBuilder->join("$rootAlias.$propertyPath", $propertyPath);
             $queryBuilder->andWhere("$propertyPath = :ownerValue");
@@ -113,6 +113,7 @@ abstract class AbstractAccessResolver implements AccessResolverInterface
                 $join = substr($join, 0, -2);
             }
         }
+
         return [$propertyName, $joins];
     }
 }
