@@ -192,6 +192,41 @@ Same class must also set following property with correct normalization group:
     public bool $isRestricted = false;
 ```
 
+### Explicit check if all roles are configured in authorization service
+
+If you want explicitly check if all project defined roles are fully configured in authorization service, you can configure this check by passing BackedEnum containing
+all needed roles to configuration.
+> Default value is `[]`, so without this configuration check will not be triggered.  
+```php
+<?php declare(strict_types = 1);
+
+use App\Constants\Enum\Roles;
+use Symfony\Config\EntityResourceMapperConfig;
+
+return static function (EntityResourceMapperConfig $config): void {
+    $config
+        ->rolesEnum(Roles::class);
+};
+```
+or
+```yaml
+entity_resource_mapper:
+    roles_enum: App\Constants\Enum\Roles
+```
+This enum must be backed and contain all needed roles with `ROLE_` prefix like this:
+```php
+<?php declare(strict_types = 1);
+
+namespace App\Constants\Enum;
+
+enum Roles: string
+{
+    case ROLE_USER = 'ROLE_USER';
+    case ROLE_ADMIN = 'ROLE_ADMIN'
+}
+```
+Now if you don't have ROLE_USER or ROLE_ADMIN grants configured for any resource operation you passed in `AuthorizationService->setServices()`, exception will be thrown.
+
 ### Menu Builder ### 
 
 This package ships with a menu builder functionality, that allows to define the overall menu structure and allows for
