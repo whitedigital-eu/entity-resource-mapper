@@ -13,10 +13,12 @@ class RoleBasedOwnerPropertyAccessResolver extends AbstractAccessResolver
         if (!$config) {
             throw new InvalidArgumentException(sprintf('Access resolver configuration for "%s" does not exist', self::class));
         }
+
         $roles = $this->security->getUser()?->getRoles();
         if (!$roles) {
             throw new InvalidArgumentException(sprintf('Current user does not have roles to check for access resolver "%s"', self::class));
         }
+
         $propertyPath = null;
         foreach ($roles as $role) {
             if (isset($config[$role])) {
@@ -24,6 +26,7 @@ class RoleBasedOwnerPropertyAccessResolver extends AbstractAccessResolver
                 break;
             }
         }
+
         if (!$propertyPath) {
             throw new InvalidArgumentException(sprintf('None of user roles ("%s") have been configured for access resolver "%s"', implode(', ', $roles), self::class));
         }

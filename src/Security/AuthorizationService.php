@@ -230,7 +230,7 @@ final class AuthorizationService
 
     private function validateAllRolesSet(array $allowedRoles, string $class, string $operation): void
     {
-        if (0 !== count($missing = array_diff($this->requiredRoles, $allowedRoles))) {
+        if ([] !== $missing = array_diff($this->requiredRoles, $allowedRoles)) {
             throw new InvalidConfigurationException(sprintf('Not all defined roles mapped for %s %s. Given: "%s", missing: "%s"', $class, $operation, implode(', ', $allowedRoles), implode(', ', $missing)));
         }
     }

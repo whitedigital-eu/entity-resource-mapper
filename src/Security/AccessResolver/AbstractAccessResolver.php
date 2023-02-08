@@ -31,16 +31,20 @@ abstract class AbstractAccessResolver implements AccessResolverInterface
                 && !str_ends_with($propertyPath, $node)) {
                 throw new InvalidArgumentException('Collection is not supported as non-last element.');
             }
+
             if (str_ends_with($node, '[]')) {
                 $node = substr($node, 0, -2);
                 $isCollection = true;
             }
+
             $topElement = $this->propertyAccessor->getValue($topElement, $node);
         }
+
         if ($isCollection) {
             /* @var Collection<int, BaseEntity> $topElement */
             return $topElement->contains($this->security->getUser());
         }
+
         $isObject = is_object($topElement); // handle scalar or object
         $authorizedValueId = $this->getAuthorizedValueId($topElement);
 
@@ -51,19 +55,20 @@ abstract class AbstractAccessResolver implements AccessResolverInterface
     public function limitCollectionQuery(AccessResolverConfiguration $accessResolverAttribute, QueryBuilder $queryBuilder): void
     {
         $propertyPath = $this->retrievePropertyPathFromConfig($accessResolverAttribute->getConfig());
-        if ($this->isOwnerPropertyNested($propertyPath)) {
+        if ($this->isPropertyNested($propertyPath)) {
             $this->applyNestedPropertyConstraints($propertyPath, $queryBuilder);
         } else {
             $this->applyRegularPropertyConstraints($propertyPath, $queryBuilder);
         }
-        $queryBuilder->setParameter('ownerValue', $this->security->getUser());
+
+        $queryBuilder->setParameter('property', $this->security->getUser());
     }
 
     abstract protected function retrievePropertyPathFromConfig(?array $config);
 
     abstract protected function getAuthorizedValueId(mixed $topElement): null|int|object;
 
-    protected function isOwnerPropertyNested(string $property): bool
+    protected function isPropertyNested(string $property): bool
     {
         return str_contains($property, '.');
     }
@@ -71,12 +76,12 @@ abstract class AbstractAccessResolver implements AccessResolverInterface
     protected function applyRegularPropertyConstraints(string $propertyPath, QueryBuilder $queryBuilder): void
     {
         $rootAlias = $queryBuilder->getRootAliases()[0];
-        if (str_ends_with($propertyPath, '[]')) { // owner property is to-many association
+        if (str_ends_with($propertyPath, '[]')) { // property is to-many association
             $propertyPath = substr($propertyPath, 0, -2);
             $queryBuilder->join("$rootAlias.$propertyPath", $propertyPath);
-            $queryBuilder->andWhere("$propertyPath = :ownerValue");
+            $queryBuilder->andWhere("$propertyPath = :property");
         } else {
-            $queryBuilder->andWhere("$rootAlias.$propertyPath = :ownerValue");
+            $queryBuilder->andWhere("$rootAlias.$propertyPath = :property");
         }
     }
 
@@ -95,7 +100,7 @@ abstract class AbstractAccessResolver implements AccessResolverInterface
             $tableAlias = $join;
         }
         $propertyPath = str_ends_with($propertyPath, '[]') ? $tableAlias : "$tableAlias.$propertyName";
-        $queryBuilder->andWhere("$propertyPath = :ownerValue");
+        $queryBuilder->andWhere("$propertyPath = :property");
     }
 
     protected function validateAndCreateJoins(string $propertyPath): array
@@ -105,6 +110,7 @@ abstract class AbstractAccessResolver implements AccessResolverInterface
         if (!str_ends_with($propertyPath, '[]')) {
             $propertyName = array_pop($joins);
         }
+
         foreach ($joins as &$join) {
             if (str_ends_with($join, '[]')) {
                 if (!str_ends_with($propertyPath, $join)) {
