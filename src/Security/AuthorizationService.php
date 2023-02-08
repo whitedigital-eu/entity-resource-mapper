@@ -27,9 +27,6 @@ use WhiteDigital\EntityResourceMapper\Security\Attribute\AuthorizeResource;
 use WhiteDigital\EntityResourceMapper\Security\Enum\GrantType;
 use WhiteDigital\EntityResourceMapper\Security\Interface\AccessResolverInterface;
 
-use function array_keys;
-use function array_merge;
-
 /**
  * Data used in following places:
  * - 1. Menu structure generator - outputs menu items available by current role
@@ -87,9 +84,11 @@ final class AuthorizationService
      */
     public function setResources(array $resources): void
     {
-        foreach ($resources as $class => $resource) {
-            foreach (self::OPERATIONS as $operation) {
-                $this->validateAllRolesSet(array_keys(array_merge($resource[$operation] ?? [], $resource[self::ALL])), $class, $operation);
+        if ([] !== $this->requiredRoles) {
+            foreach ($resources as $class => $resource) {
+                foreach (self::OPERATIONS as $operation) {
+                    $this->validateAllRolesSet(array_keys(array_merge($resource[$operation] ?? [], $resource[self::ALL])), $class, $operation);
+                }
             }
         }
 
@@ -230,8 +229,8 @@ final class AuthorizationService
 
     private function validateAllRolesSet(array $allowedRoles, string $class, string $operation): void
     {
-        if ([] !== $missing = array_diff($this->requiredRoles, $allowedRoles)) {
-            throw new InvalidConfigurationException(sprintf('Not all defined roles mapped for %s %s. Given: "%s", missing: "%s"', $class, $operation, implode(', ', $allowedRoles), implode(', ', $missing)));
+        if ([] !== ($missing = array_diff($this->requiredRoles, $allowedRoles))) {
+            throw new InvalidConfigurationException($this->translator->trans('not_all_roles_configured', ['CLASS' => $class, 'OPERATION' => $operation, 'GIVEN' => implode(', ', $allowedRoles), 'MISSING' => implode(', ', $missing)], 'EntityResourceMapper'));
         }
     }
 

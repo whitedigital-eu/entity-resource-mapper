@@ -1,1 +1,2 @@
 access_denied: 'Piekļuve liegta'
+not_all_roles_configured: 'Ne visas vajadzīgās lomas CLASS OPERATION ir nokonfigurētas. Konfigurētās: "GIVEN", trūkst: "MISSING"'

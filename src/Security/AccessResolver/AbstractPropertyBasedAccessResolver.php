@@ -13,7 +13,7 @@ use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Security\Attribute\AccessResolverConfiguration;
 use WhiteDigital\EntityResourceMapper\Security\Interface\AccessResolverInterface;
 
-abstract class AbstractAccessResolver implements AccessResolverInterface
+abstract class AbstractPropertyBasedAccessResolver implements AccessResolverInterface
 {
     public function __construct(
         protected readonly Security $security,

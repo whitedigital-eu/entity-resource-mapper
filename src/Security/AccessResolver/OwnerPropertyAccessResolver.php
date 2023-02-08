@@ -6,7 +6,7 @@ namespace WhiteDigital\EntityResourceMapper\Security\AccessResolver;
 
 use InvalidArgumentException;
 
-class OwnerPropertyAccessResolver extends AbstractAccessResolver
+class OwnerPropertyAccessResolver extends AbstractPropertyBasedAccessResolver
 {
     protected function retrievePropertyPathFromConfig(?array $config)
     {

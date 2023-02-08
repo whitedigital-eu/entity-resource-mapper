@@ -10,17 +10,9 @@ use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
-use WhiteDigital\EntityResourceMapper\Security\EmptyRoles;
-
-use function str_starts_with;
 
 class EntityResourceMapperBundle extends AbstractBundle
 {
-    public function getPath(): string
-    {
-        return dirname(__DIR__);
-    }
-
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
     {
         $container->import('../config/services.yaml');
@@ -34,8 +26,9 @@ class EntityResourceMapperBundle extends AbstractBundle
             } catch (ReflectionException $exception) {
                 throw new InvalidConfigurationException($exception->getMessage(), previous: $exception);
             }
+
             if (!$enum->implementsInterface(BackedEnum::class)) {
-                throw new InvalidConfigurationException('not_backed_enum');
+                throw new InvalidConfigurationException('"roles_enum" must be backed enum');
             }
 
             foreach ($enum->getConstants() as $constant) {
@@ -43,9 +36,9 @@ class EntityResourceMapperBundle extends AbstractBundle
                     $roles[] = $constant->value;
                 }
             }
-
-            $builder->setParameter('whitedigital.entity_resource_mapper.roles', $roles);
         }
+
+        $builder->setParameter('whitedigital.entity_resource_mapper.roles', $roles);
     }
 
     public function configure(DefinitionConfigurator $definition): void
@@ -53,7 +46,7 @@ class EntityResourceMapperBundle extends AbstractBundle
         $definition
             ->rootNode()
             ->children()
-                ->scalarNode('roles_enum')->defaultValue(EmptyRoles::class)->end()
+                ->scalarNode('roles_enum')->defaultNull()->end()
             ->end();
     }
 }

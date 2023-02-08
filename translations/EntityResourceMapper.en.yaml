@@ -1,1 +1,2 @@
 access_denied: 'Access denied'
+not_all_roles_configured: 'Not all defined roles mapped for CLASS OPERATION. Given: "GIVEN", missing: "MISSING"'
