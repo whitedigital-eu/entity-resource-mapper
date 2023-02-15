@@ -119,6 +119,9 @@ final class AuthorizationService
             return true;
         }
         if (GrantType::LIMITED === $highestGrantType) {
+            if (self::COL_POST === $operation) {
+                return true;
+            }
             $accessDecision = $this->isObjectAuthorizedForUser($resourceClass, $object);
         }
         if ($throwException && !$accessDecision) {
