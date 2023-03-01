@@ -7,26 +7,32 @@ namespace WhiteDigital\EntityResourceMapper\Mapper;
 use Countable;
 use DateTimeImmutable;
 use DateTimeInterface;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\PersistentCollection;
 use Error;
 use ReflectionClass;
 use ReflectionException;
 use RuntimeException;
+use Symfony\Component\PropertyAccess\PropertyAccess;
+use Symfony\Component\PropertyAccess\PropertyAccessor;
 use Symfony\Component\PropertyInfo\Extractor\PhpDocExtractor;
-use Symfony\Component\String\Inflector\EnglishInflector;
+use Symfony\Component\PropertyInfo\Type;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 
 class ResourceToEntityMapper
 {
     public const CONDITION_CONTEXT = 'condition_context';
+    private readonly PropertyAccessor $accessor;
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly ClassMapper $classMapper,
     ) {
         BaseEntity::setResourceToEntityMapper($this);
+        $this->accessor = PropertyAccess::createPropertyAccessor();
     }
 
     /**
@@ -66,32 +72,35 @@ class ResourceToEntityMapper
             }
 
             // For existing entities, lets not update anything, if value not changed
-            if (null !== $existingEntity && $this->compareValues($this->callMethod($output, 'get', $propertyName), $propertyValue)) {
-                continue; // No updated needed, skip it
+            $values = $this->accessor->getValue($output, $propertyName);
+            if (null !== $existingEntity && $this->compareValues($values, $propertyValue)) {
+                continue;
             }
 
             // 1A. Normalize relations for Array<BaseResource> properties
             if ('array' === $propertyType && $this->isRelationProperty($object, $propertyName)) { // array of entities
                 // First, remove all of existing collection values, then add new ones
-                foreach ($this->callMethod($output, 'get', $propertyName) as $valueToRemove) {
-                    $this->callMethod($output, 'remove', $propertyName, $valueToRemove);
-                }
+                $this->resetValue($output, $propertyName);
+
                 if (null === $propertyValue || 0 === count($propertyValue)) {
                     continue;
                 }
                 $targetClass = $this->classMapper->byResource(get_class($propertyValue[0]), $object::class); // assume equal data types in array
+                $i = -1;
                 foreach ($propertyValue as $value) {
+                    $i++;
                     if (isset($value->id)) { // entity already exists, lets fetch it from DB
                         $repository = $this->entityManager->getRepository($targetClass);
                         $entity = $repository->find($value->id);
                         if (null === $entity) {
                             throw new RuntimeException("$targetClass entity with id $value->id not found!");
                         }
-//                        $output[$propertyName]->add($entity);
-                        $this->callMethod($output, 'add', $propertyName, $entity);
+
+                        $this->accessor->setValue($output, $propertyName . "[$i]", $entity);
                         continue;
                     }
-                    $this->callMethod($output, 'add', $propertyName, $this->map($value, $context));
+
+                    $this->accessor->setValue($output, $propertyName . "[$i]", $this->map($value, $context));
                 }
                 continue;
             }
@@ -106,18 +115,19 @@ class ResourceToEntityMapper
                     if (null === $entity) {
                         throw new RuntimeException("$target_class entity with id $propertyValue->id not found!");
                     }
-                    $this->callMethod($output, 'set', $propertyName, $entity);
+
+                    $this->accessor->setValue($output, $propertyName, $entity);
                     continue;
                 }
                 if (null !== $propertyValue) { // Null property will be set in step 2.
-                    $this->callMethod($output, 'set', $propertyName, $this->map($propertyValue, $context));
+                    $this->accessor->setValue($output, $propertyName, $this->map($propertyValue, $context));
                     continue;
                 }
             }
 
             // 2. Finally, map output value to input
             if (null !== $existingEntity || null !== $propertyValue) { // for existing entities set any value, for new entities only non-null
-                $this->callMethod($output, 'set', $propertyName, $propertyValue);
+                $this->accessor->setValue($output, $propertyName, $propertyValue);
             }
         }
 
@@ -163,23 +173,20 @@ class ResourceToEntityMapper
         return false;
     }
 
-    /**
-     * Dynamically call entity->addProperty, removeProperty, setProperty, getProperty.
-     */
-    private function callMethod(BaseEntity $object, string $method, string $property, mixed $value = null): mixed
+    private function resetValue(BaseEntity $object, string $property): void
     {
-        $property = ucfirst($property);
-        foreach ((new EnglishInflector())->singularize($property) as $singularValue) {
-            try {
-                return $object->{"$method$singularValue"}($value);
-            } catch (Error $e) { // Catch only one type of errors
-                if (!str_contains($e->getMessage(), 'Call to undefined method')) {
-                    throw $e;
-                }
-            }
+        try {
+            $type = (new ReflectionClass($object))->getMethod($method = 'set' . ucfirst($property))->getParameters()[0]->getType()->getName();
+        } catch (ReflectionException) {
+            return;
         }
 
-        return $object->{"$method$property"}($value);
+        $value = match (true) {
+            Type::BUILTIN_TYPE_ARRAY === $type => [],
+            in_array($type, [Collection::class, ArrayCollection::class], true) => new ArrayCollection(),
+            default => null,
+        };
+        $object->{$method}($value);
     }
 
     private function compareValues(mixed $value1, mixed $value2): bool
