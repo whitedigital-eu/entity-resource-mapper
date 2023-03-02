@@ -65,33 +65,14 @@ use App\Entity\Customer;
 #[Mapping(Customer::class)]
 class CustumerDto ...
 ```
-### Doctrine ###
 
-Doctrine configuration should be updated with mappings:
-
-> **_TODO:_** Bundle should autoconfigure it
- 
-```yaml
-                mappings:
-                    App:
-                        is_bundle: false
-                        type: attribute
-                        dir: '%kernel.project_dir%/src/Entity'
-                        prefix: 'App\Entity'
-                        alias: App
-                    EntityResourceMapperBundle:
-                        is_bundle: true
-                        type: attribute
-                        prefix: 'WhiteDigital\EntityResourceMapper\Entity'
-                        alias: EntityResourceMapper
-```
 ### Filters ###
 Following filters are currently available (filters works as described in Api Platform docs, except for comments below): 
 - ResourceBooleanFilter
 - ResourceDateFilter _(throws exception, if value is not a valid DateTime object)_
 - ResourceEnumFilter _(same as SearchFilter but with explicit documentation)_
 - ResourceExistsFilter
-- ResourceJsonFilter _(new filter, TODO - register JSON functions...)_
+- ResourceJsonFilter _(new filter)_
 - ResourceNumericFilter
 - ResourceOrderFilter _(allows ordering by json values)_
 - ResourceOrderCustomFilter _(Order filter which will order by custom SELECT fields, which are not included in root alias nor joins)_
@@ -294,8 +275,6 @@ $ vendor/bin/phpunit
 ```
 
 ## TODO ##
-- Doctrine autoconfiguration
-- JSON functions registration
 - performance improvements
 - explicit joins on dataprovider
 - computed properties as querybuilder methods
