@@ -105,6 +105,13 @@ Following PostgreSQL functions are available in Doctrine and used in ResourceJso
 - JSON_ARRAY_LENGTH(%s) - PostgreSQL function json_array_length(%s)
 - JSON_CONTAINS(%s, %s) - PostgreSQL alias for %s::jsonb @> '%s'
 
+### DBAL Types ###
+This bundle comes with and autoconfigures following dbal types to use UTC time zone:
+- date
+- datetime
+- date_immutable
+- datetime_immutable
+
 ### Security ### 
 Available operation types:
 - `AuthorizationService::ALL` Includes all of the below

@@ -10,6 +10,8 @@ use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
+use WhiteDigital\EntityResourceMapper\DBAL\Types\UTCDateTimeImmutableType;
+use WhiteDigital\EntityResourceMapper\DBAL\Types\UTCDateTimeType;
 
 class EntityResourceMapperBundle extends AbstractBundle
 {
@@ -48,5 +50,19 @@ class EntityResourceMapperBundle extends AbstractBundle
             ->children()
                 ->scalarNode('roles_enum')->defaultNull()->end()
             ->end();
+    }
+
+    public function prependExtension(ContainerConfigurator $container, ContainerBuilder $builder): void
+    {
+        $container->extension('doctrine', [
+            'dbal' => [
+                'types' => [
+                    'date' => UTCDateTimeType::class,
+                    'datetime' => UTCDateTimeType::class,
+                    'date_immutable' => UTCDateTimeImmutableType::class,
+                    'datetime_immutable' => UTCDateTimeImmutableType::class,
+                ],
+            ],
+        ]);
     }
 }
