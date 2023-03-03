@@ -182,8 +182,9 @@ Same class must also set following property with correct normalization group:
 ### Property visibility check
 Sometimes you want to return all items in endpoint but want to limit properties returned based on user roles. To do so, you need to set `GrantType::LIMITED` to
 role and operation you want to have this visibility check and add `#[VisibleProperty]` attribute to resource where this check should be done. 
-`#[VisibleProerty]` attribute takes 2 parameters: `ownerProperty` and `properties`. `properties` is an array of all properties you want to `SHOW`. `ownerProperty` is
-the name of property which to check against current logged in user.
+`#[VisibleProperty]` attribute takes 2 parameters: `ownerProperty` and `properties`. `properties` is an array of all properties you want to `SHOW`. `ownerProperty` is
+the name of property which to check against current logged in user.  
+> **IMPORTANT**: If resource has GrantType::LIMITED to some role for get or get_collection operations, at least one access resolver or `#[VisibleProperty]` must be set!
 
 ### Explicit check if all roles are configured in authorization service
 
