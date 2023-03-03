@@ -13,16 +13,16 @@ class EntityClass extends BaseEntity
     public ?Collection $children;
 
     protected ?int $id = null;
-    protected int $number;
-    protected string $text;
-    protected ?EntityClass2 $dtoClass2;
+    protected ?int $number = null;
+    protected ?string $text = null;
+    protected ?EntityClass2 $dtoClass2 = null;
 
     public function __construct()
     {
         $this->children = new ArrayCollection();
     }
 
-    public function getNumber(): int
+    public function getNumber(): ?int
     {
         return $this->number;
     }
@@ -32,7 +32,7 @@ class EntityClass extends BaseEntity
         $this->number = $number;
     }
 
-    public function getText(): string
+    public function getText(): ?string
     {
         return $this->text;
     }
@@ -60,6 +60,11 @@ class EntityClass extends BaseEntity
     public function addChildren(?EntityClass2 $children): void
     {
         $this->children[] = $children;
+    }
+
+    public function removeChildren(?EntityClass2 $children): void
+    {
+        $this->children = new ArrayCollection(array_diff($this->children->toArray(), [$children]));
     }
 
     public function getId(): ?int

@@ -8,12 +8,12 @@ use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 class EntityClass2 extends BaseEntity
 {
     public ?int $id = null;
-    public string $text;
+    public ?string $text = null;
 
     #[ORM\ManyToOne(targetEntity: EntityClass::class, inversedBy: 'children')]
-    public ?EntityClass $parent;
+    public ?EntityClass $parent = null;
 
-    public function getText(): string
+    public function getText(): ?string
     {
         return $this->text;
     }

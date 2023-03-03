@@ -56,7 +56,7 @@
         "phpdocumentor/reflection-docblock": "*",
         "phpunit/phpunit": "9.*",
         "symfony/test-pack": "dev-main",
-        "whitedigital-eu/config-pack": "^1.1"
+        "whitedigital-eu/config-pack": "^2"
     },
     "extra": {
         "branch-alias": {
