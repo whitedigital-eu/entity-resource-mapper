@@ -24,6 +24,7 @@ use WhiteDigital\EntityResourceMapper\Mapper\ClassMapper;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 use WhiteDigital\EntityResourceMapper\Security\Attribute\AccessResolverConfiguration;
 use WhiteDigital\EntityResourceMapper\Security\Attribute\AuthorizeResource;
+use WhiteDigital\EntityResourceMapper\Security\Attribute\VisibleProperty;
 use WhiteDigital\EntityResourceMapper\Security\Enum\GrantType;
 use WhiteDigital\EntityResourceMapper\Security\Interface\AccessResolverInterface;
 
@@ -159,6 +160,8 @@ final class AuthorizationService
                     }
                 }
             }
+
+            $this->throwIfNoVisibilityAttributeSet($resourceClass);
         }
 
         return $queryBuilder;
@@ -268,7 +271,20 @@ final class AuthorizationService
             return true;
         }
 
+        $this->throwIfNoVisibilityAttributeSet($resourceClass);
+
         return false;
+    }
+
+    private function throwIfNoVisibilityAttributeSet(string $resourceClass): void
+    {
+        try {
+            $reflection = new ReflectionClass($resourceClass);
+            if ([] === $reflection->getAttributes(VisibleProperty::class)) {
+                throw new InvalidConfigurationException(sprintf('For GrantType::%s, at least one %s or %s attribute must be set', GrantType::LIMITED->value, AuthorizeResource::class, VisibleProperty::class));
+            }
+        } catch (ReflectionException) {
+        }
     }
 
     private function elevateGrantType(GrantType $currentGrantType, GrantType $expectedGrantType): GrantType

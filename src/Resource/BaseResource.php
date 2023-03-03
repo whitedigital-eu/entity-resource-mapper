@@ -17,6 +17,8 @@ abstract class BaseResource
 {
     public mixed $id = null;
 
+    public bool $isRestricted = false;
+
     private static EntityToResourceMapper $entityToResourceMapper;
 
     /**

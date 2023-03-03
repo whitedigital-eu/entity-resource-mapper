@@ -13,21 +13,29 @@ use Error;
 use ReflectionClass;
 use ReflectionException;
 use RuntimeException;
+use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Serializer\Annotation\Ignore;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
 use WhiteDigital\EntityResourceMapper\Attribute\SkipCircularReferenceCheck;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
+use WhiteDigital\EntityResourceMapper\Security\Attribute\VisibleProperty;
+use WhiteDigital\EntityResourceMapper\Security\AuthorizationService;
 
 class EntityToResourceMapper
 {
     public const PARENT_CLASSES = 'parent_classes';
     public const LEVEL_CURRENT = 'LEVEL_CURRENT'; // used in circular refernce checks
 
+    private ?bool $isOwner = null;
+
     public function __construct(
         private readonly ClassMapper $classMapper,
         private readonly ResourceMetadataCollectionFactoryInterface $resourceMetadataFactory,
+        private readonly AuthorizationService $authorizationService,
+        private readonly Security $security,
     ) {
         BaseResource::setEntityToResourceMapper($this);
     }
@@ -61,8 +69,31 @@ class EntityToResourceMapper
         $output = new $targetResourceClass();
 
         $resourceReflection = new ReflectionClass($targetResourceClass);
+
+        $visibleProperties = [];
+        $normalizeForAuthorization = [];
+        if (!empty($authorize = $resourceReflection->getAttributes(VisibleProperty::class))) {
+            $ownerProperty = $authorize[0]->getArguments()['ownerProperty'];
+            if (!$this->isOwner($object, $ownerProperty)) {
+                if (!$this->authorizationService->authorizeSingleObject($object, AuthorizationService::ITEM_GET, false)) {
+                    $visibleProperties = $authorize[0]->getArguments()['properties'] ?? [];
+                    $this->setResourceProperty($output, 'id', $object->getId());
+                    $this->setResourceProperty($output, 'isRestricted', true);
+                    if (empty($visibleProperties)) {
+                        return $output;
+                    }
+                }
+                // if AuthorizeResource includes nested properties (like email.document.owner), they need to be normalized for later use in authorizeSingleObject()
+                $this->splitNestedProperties($ownerProperty ?? null, $normalizeForAuthorization);
+            }
+        }
+
         foreach ($properties as $property) {
             $propertyName = $property->getName();
+
+            if (!empty($visibleProperties) && !in_array($propertyName, $visibleProperties, true) && false === $this->isOwner) {
+                continue;
+            }
 
             /** @phpstan-ignore-next-line */
             $propertyType = $property->getType()?->getName();
@@ -97,6 +128,7 @@ class EntityToResourceMapper
                 if (array_key_exists('groups', $context)
                     && !$this->haveCommonElements($propertyNormalizationGroup, $context['groups'])
                     && !$this->haveCommonElements($targetNormalizationGroups, $context['groups'])
+                    && !in_array($propertyName, $normalizeForAuthorization, true)
                 ) {
                     continue;
                 }
@@ -117,6 +149,7 @@ class EntityToResourceMapper
                 if (array_key_exists('groups', $context)
                     && !$this->haveCommonElements($propertyNormalizationGroup, $context['groups'])
                     && !$this->haveCommonElements($targetNormalizationGroups, $context['groups'])
+                    && !in_array($propertyName, $normalizeForAuthorization, true)
                 ) {
                     continue;
                 }
@@ -132,6 +165,28 @@ class EntityToResourceMapper
         }
 
         return $output;
+    }
+
+    protected function isPropertyNested(string $property): bool
+    {
+        return str_contains($property, '.');
+    }
+
+    private function isOwner(BaseEntity $object, string $ownerProperty): bool
+    {
+        $user = $this->security->getUser();
+        if ($this->isPropertyNested($ownerProperty)) {
+            [$ownerObject, $ownerProperty, ] = explode('.', $ownerProperty, 2);
+
+            return $this->isOwner = $object->{$this->getter($ownerObject)}()->{$this->getter($ownerProperty)}() === $user->{$this->getter($ownerProperty)}();
+        }
+
+        $property = $object->{$this->getter($ownerProperty)}();
+        if (!$property instanceof UserInterface) {
+            return $this->isOwner = $user->{$this->getter($ownerProperty)}() === $property;
+        }
+
+        return $this->isOwner = $property === $user;
     }
 
     /**
@@ -276,5 +331,22 @@ class EntityToResourceMapper
         }
 
         return [];
+    }
+
+    private function splitNestedProperties(?string $attributeValue, array &$output): void
+    {
+        if (null === $attributeValue) {
+            return;
+        }
+        foreach (explode('.', $attributeValue) as $node) {
+            if (!in_array($node, $output, true)) {
+                $output[] = $node;
+            }
+        }
+    }
+
+    private function getter(string $variable): string
+    {
+        return sprintf('get%s', ucfirst($variable));
     }
 }
