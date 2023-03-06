@@ -21,7 +21,7 @@ class EntityResourceMapperBundle extends AbstractBundle
 {
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
     {
-        $container->import('../config/services.yaml');
+        $container->import('../config/services.php');
 
         $enumClass = $config['roles_enum'] ?? null;
 
@@ -44,6 +44,14 @@ class EntityResourceMapperBundle extends AbstractBundle
             }
         }
 
+        foreach (self::makeOneDimension(['whitedigital.entity_resource_mapper' => $config], onlyLast: true) as $key => $value) {
+            $builder->setParameter($key, $value);
+        }
+
+        if([] === $builder->getParameterBag()->get('whitedigital.entity_resource_mapper.maker.groups')){
+            $builder->setParameter('whitedigital.entity_resource_mapper.maker.groups', ['item', 'read', 'patch', 'write', ]);
+        }
+
         $builder->setParameter('whitedigital.entity_resource_mapper.roles', $roles);
     }
 
@@ -54,12 +62,39 @@ class EntityResourceMapperBundle extends AbstractBundle
             ->children()
                 ->scalarNode('roles_enum')->defaultNull()->end()
                 ->scalarNode('entity_manager')->defaultValue('default')->end()
+                ->arrayNode('maker')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->arrayNode('namespaces')
+                            ->addDefaultsIfNotSet()
+                            ->children()
+                                ->scalarNode('api_resource')->defaultValue('ApiResource')->end()
+                                ->scalarNode('class_map_configurator')->defaultValue('Service\\Configurator')->end()
+                                ->scalarNode('data_processor')->defaultValue('DataProcessor')->end()
+                                ->scalarNode('data_provider')->defaultValue('DataProvider')->end()
+                                ->scalarNode('entity')->defaultValue('Entity')->end()
+                                ->scalarNode('root')->defaultValue('App')->end()
+                            ->end()
+                        ->end()
+                        ->arrayNode('defaults')
+                            ->addDefaultsIfNotSet()
+                            ->children()
+                                ->scalarNode('api_resource_suffix')->defaultValue('Resource')->end()
+                                ->scalarNode('role_separator')->defaultValue(':')->end()
+                                ->scalarNode('space')->defaultValue('_')->end()
+                            ->end()
+                        ->end()
+                        ->arrayNode('groups')
+                            ->scalarPrototype()->end()
+                        ->end()
+                    ->end()
+                ->end()
             ->end();
     }
 
     public function prependExtension(ContainerConfigurator $container, ContainerBuilder $builder): void
     {
-        $mapper = array_merge_recursive(...$builder->getExtensionConfig('entity_resource_mapper') ?? []);
+        $mapper = array_merge_recursive(...$builder->getExtensionConfig('entity_resource_mapper'));
         $mappings['EntityResourceMapper'] = [
             'type' => 'attribute',
             'dir' => __DIR__ . '/Entity',
@@ -98,5 +133,35 @@ class EntityResourceMapperBundle extends AbstractBundle
                 ],
             ],
         ]);
+    }
+
+    private static function isAssociative(mixed $array): bool
+    {
+        if (!is_array(value: $array) || [] === $array) {
+            return false;
+        }
+
+        return !array_is_list(array: $array);
+    }
+
+    public static function makeOneDimension(array $array, string $base = '', string $separator = '.', bool $onlyLast = false, int $depth = 0, int $maxDepth = PHP_INT_MAX, array $result = []): array
+    {
+        if ($depth <= $maxDepth) {
+            foreach ($array as $key => $value) {
+                $key = ltrim(string: $base . '.' . $key, characters: '.');
+
+                if (self::isAssociative(array: $value)) {
+                    $result = self::makeOneDimension(array: $value, base: $key, separator: $separator, onlyLast: $onlyLast, depth: $depth + 1, maxDepth: $maxDepth, result: $result);
+
+                    if ($onlyLast) {
+                        continue;
+                    }
+                }
+
+                $result[$key] = $value;
+            }
+        }
+
+        return $result;
     }
 }

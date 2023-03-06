@@ -273,6 +273,33 @@ class SomeClass
 }
 ```
 
+### Extended api resource
+Other `whitedigital-eu` packages may come with api resources that with some configuration may not be suited for
+straight away usage in a project. This is why `ExtendedApiResource` is useful to override part of options defined
+in default attributes.
+
+For example, take a look at `WhiteDigital\Audit\ApiResource\AuditResource` class. It defines api resource
+with `routePrefix: /wd/as` which means that iri generated for it will be `/api/wd/as/audits`. If you want iri
+to be `/api/audits`, you have to do the following:
+1. Create new class that extends resource you want to override
+2. Add `ExtendedApiResouce` attribute insted of `ApiResource` attribute
+3. Pass only those options that you want to override, others will be taken from resource you are extending
+```php
+namespace App\ApiResource;
+
+use WhiteDigital\EntityResourceMapper\Attribute\ExtendedApiResource;
+
+#[ExtendedApiResource(routePrefix: '')]
+class AuditResource extends WhiteDigital\Audit\ApiResource\AuditResource
+{
+}
+```
+`ExtendedApiResouce` attribute checks which resource you are extending and overrides options given in extension,
+keeping other options same as in parent resource.
+
+> **IMPORTANT**: You need to disable bundled resource in configuration, otherwise you will have 2 instances of audit
+> resource: one with `/api/audits` iri and one with `/api/wd/as/audits` iri.
+
 ## Tests
 
 Run tests by:
