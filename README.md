@@ -273,14 +273,20 @@ class SomeClass
 }
 ```
 
+### Base provider and processor
+In most cases way how to read or write data to database is the same, so this package provides `AbstractDataProcessor` 
+and `AbstractDataProvider` that implements base logic for api platform.
+Maker part of this package uses these clases for generation as well. Using these abstractions will take away need to
+duplicate code for each entity/resource. As these are abstractions, you can always override any function of them when
+needed.
+
 ### Extended api resource
 Other `whitedigital-eu` packages may come with api resources that with some configuration may not be suited for
 straight away usage in a project. This is why `ExtendedApiResource` is useful to override part of options defined
 in default attributes.
 
-For example, take a look at `WhiteDigital\Audit\ApiResource\AuditResource` class. It defines api resource
-with `routePrefix: /wd/as` which means that iri generated for it will be `/api/wd/as/audits`. If you want iri
-to be `/api/audits`, you have to do the following:
+For example, take a look at `WhiteDigital\Audit\ApiResource\AuditResource` class. It defines api resource. 
+If you want iri to be `/api/vendor/audits`, you have to do the following:
 1. Create new class that extends resource you want to override
 2. Add `ExtendedApiResouce` attribute insted of `ApiResource` attribute
 3. Pass only those options that you want to override, others will be taken from resource you are extending
@@ -289,7 +295,7 @@ namespace App\ApiResource;
 
 use WhiteDigital\EntityResourceMapper\Attribute\ExtendedApiResource;
 
-#[ExtendedApiResource(routePrefix: '')]
+#[ExtendedApiResource(routePrefix: '/vendor')]
 class AuditResource extends WhiteDigital\Audit\ApiResource\AuditResource
 {
 }
@@ -297,8 +303,57 @@ class AuditResource extends WhiteDigital\Audit\ApiResource\AuditResource
 `ExtendedApiResouce` attribute checks which resource you are extending and overrides options given in extension,
 keeping other options same as in parent resource.
 
-> **IMPORTANT**: You need to disable bundled resource in configuration, otherwise you will have 2 instances of audit
-> resource: one with `/api/audits` iri and one with `/api/wd/as/audits` iri.
+> **IMPORTANT**: You need to disable bundled resource using api_platform.openapi.factory decorator, otherwise you will have 2 instances of audit
+> resource: one with `/api/audits` iri and one with `/api/vendor/audits` iri.
+
+### ApiResource maker
+Default configuration options comes based on `api-platform`|`symfony` recommendations but you can override them like this (default values shown):
+```yaml
+api_resource:
+    namespaces:
+        api_resource: ApiResource
+        class_map_configurator: Service\\Configurator # required by whitedigital-eu/entity-resource-mapper-bundle
+        data_processor: DataProcessor
+        data_provider: DataProvider
+        entity: Entity
+        root: App
+    defaults:
+        api_resource_suffix: Resource
+        role_separator: ':'
+        space: '_'
+```
+```php
+use Symfony\Config\EntityResourceMapperConfig;
+
+return static function (EntityResourceMapperConfig $config): void {
+    $namespaces = $config
+        ->namespaces();
+
+    $namespaces
+        ->apiResource('ApiResource')
+        ->classMapConfigurator('Service\\Configurator') # required by whitedigital-eu/entity-resource-mapper-bundle
+        ->dataProcessor('DataProcessor')
+        ->dataProvider('DataProvider')
+        ->entity('Entity')
+        ->root('App');
+        
+    $defaults = $config
+        ->defaults();
+        
+    $defaults
+        ->apiResourceSuffix('Resource')
+        ->roleSeparator(':')
+        ->space('_');
+};
+```
+`namespaces` are there to set up different directories for generated files. So, if you need to put files in different directories/namespaces, you can chnage it as such.
+
+`roleSeparator` and `space` from `defaults` are added to configure separators for groups used in api resource. For example, `UserRole` with defaults will become `user_role:read` for read group.  
+`apiResourcrSuffix` defines suffix for api resource class name. For example, by default `User` entity will make `UserResource` api resource class.
+
+### Usage
+Simply run `make:api-resource <EntityName>` where EntityName is entity you want to create api resource for.
+Example, `make:api-resource User` to make UserResource, UserDataProcessor and UserDataProvider for User entity.
 
 ## Tests
 
