@@ -96,13 +96,13 @@ class ResourceToEntityMapper
                             throw new RuntimeException("$targetClass entity with id $value->id not found!");
                         }
 
-                        // This simulates output->addProperty as PropertyAccess decides if it is an add or set by itself, and to access one collection item, 
+                        // This simulates output->addProperty as PropertyAccess decides if it is an add or set by itself, and to access one collection item,
                         // it must be done like this => $propertyName[0], $propertyName[1], etc
                         $this->accessor->setValue($output, $propertyName . "[$i]", $entity);
                         continue;
                     }
 
-                    // This simulates output->addProperty as PropertyAccess decides if it is an add or set by itself, and to access one collection item, 
+                    // This simulates output->addProperty as PropertyAccess decides if it is an add or set by itself, and to access one collection item,
                     // it must be done like this => $propertyName[0], $propertyName[1], etc
                     $this->accessor->setValue($output, $propertyName . "[$i]", $this->map($value, $context));
                 }

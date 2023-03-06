@@ -16,12 +16,32 @@ use WhiteDigital\EntityResourceMapper\DBAL\Functions\JsonContains;
 use WhiteDigital\EntityResourceMapper\DBAL\Functions\JsonGetText;
 use WhiteDigital\EntityResourceMapper\DBAL\Types\UTCDateTimeImmutableType;
 use WhiteDigital\EntityResourceMapper\DBAL\Types\UTCDateTimeType;
+use WhiteDigital\EntityResourceMapper\DependencyInjection\Traits\DefineOrmMappings;
+
+use function array_is_list;
+use function array_merge_recursive;
+use function is_array;
+use function ltrim;
+use function str_starts_with;
+
+use const PHP_INT_MAX;
 
 class EntityResourceMapperBundle extends AbstractBundle
 {
+    use DefineOrmMappings;
+
+    private const MAPPINGS = [
+        'type' => 'attribute',
+        'dir' => __DIR__ . '/Entity',
+        'alias' => 'EntityResourceMapper',
+        'prefix' => 'WhiteDigital\EntityResourceMapper\Entity',
+        'is_bundle' => false,
+        'mapping' => true,
+    ];
+
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
     {
-        $container->import('../config/services.yaml');
+        $container->import('../config/services.php');
 
         $enumClass = $config['roles_enum'] ?? null;
 
@@ -44,6 +64,14 @@ class EntityResourceMapperBundle extends AbstractBundle
             }
         }
 
+        foreach (self::makeOneDimension(['whitedigital.entity_resource_mapper' => $config], onlyLast: true) as $key => $value) {
+            $builder->setParameter($key, $value);
+        }
+
+        if ([] === $builder->getParameterBag()->get('whitedigital.entity_resource_mapper.maker.groups')) {
+            $builder->setParameter('whitedigital.entity_resource_mapper.maker.groups', ['item', 'read', 'patch', 'write', ]);
+        }
+
         $builder->setParameter('whitedigital.entity_resource_mapper.roles', $roles);
     }
 
@@ -54,27 +82,48 @@ class EntityResourceMapperBundle extends AbstractBundle
             ->children()
                 ->scalarNode('roles_enum')->defaultNull()->end()
                 ->scalarNode('entity_manager')->defaultValue('default')->end()
+                ->arrayNode('maker')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->arrayNode('namespaces')
+                            ->addDefaultsIfNotSet()
+                            ->children()
+                                ->scalarNode('api_resource')->defaultValue('ApiResource')->end()
+                                ->scalarNode('class_map_configurator')->defaultValue('Service\\Configurator')->end()
+                                ->scalarNode('data_processor')->defaultValue('DataProcessor')->end()
+                                ->scalarNode('data_provider')->defaultValue('DataProvider')->end()
+                                ->scalarNode('entity')->defaultValue('Entity')->end()
+                                ->scalarNode('root')->defaultValue('App')->end()
+                            ->end()
+                        ->end()
+                        ->arrayNode('defaults')
+                            ->addDefaultsIfNotSet()
+                            ->children()
+                                ->scalarNode('api_resource_suffix')->defaultValue('Resource')->end()
+                                ->scalarNode('role_separator')->defaultValue(':')->end()
+                                ->scalarNode('space')->defaultValue('_')->end()
+                            ->end()
+                        ->end()
+                        ->arrayNode('groups')
+                            ->scalarPrototype()->end()
+                        ->end()
+                    ->end()
+                ->end()
             ->end();
     }
 
     public function prependExtension(ContainerConfigurator $container, ContainerBuilder $builder): void
     {
-        $mapper = array_merge_recursive(...$builder->getExtensionConfig('entity_resource_mapper') ?? []);
-        $mappings['EntityResourceMapper'] = [
-            'type' => 'attribute',
-            'dir' => __DIR__ . '/Entity',
-            'alias' => 'EntityResourceMapper',
-            'prefix' => 'WhiteDigital\EntityResourceMapper\Entity',
-            'is_bundle' => false,
-            'mapping' => true,
-        ];
+        $mapper = array_merge_recursive(...$builder->getExtensionConfig('entity_resource_mapper'));
+        $mappings = $this->getOrmMappings($builder, $manager = $mapper['entity_manager'] ?? 'default');
+
+        $this->addDoctrineConfig($container, $manager, $mappings, 'EntityResourceMapper', self::MAPPINGS, true);
 
         $container->extension('doctrine', [
             'orm' => [
                 'entity_managers' => [
-                    $mapper['entity_manager'] ?? 'default' => [
+                    $manager => [
                         'naming_strategy' => 'doctrine.orm.naming_strategy.underscore_number_aware',
-                        'mappings' => $mappings,
                         'dql' => [
                             'string_functions' => [
                                 'JSONB_PATH_EXISTS' => JsonbPathExists::class,
@@ -86,9 +135,6 @@ class EntityResourceMapperBundle extends AbstractBundle
                     ],
                 ],
             ],
-        ]);
-
-        $container->extension('doctrine', [
             'dbal' => [
                 'types' => [
                     'date' => UTCDateTimeType::class,
@@ -98,5 +144,35 @@ class EntityResourceMapperBundle extends AbstractBundle
                 ],
             ],
         ]);
+    }
+
+    public static function makeOneDimension(array $array, string $base = '', string $separator = '.', bool $onlyLast = false, int $depth = 0, int $maxDepth = PHP_INT_MAX, array $result = []): array
+    {
+        if ($depth <= $maxDepth) {
+            foreach ($array as $key => $value) {
+                $key = ltrim(string: $base . '.' . $key, characters: '.');
+
+                if (self::isAssociative(array: $value)) {
+                    $result = self::makeOneDimension(array: $value, base: $key, separator: $separator, onlyLast: $onlyLast, depth: $depth + 1, maxDepth: $maxDepth, result: $result);
+
+                    if ($onlyLast) {
+                        continue;
+                    }
+                }
+
+                $result[$key] = $value;
+            }
+        }
+
+        return $result;
+    }
+
+    private static function isAssociative(mixed $array): bool
+    {
+        if (!is_array(value: $array) || [] === $array) {
+            return false;
+        }
+
+        return !array_is_list(array: $array);
     }
 }
