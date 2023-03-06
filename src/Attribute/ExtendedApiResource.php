@@ -50,7 +50,7 @@ class ExtendedApiResource extends ApiResource
         } catch (ReflectionException) {
         }
 
-        if(null === $attributes){
+        if (null === $attributes) {
             throw new InvalidConfigurationException(sprintf('Unable to extend %s in %s', self::class, $callerClass));
         }
 

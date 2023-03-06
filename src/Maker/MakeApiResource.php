@@ -46,7 +46,6 @@ If the argument is missing, the command will ask for the entity class name inter
 
     public function configureDependencies(DependencyBuilder $dependencies): void
     {
-
     }
 
     /**

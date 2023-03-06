@@ -48,7 +48,7 @@ class EntityResourceMapperBundle extends AbstractBundle
             $builder->setParameter($key, $value);
         }
 
-        if([] === $builder->getParameterBag()->get('whitedigital.entity_resource_mapper.maker.groups')){
+        if ([] === $builder->getParameterBag()->get('whitedigital.entity_resource_mapper.maker.groups')) {
             $builder->setParameter('whitedigital.entity_resource_mapper.maker.groups', ['item', 'read', 'patch', 'write', ]);
         }
 
@@ -135,15 +135,6 @@ class EntityResourceMapperBundle extends AbstractBundle
         ]);
     }
 
-    private static function isAssociative(mixed $array): bool
-    {
-        if (!is_array(value: $array) || [] === $array) {
-            return false;
-        }
-
-        return !array_is_list(array: $array);
-    }
-
     public static function makeOneDimension(array $array, string $base = '', string $separator = '.', bool $onlyLast = false, int $depth = 0, int $maxDepth = PHP_INT_MAX, array $result = []): array
     {
         if ($depth <= $maxDepth) {
@@ -163,5 +154,14 @@ class EntityResourceMapperBundle extends AbstractBundle
         }
 
         return $result;
+    }
+
+    private static function isAssociative(mixed $array): bool
+    {
+        if (!is_array(value: $array) || [] === $array) {
+            return false;
+        }
+
+        return !array_is_list(array: $array);
     }
 }
