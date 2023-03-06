@@ -30,6 +30,13 @@ use WhiteDigital\EntityResourceMapper\Mapper\ResourceToEntityMapper;
 use WhiteDigital\EntityResourceMapper\Security\AuthorizationService;
 use WhiteDigital\EntityResourceMapper\Security\Enum\GrantType;
 
+use function array_key_exists;
+use function array_merge;
+use function count;
+use function is_array;
+use function sprintf;
+use function strtolower;
+
 abstract class AbstractDataProvider implements ProviderInterface
 {
     /** @noinspection PhpInapplicableAttributeTargetDeclarationInspection */
@@ -118,24 +125,6 @@ abstract class AbstractDataProvider implements ProviderInterface
         return $this->createResource($entity, $context);
     }
 
-    protected function throwErrorIfNotExists(mixed $result, string $rootAlias, mixed $id): void
-    {
-        if (null === $result) {
-            throw new NotFoundHttpException($this->translator->trans('named_resource_not_found', ['%resource%' => $rootAlias, '%id%' => $id], domain: 'ApiResource'));
-        }
-    }
-
-    abstract protected function createResource(BaseEntity $entity, array $context);
-
-    protected function queryResult(QueryBuilder $queryBuilder): BaseEntity
-    {
-        $entity = $queryBuilder->getQuery()->getResult()[0] ?? null;
-
-        $this->throwErrorIfNotExists($entity, $queryBuilder->getRootAliases()[0], $queryBuilder->getParameter('id')?->getValue());
-
-        return $entity;
-    }
-
     protected function override(string $operation, string $class): bool
     {
         try {
@@ -160,5 +149,23 @@ abstract class AbstractDataProvider implements ProviderInterface
         }
 
         return false;
+    }
+
+    protected function throwErrorIfNotExists(mixed $result, string $rootAlias, mixed $id): void
+    {
+        if (null === $result) {
+            throw new NotFoundHttpException($this->translator->trans('named_resource_not_found', ['%resource%' => $rootAlias, '%id%' => $id], domain: 'ApiResource'));
+        }
+    }
+
+    abstract protected function createResource(BaseEntity $entity, array $context);
+
+    protected function queryResult(QueryBuilder $queryBuilder): BaseEntity
+    {
+        $entity = $queryBuilder->getQuery()->getResult()[0] ?? null;
+
+        $this->throwErrorIfNotExists($entity, $queryBuilder->getRootAliases()[0], $queryBuilder->getParameter('id')?->getValue());
+
+        return $entity;
     }
 }

@@ -24,6 +24,10 @@ use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 use WhiteDigital\EntityResourceMapper\Security\AuthorizationService;
 use WhiteDigital\EntityResourceMapper\Security\Enum\GrantType;
 
+use function array_key_exists;
+use function array_merge;
+use function preg_match;
+
 abstract class AbstractDataProcessor implements ProcessorInterface
 {
     public function __construct(
@@ -97,28 +101,6 @@ abstract class AbstractDataProcessor implements ProcessorInterface
 
     abstract protected function createResource(BaseEntity $entity, array $context);
 
-    protected function remove(BaseResource $resource, Operation $operation): void
-    {
-        $this->authorizationService->setAuthorizationOverride(fn () => $this->override(AuthorizationService::ITEM_DELETE, $operation->getClass()));
-        $this->authorizationService->authorizeSingleObject($resource, AuthorizationService::ITEM_DELETE);
-        $entity = $this->findById($this->getEntityClass(), $resource->id);
-        if (null !== $entity) {
-            $this->removeWithFkCheck($entity);
-        }
-    }
-
-    protected function removeWithFkCheck(BaseEntity $entity): void
-    {
-        $this->entityManager->remove($entity);
-
-        try {
-            $this->entityManager->flush();
-        } catch (Exception $exception) {
-            preg_match('/DETAIL: (.*)/', $exception->getMessage(), $matches);
-            throw new AccessDeniedHttpException($this->translator->trans('unable_to_delete_record', ['%detail%' => $matches[1]], domain: 'ApiResource'), $exception);
-        }
-    }
-
     protected function override(string $operation, string $class): bool
     {
         try {
@@ -143,5 +125,27 @@ abstract class AbstractDataProcessor implements ProcessorInterface
         }
 
         return false;
+    }
+
+    protected function remove(BaseResource $resource, Operation $operation): void
+    {
+        $this->authorizationService->setAuthorizationOverride(fn () => $this->override(AuthorizationService::ITEM_DELETE, $operation->getClass()));
+        $this->authorizationService->authorizeSingleObject($resource, AuthorizationService::ITEM_DELETE);
+        $entity = $this->findById($this->getEntityClass(), $resource->id);
+        if (null !== $entity) {
+            $this->removeWithFkCheck($entity);
+        }
+    }
+
+    protected function removeWithFkCheck(BaseEntity $entity): void
+    {
+        $this->entityManager->remove($entity);
+
+        try {
+            $this->entityManager->flush();
+        } catch (Exception $exception) {
+            preg_match('/DETAIL: (.*)/', $exception->getMessage(), $matches);
+            throw new AccessDeniedHttpException($this->translator->trans('unable_to_delete_record', ['%detail%' => $matches[1]], domain: 'ApiResource'), $exception);
+        }
     }
 }

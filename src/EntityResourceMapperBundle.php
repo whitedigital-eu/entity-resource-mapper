@@ -16,9 +16,29 @@ use WhiteDigital\EntityResourceMapper\DBAL\Functions\JsonContains;
 use WhiteDigital\EntityResourceMapper\DBAL\Functions\JsonGetText;
 use WhiteDigital\EntityResourceMapper\DBAL\Types\UTCDateTimeImmutableType;
 use WhiteDigital\EntityResourceMapper\DBAL\Types\UTCDateTimeType;
+use WhiteDigital\EntityResourceMapper\DependencyInjection\Traits\DefineOrmMappings;
+
+use function array_is_list;
+use function array_merge_recursive;
+use function is_array;
+use function ltrim;
+use function str_starts_with;
+
+use const PHP_INT_MAX;
 
 class EntityResourceMapperBundle extends AbstractBundle
 {
+    use DefineOrmMappings;
+
+    private const MAPPINGS = [
+        'type' => 'attribute',
+        'dir' => __DIR__ . '/Entity',
+        'alias' => 'EntityResourceMapper',
+        'prefix' => 'WhiteDigital\EntityResourceMapper\Entity',
+        'is_bundle' => false,
+        'mapping' => true,
+    ];
+
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
     {
         $container->import('../config/services.php');
@@ -95,21 +115,15 @@ class EntityResourceMapperBundle extends AbstractBundle
     public function prependExtension(ContainerConfigurator $container, ContainerBuilder $builder): void
     {
         $mapper = array_merge_recursive(...$builder->getExtensionConfig('entity_resource_mapper'));
-        $mappings['EntityResourceMapper'] = [
-            'type' => 'attribute',
-            'dir' => __DIR__ . '/Entity',
-            'alias' => 'EntityResourceMapper',
-            'prefix' => 'WhiteDigital\EntityResourceMapper\Entity',
-            'is_bundle' => false,
-            'mapping' => true,
-        ];
+        $mappings = $this->getOrmMappings($builder, $manager = $mapper['entity_manager'] ?? 'default');
+
+        $this->addDoctrineConfig($container, $manager, $mappings, 'EntityResourceMapper', self::MAPPINGS, true);
 
         $container->extension('doctrine', [
             'orm' => [
                 'entity_managers' => [
-                    $mapper['entity_manager'] ?? 'default' => [
+                    $manager => [
                         'naming_strategy' => 'doctrine.orm.naming_strategy.underscore_number_aware',
-                        'mappings' => $mappings,
                         'dql' => [
                             'string_functions' => [
                                 'JSONB_PATH_EXISTS' => JsonbPathExists::class,
@@ -121,9 +135,6 @@ class EntityResourceMapperBundle extends AbstractBundle
                     ],
                 ],
             ],
-        ]);
-
-        $container->extension('doctrine', [
             'dbal' => [
                 'types' => [
                     'date' => UTCDateTimeType::class,

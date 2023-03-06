@@ -5,6 +5,8 @@ namespace WhiteDigital\EntityResourceMapper\DependencyInjection\Traits;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
+use function array_merge_recursive;
+
 trait DefineOrmMappings
 {
     protected function getOrmMappings(ContainerBuilder $builder, string $manager): array

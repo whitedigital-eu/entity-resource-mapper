@@ -15,6 +15,23 @@ use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Mapper\ClassMapper;
 
+use function array_column;
+use function array_multisort;
+use function array_unique;
+use function class_exists;
+use function dirname;
+use function getcwd;
+use function is_subclass_of;
+use function preg_replace;
+use function sort;
+use function sprintf;
+use function str_replace;
+use function strtolower;
+use function unlink;
+
+use const SORT_ASC;
+use const SORT_REGULAR;
+
 class MakeApiResource extends AbstractMaker
 {
     public function __construct(

@@ -4,6 +4,8 @@ namespace WhiteDigital\EntityResourceMapper\DependencyInjection\Traits;
 
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
+use function array_unique;
+
 trait DefineApiPlatformMappings
 {
     protected function addApiPlatformPaths(ContainerConfigurator $container, array $bundlePaths): void

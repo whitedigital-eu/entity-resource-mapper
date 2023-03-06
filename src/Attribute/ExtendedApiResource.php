@@ -12,6 +12,18 @@ use ReflectionClass;
 use ReflectionException;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 
+use function count;
+use function debug_backtrace;
+use function file_get_contents;
+use function func_get_args;
+use function sprintf;
+
+use const T_CLASS;
+use const T_NAME_QUALIFIED;
+use const T_NAMESPACE;
+use const T_STRING;
+use const T_WHITESPACE;
+
 #[Attribute(Attribute::TARGET_CLASS | Attribute::IS_REPEATABLE)]
 class ExtendedApiResource extends ApiResource
 {
