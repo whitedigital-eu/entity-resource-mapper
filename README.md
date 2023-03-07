@@ -355,6 +355,10 @@ return static function (EntityResourceMapperConfig $config): void {
 Simply run `make:api-resource <EntityName>` where EntityName is entity you want to create api resource for.
 Example, `make:api-resource User` to make UserResource, UserDataProcessor and UserDataProvider for User entity.
 
+### PHP CS Fixer
+> **IMPORTANT**: When running php-cs-fixer, make sure not to format files in `skeleton` folder. Otherwise maker
+> command will stop working.
+
 ## Tests
 
 Run tests by:
