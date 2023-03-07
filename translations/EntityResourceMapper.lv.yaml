@@ -1,2 +1,6 @@
 access_denied: 'Piekļuve liegta'
 not_all_roles_configured: 'Ne visas vajadzīgās lomas CLASS OPERATION ir nokonfigurētas. Konfigurētās: "GIVEN", trūkst: "MISSING"'
+named_resource_not_found: 'Resurss %resource%:%id% nav atrasts'
+resource_not_found: 'Resurss nav atrasts'
+unable_to_delete_record: 'Šo ierakstu nav iespējams dzēst, jo tas tiek izmantots citur (%detail%)'
+record_already_exists: 'Nav iespējams izveidot/labot šo ierakstu, jo cits ieraksts ar šādām vērtībām jau eksistē (%detail%)'

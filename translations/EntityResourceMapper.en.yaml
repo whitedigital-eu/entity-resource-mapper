@@ -1,2 +1,6 @@
 access_denied: 'Access denied'
 not_all_roles_configured: 'Not all defined roles mapped for CLASS OPERATION. Given: "GIVEN", missing: "MISSING"'
+named_resource_not_found: 'Resource %resource%:%id% not found'
+resource_not_found: 'Resource not found'
+unable_to_delete_record: 'Unable to delete this record, it has been used elsewhere (%detail%)'
+record_already_exists: 'Unable to create/update this record as another record with these values exists (%detail%)'

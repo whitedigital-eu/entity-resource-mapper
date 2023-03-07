@@ -154,7 +154,7 @@ abstract class AbstractDataProvider implements ProviderInterface
     protected function throwErrorIfNotExists(mixed $result, string $rootAlias, mixed $id): void
     {
         if (null === $result) {
-            throw new NotFoundHttpException($this->translator->trans('named_resource_not_found', ['%resource%' => $rootAlias, '%id%' => $id], domain: 'ApiResource'));
+            throw new NotFoundHttpException($this->translator->trans('named_resource_not_found', ['%resource%' => $rootAlias, '%id%' => $id], domain: 'EntityResourceMapper'));
         }
     }
 
