@@ -78,12 +78,18 @@ foreach ($properties as $property => $options) {
     if (null !== $options['header']) {
         echo "    /** @var {$options['header']}[]|null */\n";
     }
+
     echo '    #[Groups([';
     foreach ($groups as $group) {
         echo 'self::' . strtoupper($group) . ', ';
     }
     echo "])]\n";
-    echo '    public ?' . $options['type'] . ' $' . $property . ' = null;' . "\n\n";
+
+    $type = $options['type'];
+    if ('mixed' !== $type) {
+        $type = '?' . $type;
+    }
+    echo '    public ' . $type . ' $' . $property . ' = null;' . "\n\n";
 }
 ?>
 }
