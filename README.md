@@ -355,6 +355,14 @@ return static function (EntityResourceMapperConfig $config): void {
 Simply run `make:api-resource <EntityName>` where EntityName is entity you want to create api resource for.
 Example, `make:api-resource User` to make UserResource, UserDataProcessor and UserDataProvider for User entity.
 
+Maker command generates resource properties based on entity variables. This could sometimes be incorrect or not needed, so you can pass `--no-properties` option to not generate properties.  
+By default, maker command will throw an error if you are trying to generate classes that already exist. If for some reason you want to rewrite generated classes, you can pass `--delete-if-exists`
+option.  
+This option comes in handy on occasion when you have 2 entities, that have relation. Because of specific logical impossibility, to generate resources for both classes automatically, you should:  
+1. run `make:api-resource Entity1 --no-properties`  
+2. run `make:api-resource Entity2`  
+3. run `make:api-resource Entity1 --delete-if-exists`
+
 ### PHP CS Fixer
 > **IMPORTANT**: When running php-cs-fixer, make sure not to format files in `skeleton` folder. Otherwise maker
 > command will stop working.
