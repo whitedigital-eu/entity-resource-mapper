@@ -46,7 +46,7 @@
         "symfony/framework-bundle": "^6.2",
         "symfony/http-foundation": "^6.2",
         "symfony/http-kernel": "^6.2",
-        "symfony/maker-bundle": "^1.40",
+        "symfony/maker-bundle": "*",
         "symfony/property-access": "^6.2",
         "symfony/property-info": "^6.2",
         "symfony/security-bundle": "^6.2",
