@@ -2,7 +2,12 @@
 
 namespace WhiteDigital\EntityResourceMapper\Maker;
 
+use DateTimeImmutable;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\ORM\Mapping\ManyToMany;
+use Doctrine\ORM\Mapping\OneToMany;
 use Exception;
+use ReflectionClass;
 use Symfony\Bundle\MakerBundle\ConsoleStyle;
 use Symfony\Bundle\MakerBundle\DependencyBuilder;
 use Symfony\Bundle\MakerBundle\Generator;
@@ -12,15 +17,20 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+use Symfony\Component\PropertyInfo\Type;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Mapper\ClassMapper;
 
 use function array_column;
+use function array_merge_recursive;
 use function array_multisort;
 use function array_unique;
 use function class_exists;
 use function dirname;
+use function end;
+use function explode;
 use function getcwd;
+use function in_array;
 use function is_subclass_of;
 use function preg_replace;
 use function sort;
@@ -120,7 +130,7 @@ If the argument is missing, the command will ask for the entity class name inter
                 'processor' => $processor,
                 'provider' => $provider,
                 'separator' => $this->bag->get($wd . '.defaults.role_separator'),
-                'groups' => $this->bag->get($wd . '.groups'),
+                'groups' => $groups = $this->bag->get($wd . '.groups'),
             ],
         );
 
@@ -171,6 +181,64 @@ If the argument is missing, the command will ask for the entity class name inter
             [
                 'uses' => $uses,
                 'mapping' => $mapping,
+            ],
+        );
+
+        $generator->writeChanges();
+
+        $entityRef = new ReflectionClass($entity->getFullName());
+        $excluded = ['id', 'createdAt', 'updatedAt', ];
+        $properties = [];
+        $resourceMapping = [];
+        foreach ($entityRef->getProperties() as $property) {
+            if (!in_array($property->getName(), $excluded, true)) {
+                $prop = $property->getType();
+                $header = null;
+                if ($prop->isBuiltin()) {
+                    $type = $prop->getName();
+                } else {
+                    if (Collection::class === $prop->getName()) {
+                        $type = Type::BUILTIN_TYPE_ARRAY;
+                        $orm = array_merge_recursive($property->getAttributes(ManyToMany::class), $property->getAttributes(OneToMany::class));
+                        if ([] !== $orm) {
+                            $header = $this->mapper->byEntity($orm[0]->getArguments()['targetEntity']);
+                            $resourceMapping[] = $header;
+                            $parts = explode('\\', $header);
+                            $header = end($parts);
+                        }
+                    } elseif (DateTimeImmutable::class === $prop->getName()) {
+                        $type = DateTimeImmutable::class;
+                    } else {
+                        $type = $this->mapper->byEntity($prop->getName());
+                        $resourceMapping[] = $type;
+                        $parts = explode('\\', $type);
+                        $type = end($parts);
+                    }
+                }
+
+                $properties[$property->getName()] = [
+                    'type' => $type,
+                    'header' => $header,
+                ];
+            }
+        }
+
+        if (class_exists($resource->getFullName())) {
+            unlink($this->fixPath($resource->getFullName()));
+        }
+
+        $generator->generateClass(
+            $resource->getFullName(),
+            dirname(__DIR__, 2) . '/skeleton/ApiResourceExtended.tpl.php',
+            [
+                'entity_name' => $entityName,
+                'prefix' => $this->toSnakeCase($entityName, $this->bag->get($wd . '.defaults.space')),
+                'processor' => $processor,
+                'provider' => $provider,
+                'separator' => $this->bag->get($wd . '.defaults.role_separator'),
+                'groups' => $groups,
+                'properties' => $properties,
+                'uses' => $resourceMapping,
             ],
         );
 
