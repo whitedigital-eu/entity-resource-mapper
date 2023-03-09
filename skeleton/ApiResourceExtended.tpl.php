@@ -11,6 +11,11 @@ use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\Serializer\Filter\GroupFilter;
+<?php
+foreach ($uses as $use) {
+    echo 'use ' . $use . ";\n";
+}
+?>
 use <?php echo $processor->getFullName() . ";\n"; ?>
 use <?php echo $provider->getFullName() . ";\n"; ?>
 use DateTimeImmutable;
@@ -67,4 +72,24 @@ foreach($groups as $group){
 
     #[Groups([self::READ, self::ITEM, ])]
     public ?DateTimeImmutable $updatedAt = null;
+
+<?php
+foreach ($properties as $property => $options) {
+    if (null !== $options['header']) {
+        echo "    /** @var {$options['header']}[]|null */\n";
+    }
+
+    echo '    #[Groups([';
+    foreach ($groups as $group) {
+        echo 'self::' . strtoupper($group) . ', ';
+    }
+    echo "])]\n";
+
+    $type = $options['type'];
+    if ('mixed' !== $type) {
+        $type = '?' . $type;
+    }
+    echo '    public ' . $type . ' $' . $property . ' = null;' . "\n\n";
+}
+?>
 }

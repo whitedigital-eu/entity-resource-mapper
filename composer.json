@@ -37,6 +37,7 @@
         "doctrine/dbal": "^3.4",
         "doctrine/orm": "^2.10",
         "doctrine/persistence": "*",
+        "phpdocumentor/reflection-docblock": "*",
         "psr/log": "*",
         "symfony/config": "^6.2",
         "symfony/console": "^6.2",
@@ -45,7 +46,7 @@
         "symfony/framework-bundle": "^6.2",
         "symfony/http-foundation": "^6.2",
         "symfony/http-kernel": "^6.2",
-        "symfony/maker-bundle": "^1.40",
+        "symfony/maker-bundle": "*",
         "symfony/property-access": "^6.2",
         "symfony/property-info": "^6.2",
         "symfony/security-bundle": "^6.2",
@@ -59,7 +60,6 @@
     },
     "require-dev": {
         "roave/security-advisories": "dev-latest",
-        "phpdocumentor/reflection-docblock": "*",
         "phpunit/phpunit": "^10.0",
         "symfony/test-pack": "dev-main",
         "whitedigital-eu/config-pack": "^2"

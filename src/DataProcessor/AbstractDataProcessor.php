@@ -93,7 +93,7 @@ abstract class AbstractDataProcessor implements ProcessorInterface
             $this->entityManager->flush();
         } catch (UniqueConstraintViolationException $exception) {
             preg_match('/DETAIL: (.*)/', $exception->getMessage(), $matches);
-            throw new PreconditionFailedHttpException($this->translator->trans('record_already_exists', ['%detail%' => $matches[1]], domain: 'ApiResource'), $exception);
+            throw new PreconditionFailedHttpException($this->translator->trans('record_already_exists', ['%detail%' => $matches[1]], domain: 'EntityResourceMapper'), $exception);
         }
 
         $this->entityManager->refresh($entity);
@@ -145,7 +145,7 @@ abstract class AbstractDataProcessor implements ProcessorInterface
             $this->entityManager->flush();
         } catch (Exception $exception) {
             preg_match('/DETAIL: (.*)/', $exception->getMessage(), $matches);
-            throw new AccessDeniedHttpException($this->translator->trans('unable_to_delete_record', ['%detail%' => $matches[1]], domain: 'ApiResource'), $exception);
+            throw new AccessDeniedHttpException($this->translator->trans('unable_to_delete_record', ['%detail%' => $matches[1]], domain: 'EntityResourceMapper'), $exception);
         }
     }
 }

@@ -2,7 +2,13 @@
 
 namespace WhiteDigital\EntityResourceMapper\Maker;
 
+use BackedEnum;
+use DateTimeImmutable;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\ORM\Mapping\ManyToMany;
+use Doctrine\ORM\Mapping\OneToMany;
 use Exception;
+use ReflectionClass;
 use Symfony\Bundle\MakerBundle\ConsoleStyle;
 use Symfony\Bundle\MakerBundle\DependencyBuilder;
 use Symfony\Bundle\MakerBundle\Generator;
@@ -11,16 +17,23 @@ use Symfony\Bundle\MakerBundle\Maker\AbstractMaker;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+use Symfony\Component\HttpFoundation\File\File;
+use Symfony\Component\PropertyInfo\Type;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Mapper\ClassMapper;
 
 use function array_column;
+use function array_merge_recursive;
 use function array_multisort;
 use function array_unique;
 use function class_exists;
 use function dirname;
+use function end;
+use function explode;
 use function getcwd;
+use function in_array;
 use function is_subclass_of;
 use function preg_replace;
 use function sort;
@@ -34,10 +47,8 @@ use const SORT_REGULAR;
 
 class MakeApiResource extends AbstractMaker
 {
-    public function __construct(
-        private readonly ClassMapper $mapper,
-        private readonly ParameterBagInterface $bag,
-    ) {
+    public function __construct(private readonly ClassMapper $mapper, private readonly ParameterBagInterface $bag)
+    {
     }
 
     public static function getCommandName(): string
@@ -54,6 +65,8 @@ class MakeApiResource extends AbstractMaker
     {
         $command
             ->addArgument('entity', InputArgument::OPTIONAL, 'The name of the entity class (e.g. <fg=yellow>User</>) for which to create resource')
+            ->addOption('no-properties', null, InputOption::VALUE_NONE, 'Use this option to disable resource property generation')
+            ->addOption('delete-if-exists', null, InputOption::VALUE_NONE, 'Use this option to delete existing ApiResource, DataProvider and DataProcessor before generation')
             ->setHelp('
 <info>php %command.full_name% User</info>
 
@@ -84,14 +97,38 @@ If the argument is missing, the command will ask for the entity class name inter
 
         $provider = $generator->createClassNameDetails($entityName, ($dpn = $this->bag->get($wd . '.namespaces.data_provider')) . $ns, $dpn);
 
+        if (class_exists($provider->getFullName())) {
+            if ($input->getOption('delete-if-exists')) {
+                unlink($this->fixPath($provider->getFullName()));
+            } else {
+                $io->caution(sprintf('Provaider %s already exists', $provider->getShortName()));
+
+                exit;
+            }
+        }
+
         $resource = $generator->createClassNameDetails($entityName, $this->bag->get($wd . '.namespaces.api_resource') . $ns, $this->bag->get($wd . '.defaults.api_resource_suffix'));
+
+        if (class_exists($resource->getFullName()) || class_exists($resource->getFullName(), false)) {
+            if ($input->getOption('delete-if-exists')) {
+                unlink($this->fixPath($resource->getFullName()));
+            } else {
+                $io->caution(sprintf('ApiResource %s already exists', $resource->getShortName()));
+
+                exit;
+            }
+        }
 
         $processor = $generator->createClassNameDetails($entityName, ($pn = $this->bag->get($wd . '.namespaces.data_processor')) . $ns, $pn);
 
-        if (class_exists($provider->getFullName(), false) || class_exists($resource->getFullName(), false) || class_exists($processor->getFullName(), false)) {
-            $io->caution(sprintf('%s, %s or %s already exists', $resource->getShortName(), $processor->getShortName(), $provider->getShortName()));
+        if (class_exists($processor->getFullName())) {
+            if ($input->getOption('delete-if-exists')) {
+                unlink($this->fixPath($processor->getFullName()));
+            } else {
+                $io->caution(sprintf('Processor %s already exists', $processor->getShortName()));
 
-            exit;
+                exit;
+            }
         }
 
         $generator->generateClass(
@@ -120,7 +157,7 @@ If the argument is missing, the command will ask for the entity class name inter
                 'processor' => $processor,
                 'provider' => $provider,
                 'separator' => $this->bag->get($wd . '.defaults.role_separator'),
-                'groups' => $this->bag->get($wd . '.groups'),
+                'groups' => $groups = $this->bag->get($wd . '.groups'),
             ],
         );
 
@@ -156,14 +193,15 @@ If the argument is missing, the command will ask for the entity class name inter
             'condition' => null,
         ];
 
+        $mapping = array_unique($mapping, SORT_REGULAR);
+        $uses = array_unique($uses, SORT_REGULAR);
+        sort($uses);
+        array_multisort(array_column($mapping, 'dto'), SORT_ASC, $mapping);
+
         $configurator = $generator->createClassNameDetails('ClassMapperConfigurator', $this->bag->get($wd . '.namespaces.class_map_configurator'));
         if (class_exists($configurator->getFullName())) {
             unlink($this->fixPath($configurator->getFullName()));
         }
-
-        $uses = array_unique($uses, SORT_REGULAR);
-        sort($uses);
-        array_multisort(array_column(array_unique($mapping, SORT_REGULAR), 'dto'), SORT_ASC, $mapping);
 
         $generator->generateClass(
             $configurator->getFullName(),
@@ -171,6 +209,81 @@ If the argument is missing, the command will ask for the entity class name inter
             [
                 'uses' => $uses,
                 'mapping' => $mapping,
+            ],
+        );
+
+        $generator->writeChanges();
+
+        if ($input->getOption('no-properties')) {
+            $this->writeSuccessMessage($io);
+
+            return;
+        }
+
+        $entityRef = new ReflectionClass($entity->getFullName());
+        $excluded = ['id', 'createdAt', 'updatedAt', ];
+        $properties = [];
+        $resourceMapping = [];
+        foreach ($entityRef->getProperties() as $property) {
+            if (!in_array($property->getName(), $excluded, true)) {
+                $prop = $property->getType();
+                $header = null;
+                if ($prop->isBuiltin()) {
+                    $type = $prop->getName();
+                } else {
+                    $ref = new ReflectionClass($prop->getName());
+                    if (Collection::class === $prop->getName()) {
+                        $type = Type::BUILTIN_TYPE_ARRAY;
+                        $orm = array_merge_recursive($property->getAttributes(ManyToMany::class), $property->getAttributes(OneToMany::class));
+                        if ([] !== $orm) {
+                            $header = $this->mapper->byEntity($orm[0]->getArguments()['targetEntity']);
+                            $resourceMapping[] = $header;
+                            $parts = explode('\\', $header);
+                            $header = end($parts);
+                        }
+                    } elseif (DateTimeImmutable::class === $prop->getName()) {
+                        $type = DateTimeImmutable::class;
+                    } elseif (File::class === $prop->getName()) {
+                        $type = File::class;
+                        $resourceMapping[] = File::class;
+                        $parts = explode('\\', $type);
+                        $type = end($parts);
+                    } elseif ($ref->implementsInterface(BackedEnum::class)) {
+                        $type = $prop->getName();
+                        $resourceMapping[] = $prop->getName();
+                        $parts = explode('\\', $type);
+                        $type = end($parts);
+                    } else {
+                        $type = $this->mapper->byEntity($prop->getName());
+                        $resourceMapping[] = $type;
+                        $parts = explode('\\', $type);
+                        $type = end($parts);
+                    }
+                }
+
+                $properties[$property->getName()] = [
+                    'type' => $type,
+                    'header' => $header,
+                ];
+            }
+        }
+
+        $newResource = $generator->createClassNameDetails($entityName, $this->bag->get($wd . '.namespaces.api_resource') . $ns, $this->bag->get($wd . '.defaults.api_resource_suffix'));
+
+        @unlink($this->fixPath($newResource->getFullName()));
+
+        $generator->generateClass(
+            $newResource->getFullName(),
+            dirname(__DIR__, 2) . '/skeleton/ApiResourceExtended.tpl.php',
+            [
+                'entity_name' => $entityName,
+                'prefix' => $this->toSnakeCase($entityName, $this->bag->get($wd . '.defaults.space')),
+                'processor' => $processor,
+                'provider' => $provider,
+                'separator' => $this->bag->get($wd . '.defaults.role_separator'),
+                'groups' => $groups,
+                'properties' => $properties,
+                'uses' => $resourceMapping,
             ],
         );
 

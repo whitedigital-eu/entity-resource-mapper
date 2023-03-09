@@ -11,6 +11,7 @@ use ApiPlatform\Doctrine\Orm\Filter\FilterInterface;
 use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
 use ApiPlatform\Doctrine\Orm\Util\QueryNameGeneratorInterface;
 use ApiPlatform\Metadata\Operation;
+use BackedEnum;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LoggerInterface;
@@ -78,6 +79,9 @@ final class ResourceEnumFilter implements SearchFilterInterface, FilterInterface
 
         $description = [];
         foreach ($this->properties as $property => $enumValues) {
+            if (!is_array($enumValues) && in_array(BackedEnum::class, class_implements($enumValues), true)) {
+                $enumValues = $enumValues::cases();
+            }
             $description[$property] = [
                 'property' => $property,
                 'type' => Type::BUILTIN_TYPE_STRING,

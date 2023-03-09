@@ -10,7 +10,7 @@ namespace <?php echo $namespace; ?>;
 use WhiteDigital\EntityResourceMapper\Mapper\ClassMapper;
 use WhiteDigital\EntityResourceMapper\Mapper\ClassMapperConfiguratorInterface;
 
-class ClassMapperConfigurator implements ClassMapperConfiguratorInterface
+final class ClassMapperConfigurator implements ClassMapperConfiguratorInterface
 {
     public function __invoke(ClassMapper $classMapper): void
     {
