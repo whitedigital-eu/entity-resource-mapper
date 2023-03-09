@@ -19,7 +19,6 @@ use WhiteDigital\EntityResourceMapper\DBAL\Types\UTCDateTimeType;
 use WhiteDigital\EntityResourceMapper\DependencyInjection\Traits\DefineOrmMappings;
 
 use function array_is_list;
-use function array_merge_recursive;
 use function is_array;
 use function ltrim;
 use function str_starts_with;
@@ -114,10 +113,8 @@ class EntityResourceMapperBundle extends AbstractBundle
 
     public function prependExtension(ContainerConfigurator $container, ContainerBuilder $builder): void
     {
-        $mapper = array_merge_recursive(...$builder->getExtensionConfig('entity_resource_mapper'));
-        $mappings = $this->getOrmMappings($builder, $manager = $mapper['entity_manager'] ?? 'default');
-
-        $this->addDoctrineConfig($container, $manager, $mappings, 'EntityResourceMapper', self::MAPPINGS, true);
+        $manager = $mapper['entity_manager'] ?? 'default';
+        $this->addDoctrineConfig($container, $manager, 'EntityResourceMapper', self::MAPPINGS);
 
         $container->extension('doctrine', [
             'orm' => [

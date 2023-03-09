@@ -20,11 +20,8 @@ trait DefineOrmMappings
         return $mappings;
     }
 
-    private function addDoctrineConfig(ContainerConfigurator $container, string $entityManager, array $mappings, string $alias, array $bundleMappings, bool $addDefault = false): void
+    private function addDoctrineConfig(ContainerConfigurator $container, string $entityManager, string $alias, array $bundleMappings, array $mappings = []): void
     {
-        if (false === $addDefault) {
-            $mappings = [];
-        }
         $mappings[$alias] = $bundleMappings;
 
         $container->extension('doctrine', [
