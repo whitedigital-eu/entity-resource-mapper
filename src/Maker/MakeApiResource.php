@@ -271,6 +271,7 @@ If the argument is missing, the command will ask for the entity class name inter
         $newResource = $generator->createClassNameDetails($entityName, $this->bag->get($wd . '.namespaces.api_resource') . $ns, $this->bag->get($wd . '.defaults.api_resource_suffix'));
 
         @unlink($this->fixPath($newResource->getFullName()));
+        $resourceMapping = array_unique($resourceMapping);
 
         $generator->generateClass(
             $newResource->getFullName(),
