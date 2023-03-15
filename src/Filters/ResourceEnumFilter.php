@@ -79,8 +79,11 @@ final class ResourceEnumFilter implements SearchFilterInterface, FilterInterface
 
         $description = [];
         foreach ($this->properties as $property => $enumValues) {
-            if (!is_array($enumValues) && in_array(BackedEnum::class, class_implements($enumValues), true)) {
-                $enumValues = $enumValues::cases();
+            if (!is_array($enumValues)) {
+                $implements = @class_implements($enumValues);
+                if (is_array($implements) && in_array(BackedEnum::class, $implements, true)) {
+                    $enumValues = array_column($enumValues::cases(), 'value');
+                }
             }
             $description[$property] = [
                 'property' => $property,
