@@ -9,6 +9,7 @@ use Doctrine\ORM\QueryBuilder;
 use InvalidArgumentException;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Security\Attribute\AccessResolverConfiguration;
 use WhiteDigital\EntityResourceMapper\Security\Interface\AccessResolverInterface;
@@ -41,8 +42,19 @@ abstract class AbstractPropertyBasedAccessResolver implements AccessResolverInte
         }
 
         if ($isCollection) {
-            /* @var Collection<int, BaseEntity> $topElement */
-            return $topElement->contains($this->security->getUser());
+            /** @var BaseEntity&UserInterface $user */
+            $user = $this->security->getUser();
+            if ($topElement instanceof Collection) {
+                return $topElement->contains($user);
+            }
+
+            /** @var array $filtered */
+            $filtered = array_filter(
+                $topElement,
+                static fn ($object) => $object->id === $user->getId(),
+            );
+
+            return [] !== $filtered;
         }
 
         $isObject = is_object($topElement); // handle scalar or object
