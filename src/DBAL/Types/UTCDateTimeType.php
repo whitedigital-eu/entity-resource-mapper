@@ -16,6 +16,10 @@ class UTCDateTimeType extends DateTimeType
 
     public function convertToDatabaseValue($value, AbstractPlatform $platform): ?string
     {
-        throw new InvalidConfigurationException(sprintf('%s is deprectaed, use %s instead', __CLASS__, UTCDateTimeImmutableType::class));
+        if ($value instanceof DateTime) {
+            throw new InvalidConfigurationException(sprintf('%s is deprectaed, use %s instead', __CLASS__, UTCDateTimeImmutableType::class));
+        }
+
+        return parent::convertToDatabaseValue($value, $platform);
     }
 }

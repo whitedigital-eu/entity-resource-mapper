@@ -4,9 +4,7 @@ declare(strict_types = 1);
 
 namespace WhiteDigital\EntityResourceMapper\Entity;
 
-use DateTimeImmutable;
 use DateTimeInterface;
-use DateTimeZone;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\ORM\Mapping\MappedSuperclass;
@@ -14,26 +12,23 @@ use Exception;
 use RuntimeException;
 use WhiteDigital\EntityResourceMapper\Mapper\ResourceToEntityMapper;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
-
-use function is_subclass_of;
+use WhiteDigital\EntityResourceMapper\UTCDateTimeImmutable;
 
 #[ORM\HasLifecycleCallbacks]
 #[MappedSuperclass]
 abstract class BaseEntity
 {
-    final protected const TIMEZONE = 'UTC';
-
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
-    protected ?DateTimeImmutable $createdAt = null;
+    protected ?UTCDateTimeImmutable $createdAt = null;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
-    protected ?DateTimeImmutable $updatedAt = null;
+    protected ?UTCDateTimeImmutable $updatedAt = null;
 
     private static ResourceToEntityMapper $resourceToEntityMapper;
 
     abstract public function getId();
 
-    public function getCreatedAt(): ?DateTimeImmutable
+    public function getCreatedAt(): ?UTCDateTimeImmutable
     {
         return $this->createdAt;
     }
@@ -43,12 +38,12 @@ abstract class BaseEntity
      */
     public function setCreatedAt(?DateTimeInterface $date): static
     {
-        $this->createdAt = null === $date ? null : DateTimeImmutable::createFromInterface($date)->setTimezone(new DateTimeZone('UTC'));
+        $this->createdAt = null === $date ? null : UTCDateTimeImmutable::createFromInterface($date);
 
         return $this;
     }
 
-    public function getUpdatedAt(): ?DateTimeImmutable
+    public function getUpdatedAt(): ?UTCDateTimeImmutable
     {
         return $this->updatedAt;
     }
@@ -59,7 +54,7 @@ abstract class BaseEntity
     #[ORM\PrePersist]
     public function onPrePersist(): void
     {
-        $now = new DateTimeImmutable(timezone: new DateTimeZone('UTC'));
+        $now = new UTCDateTimeImmutable();
         if (null === $this->createdAt) {
             $this->createdAt = $now;
         }
@@ -72,7 +67,7 @@ abstract class BaseEntity
     #[ORM\PreUpdate]
     public function onPreUpdate(): void
     {
-        $this->updatedAt = new DateTimeImmutable(timezone: new DateTimeZone('UTC'));
+        $this->updatedAt = new UTCDateTimeImmutable();
     }
 
     public static function setResourceToEntityMapper(ResourceToEntityMapper $mapper): void
