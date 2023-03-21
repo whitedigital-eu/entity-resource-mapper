@@ -4,18 +4,18 @@ namespace WhiteDigital\EntityResourceMapper\DBAL\Types;
 
 use DateTime;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
-use Doctrine\DBAL\Types\DateTimeType;
+use Doctrine\DBAL\Types\DateType;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 
-class UTCDateTimeType extends DateTimeType
+class UTCDateType extends DateType
 {
     public function convertToPHPValue($value, AbstractPlatform $platform): ?DateTime
     {
-        throw new InvalidConfigurationException(sprintf('%s is deprectaed, use %s instead', __CLASS__, UTCDateTimeImmutableType::class));
+        throw new InvalidConfigurationException(sprintf('%s is deprectaed, use %s instead', __CLASS__, UTCDateImmutableType::class));
     }
 
     public function convertToDatabaseValue($value, AbstractPlatform $platform): ?string
     {
-        throw new InvalidConfigurationException(sprintf('%s is deprectaed, use %s instead', __CLASS__, UTCDateTimeImmutableType::class));
+        throw new InvalidConfigurationException(sprintf('%s is deprectaed, use %s instead', __CLASS__, UTCDateImmutableType::class));
     }
 }
