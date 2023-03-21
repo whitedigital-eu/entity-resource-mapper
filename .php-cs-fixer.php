@@ -39,7 +39,7 @@ return (new Config())
         'no_alias_functions' => ['sets' => ['@all', ], ],
         'no_blank_lines_after_class_opening' => true,
         'no_superfluous_elseif' => true,
-        'no_superfluous_phpdoc_tags' => ['allow_mixed' => true, 'remove_inheritdoc' => true, ],
+        'no_superfluous_phpdoc_tags' => ['allow_mixed' => true, 'remove_inheritdoc' => false, ],
         'no_trailing_comma_in_singleline' => ['elements' => [], ],
         'no_unneeded_curly_braces' => true,
         'no_unset_on_property' => true,

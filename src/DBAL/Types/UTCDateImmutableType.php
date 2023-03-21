@@ -5,12 +5,12 @@ namespace WhiteDigital\EntityResourceMapper\DBAL\Types;
 use DateTimeImmutable;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Types\ConversionException;
-use Doctrine\DBAL\Types\DateTimeImmutableType;
+use Doctrine\DBAL\Types\DateImmutableType;
 use Doctrine\DBAL\Types\Types;
 use Exception;
 use WhiteDigital\EntityResourceMapper\UTCDateTimeImmutable;
 
-class UTCDateTimeImmutableType extends DateTimeImmutableType
+class UTCDateImmutableType extends DateImmutableType
 {
     /**
      * @param T $value
@@ -38,6 +38,8 @@ class UTCDateTimeImmutableType extends DateTimeImmutableType
      * @template T
      *
      * {@inheritDoc}
+     *
+     * @throws Exception
      */
     public function convertToPHPValue($value, AbstractPlatform $platform): ?DateTimeImmutable
     {
