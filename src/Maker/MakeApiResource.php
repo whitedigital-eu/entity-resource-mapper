@@ -23,6 +23,7 @@ use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\PropertyInfo\Type;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Mapper\ClassMapper;
+use WhiteDigital\EntityResourceMapper\UTCDateTimeImmutable;
 
 use function array_column;
 use function array_merge_recursive;
@@ -241,8 +242,8 @@ If the argument is missing, the command will ask for the entity class name inter
                             $parts = explode('\\', $header);
                             $header = end($parts);
                         }
-                    } elseif (DateTimeImmutable::class === $prop->getName()) {
-                        $type = DateTimeImmutable::class;
+                    } elseif (in_array($prop->getName(), [DateTimeImmutable::class, UTCDateTimeImmutable::class, ], true)) {
+                        $type = $prop->getName();
                     } elseif (File::class === $prop->getName()) {
                         $type = File::class;
                         $resourceMapping[] = File::class;
