@@ -3,7 +3,7 @@
 namespace WhiteDigital\EntityResourceMapper\Maker;
 
 use BackedEnum;
-use DateTimeImmutable;
+use DateTimeInterface;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping\ManyToMany;
 use Doctrine\ORM\Mapping\OneToMany;
@@ -34,6 +34,7 @@ use function end;
 use function explode;
 use function getcwd;
 use function in_array;
+use function is_a;
 use function is_subclass_of;
 use function preg_replace;
 use function sort;
@@ -241,8 +242,8 @@ If the argument is missing, the command will ask for the entity class name inter
                             $parts = explode('\\', $header);
                             $header = end($parts);
                         }
-                    } elseif (DateTimeImmutable::class === $prop->getName()) {
-                        $type = DateTimeImmutable::class;
+                    } elseif (is_a($prop->getName(), DateTimeInterface::class, true)) {
+                        $type = $prop->getName();
                     } elseif (File::class === $prop->getName()) {
                         $type = File::class;
                         $resourceMapping[] = File::class;
