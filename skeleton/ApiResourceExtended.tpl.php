@@ -21,6 +21,13 @@ use <?php echo $provider->getFullName() . ";\n"; ?>
 use DateTimeImmutable;
 use Doctrine\Common\Collections\Criteria;
 use Symfony\Component\Serializer\Annotation\Groups;
+use WhiteDigital\EntityResourceMapper\Filters\ResourceBooleanFilter;
+use WhiteDigital\EntityResourceMapper\Filters\ResourceDateFilter;
+use WhiteDigital\EntityResourceMapper\Filters\ResourceEnumFilter;
+use WhiteDigital\EntityResourceMapper\Filters\ResourceJsonFilter;
+use WhiteDigital\EntityResourceMapper\Filters\ResourceNumericFilter;
+use WhiteDigital\EntityResourceMapper\Filters\ResourceOrderFilter;
+use WhiteDigital\EntityResourceMapper\Filters\ResourceRangeFilter;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 
 #[
@@ -52,6 +59,29 @@ use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
         processor: <?php echo $processor->getShortName(); ?>::class,
     ),
     ApiFilter(GroupFilter::class, arguments: ['parameterName' => 'groups', 'overrideDefaultGroups' => false, ]),
+    <?php if([] !== ($filters['bool'] ?? [])){ ?>
+    ApiFilter(ResourceBooleanFilter::class, properties: <?php echo json_encode($filters['bool']); ?>),
+    <?php } ?>
+    <?php if([] !== ($filters['date'] ?? [])){ ?>
+    ApiFilter(ResourceDateFilter::class, properties: <?php echo json_encode($filters['date']); ?>),
+    <?php } ?>
+    <?php if([] !== ($filters['array'] ?? [])){ ?>
+    ApiFilter(ResourceJsonFilter::class, properties: <?php echo json_encode($filters['array']); ?>),
+    <?php } ?>
+    <?php if([] !== ($filters['numeric'] ?? [])){ ?>
+    ApiFilter(ResourceNumericFilter::class, properties: <?php echo json_encode($filters['numeric']); ?>),
+    ApiFilter(ResourceRangeFilter::class, properties: <?php echo json_encode($filters['numeric']); ?>),
+    <?php } ?>
+    <?php if([] !== ($filters['enum'] ?? [])){ ?>
+    ApiFilter(ResourceEnumFilter::class, properties: [<?php
+        foreach($filters['enum'] as $enum){
+            echo "'".$enum."' => ".$enums[$enum].', ';
+        }
+    ?>]),
+    <?php } ?>
+    <?php if([] !== ($order ?? [])){ ?>
+    ApiFilter(ResourceOrderFilter::class, properties: <?php echo json_encode($order); ?>),
+    <?php } ?>
 ]
 class <?php echo $class_name; ?> extends BaseResource
 {

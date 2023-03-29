@@ -9,6 +9,7 @@ use Doctrine\ORM\Mapping\ManyToMany;
 use Doctrine\ORM\Mapping\OneToMany;
 use Exception;
 use ReflectionClass;
+use ReflectionException;
 use Symfony\Bundle\MakerBundle\ConsoleStyle;
 use Symfony\Bundle\MakerBundle\DependencyBuilder;
 use Symfony\Bundle\MakerBundle\Generator;
@@ -22,10 +23,12 @@ use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\PropertyInfo\Type;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
+use WhiteDigital\EntityResourceMapper\EntityResourceMapperBundle;
 use WhiteDigital\EntityResourceMapper\Mapper\ClassMapper;
 use WhiteDigital\EntityResourceMapper\UTCDateTimeImmutable;
 
 use function array_column;
+use function array_merge;
 use function array_merge_recursive;
 use function array_multisort;
 use function array_unique;
@@ -36,10 +39,12 @@ use function explode;
 use function getcwd;
 use function in_array;
 use function is_a;
+use function is_array;
 use function is_subclass_of;
 use function preg_replace;
 use function sort;
 use function sprintf;
+use function str_contains;
 use function str_replace;
 use function strtolower;
 use function unlink;
@@ -49,6 +54,8 @@ use const SORT_REGULAR;
 
 class MakeApiResource extends AbstractMaker
 {
+    private array $enums = [];
+
     public function __construct(private readonly ClassMapper $mapper, private readonly ParameterBagInterface $bag)
     {
     }
@@ -69,6 +76,7 @@ class MakeApiResource extends AbstractMaker
             ->addArgument('entity', InputArgument::OPTIONAL, 'The name of the entity class (e.g. <fg=yellow>User</>) for which to create resource')
             ->addOption('no-properties', null, InputOption::VALUE_NONE, 'Use this option to disable resource property generation')
             ->addOption('delete-if-exists', null, InputOption::VALUE_NONE, 'Use this option to delete existing ApiResource, DataProvider and DataProcessor before generation')
+            ->addOption('level', null, InputOption::VALUE_OPTIONAL, 'How deep generate filters', 0)
             ->setHelp('
 <info>php %command.full_name% User</info>
 
@@ -279,9 +287,29 @@ If the argument is missing, the command will ask for the entity class name inter
 
         $newResource = $generator->createClassNameDetails($entityName, $this->bag->get($wd . '.namespaces.api_resource') . $ns, $this->bag->get($wd . '.defaults.api_resource_suffix'));
 
+        $enums = [];
+        $filters = $this->getFilters($entityRef, (int) $input->getOption('level'));
+        $map = EntityResourceMapperBundle::makeOneDimension($filters, onlyLast: true);
+        foreach ($map as $item => $values) {
+            foreach ($values as $value) {
+                if (is_array($value)) {
+                    $ref = new ReflectionClass($value['type']);
+                    $enums[strtr($item, ['enum' => $value['name']])] = $ref->getShortName() . '::class';
+                    $resourceMapping[] = $value['type'];
+                }
+            }
+        }
+        $full = $this->makeFilters($map);
+
         @unlink($this->fixPath($newResource->getFullName()));
         $resourceMapping = array_unique($resourceMapping);
 
+        $json = [];
+        foreach ($full['array'] ?? [] as $item) {
+            $json[] = $item . "->>'order'";
+        }
+
+        $order = array_merge($full['numeric'] ?? [], $full['search'] ?? [], $full['date'] ?? [], $json);
         $generator->generateClass(
             $newResource->getFullName(),
             dirname(__DIR__, 2) . '/skeleton/ApiResourceExtended.tpl.php',
@@ -294,12 +322,91 @@ If the argument is missing, the command will ask for the entity class name inter
                 'groups' => $groups,
                 'properties' => $properties,
                 'uses' => $resourceMapping,
+                'filters' => $full,
+                'enums' => $enums,
+                'order' => $order,
             ],
         );
 
         $generator->writeChanges();
 
         $this->writeSuccessMessage($io);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    private function getFilters(ReflectionClass $entityRef, int $level = 0): array
+    {
+        if (0 === $level) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($entityRef->getProperties() as $property) {
+            $name = $property->getName();
+            $prop = $property->getType();
+            if ($prop->isBuiltin()) {
+                $type = $prop->getName();
+                if ('mixed' === $type && 'id' === $property->getName()) {
+                    $type = 'int';
+                }
+
+                match ($type) {
+                    'string', 'mixed' => $result['search'][] = $name,
+                    'int', 'float' => $result['numeric'][] = $name,
+                    'bool' => $result['bool'][] = $name,
+                    'array' => $result['array'][] = $name,
+                    default => null,
+                };
+            } else {
+                $ref = new ReflectionClass($prop->getName());
+                if (is_a($prop->getName(), DateTimeInterface::class, true)) {
+                    $result['date'][] = $name;
+                    continue;
+                }
+
+                if ($ref->implementsInterface(BackedEnum::class)) {
+                    $result['enum'][] = ['name' => $name, 'type' => $ref->getName()];
+                    continue;
+                }
+
+                if (Collection::class === $prop->getName()) {
+                    $orm = array_merge_recursive($property->getAttributes(ManyToMany::class), $property->getAttributes(OneToMany::class));
+                    if ([] !== $orm && 0 < $level - 1) {
+                        $colRef = new ReflectionClass($this->mapper->byEntity($orm[0]->getArguments()['targetEntity']));
+                        $result[$property->getName()] = $this->getFilters($colRef, $level - 1);
+                    }
+                    continue;
+                }
+
+                if (0 < $level - 1) {
+                    $result[$property->getName()] = $this->getFilters($ref, $level - 1);
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    private function makeFilters(array $full): array
+    {
+        foreach ($full as $item => $values) {
+            if (str_contains($item, '.')) {
+                $parts = [];
+                preg_match("/(^.*)\.(.*?)$/", $item, $parts);
+                unset($full[$item]);
+                foreach ($values as $value) {
+                    if (is_array($value)) {
+                        $value = $value['name'];
+                    }
+
+                    $full[$parts[2]][] = $parts[1] . '.' . $value;
+                }
+            }
+        }
+
+        return $full;
     }
 
     private function fixPath(string $className): string
