@@ -3,7 +3,7 @@
 namespace WhiteDigital\EntityResourceMapper\Maker;
 
 use BackedEnum;
-use DateTimeImmutable;
+use DateTimeInterface;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping\ManyToMany;
 use Doctrine\ORM\Mapping\OneToMany;
@@ -23,7 +23,6 @@ use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\PropertyInfo\Type;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Mapper\ClassMapper;
-use WhiteDigital\EntityResourceMapper\UTCDateTimeImmutable;
 
 use function array_column;
 use function array_merge_recursive;
@@ -35,6 +34,7 @@ use function end;
 use function explode;
 use function getcwd;
 use function in_array;
+use function is_a;
 use function is_subclass_of;
 use function preg_replace;
 use function sort;
@@ -242,7 +242,7 @@ If the argument is missing, the command will ask for the entity class name inter
                             $parts = explode('\\', $header);
                             $header = end($parts);
                         }
-                    } elseif (in_array($prop->getName(), [DateTimeImmutable::class, UTCDateTimeImmutable::class, ], true)) {
+                    } elseif (is_a($prop->getName(), DateTimeInterface::class, true)) {
                         $type = $prop->getName();
                     } elseif (File::class === $prop->getName()) {
                         $type = File::class;
