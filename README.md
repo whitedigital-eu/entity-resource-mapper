@@ -416,7 +416,8 @@ class UserResource extends BaseResource
     public ?UserResource $parent = null;
 }
 ```
-Higher level -> deeper subresource filters  
+Higher level -> deeper subresource filters.  
+It is obvious that you probably do not need all generated filters, but it is easier to remove than it is to add.  
 
 ### PHP CS Fixer
 > **IMPORTANT**: When running php-cs-fixer, make sure not to format files in `skeleton` folder. Otherwise maker

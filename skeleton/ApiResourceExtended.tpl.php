@@ -28,6 +28,7 @@ use WhiteDigital\EntityResourceMapper\Filters\ResourceJsonFilter;
 use WhiteDigital\EntityResourceMapper\Filters\ResourceNumericFilter;
 use WhiteDigital\EntityResourceMapper\Filters\ResourceOrderFilter;
 use WhiteDigital\EntityResourceMapper\Filters\ResourceRangeFilter;
+use WhiteDigital\EntityResourceMapper\Filters\ResourceSearchFilter;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 
 #[
@@ -59,28 +60,31 @@ use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
         processor: <?php echo $processor->getShortName(); ?>::class,
     ),
     ApiFilter(GroupFilter::class, arguments: ['parameterName' => 'groups', 'overrideDefaultGroups' => false, ]),
-    <?php if([] !== ($filters['bool'] ?? [])){ ?>
+    <?php if ([] !== ($filters['bool'] ?? [])) { ?>
     ApiFilter(ResourceBooleanFilter::class, properties: <?php echo json_encode($filters['bool']); ?>),
     <?php } ?>
-    <?php if([] !== ($filters['date'] ?? [])){ ?>
+    <?php if ([] !== ($filters['date'] ?? [])) { ?>
     ApiFilter(ResourceDateFilter::class, properties: <?php echo json_encode($filters['date']); ?>),
     <?php } ?>
-    <?php if([] !== ($filters['array'] ?? [])){ ?>
+    <?php if ([] !== ($filters['array'] ?? [])) { ?>
     ApiFilter(ResourceJsonFilter::class, properties: <?php echo json_encode($filters['array']); ?>),
     <?php } ?>
-    <?php if([] !== ($filters['numeric'] ?? [])){ ?>
+    <?php if ([] !== ($filters['numeric'] ?? [])) { ?>
     ApiFilter(ResourceNumericFilter::class, properties: <?php echo json_encode($filters['numeric']); ?>),
     ApiFilter(ResourceRangeFilter::class, properties: <?php echo json_encode($filters['numeric']); ?>),
     <?php } ?>
     <?php if([] !== ($filters['enum'] ?? [])){ ?>
     ApiFilter(ResourceEnumFilter::class, properties: [<?php
-        foreach($filters['enum'] as $enum){
-            echo "'".$enum."' => ".$enums[$enum].', ';
+        foreach ($filters['enum'] as $enum) {
+            echo "'" . $enum . "' => " . $enums[$enum] . ', ';
         }
     ?>]),
     <?php } ?>
-    <?php if([] !== ($order ?? [])){ ?>
+    <?php if ([] !== ($order ?? [])) { ?>
     ApiFilter(ResourceOrderFilter::class, properties: <?php echo json_encode($order); ?>),
+    <?php } ?>
+    <?php if ([] !== ($filters['search'] ?? [])) { ?>
+    ApiFilter(ResourceSearchFilter::class, properties: <?php echo json_encode($filters['search']); ?>),
     <?php } ?>
 ]
 class <?php echo $class_name; ?> extends BaseResource
@@ -88,7 +92,7 @@ class <?php echo $class_name; ?> extends BaseResource
     public const PREFIX = '<?php echo $prefix . $separator; ?>';
 
 <?php
-foreach($groups as $group){
+foreach ($groups as $group) {
     echo '    private const ' . strtoupper($group) . " = self::PREFIX . '$group'; // $prefix$separator$group\n";
 }
 ?>

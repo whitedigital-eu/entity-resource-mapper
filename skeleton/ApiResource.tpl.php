@@ -53,7 +53,7 @@ class <?php echo $class_name; ?> extends BaseResource
     public const PREFIX = '<?php echo $prefix . $separator; ?>';
 
 <?php
-foreach($groups as $group){
+foreach ($groups as $group) {
     echo '    private const ' . strtoupper($group) . " = self::PREFIX . '$group'; // $prefix$separator$group\n";
 }
 ?>
