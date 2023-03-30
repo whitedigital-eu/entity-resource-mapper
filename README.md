@@ -363,6 +363,61 @@ This option comes in handy on occasion when you have 2 entities, that have relat
 2. run `make:api-resource Entity2`  
 3. run `make:api-resource Entity1 --delete-if-exists`
 
+This command automatically generates ApiFilters for given entity. Default value is to generate them is for first level fields. Like this:
+
+```php
+use ApiPlatform\Metadata\ApiFilter;
+use ApiPlatform\Metadata\ApiResource;
+use WhiteDigital\EntityResourceMapper\Filters\ResourceDateFilter;
+use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
+
+#[
+    ApiResource (
+        shortName: 'User'
+    ),
+    ApiFilter(ResourceDateFilter::class, properties: ['createdAt', 'updatedAt', ]),
+]
+class UserResource extends BaseResource 
+{
+    public ?DateTimeImmutable $createdAt = null;
+
+    public ?DateTimeImmutable $updatedAt = null;
+    
+    public ?UserResource $parent = null;
+}
+```
+If you don't want to generate any filters, run command by passing `level 0`:  
+```shell
+bin/console make:api-resource User --level 0
+```
+
+If you want generate filters for more levels for subresources, like, parent.createdAt, pass higher level:  
+```shell
+bin/console make:api-resource User --level 2
+```
+```php
+use ApiPlatform\Metadata\ApiFilter;
+use ApiPlatform\Metadata\ApiResource;
+use WhiteDigital\EntityResourceMapper\Filters\ResourceDateFilter;
+use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
+
+#[
+    ApiResource (
+        shortName: 'User'
+    ),
+    ApiFilter(ResourceDateFilter::class, properties: ['createdAt', 'updatedAt', 'parent.createdAt', 'parent.updatedAt']),
+]
+class UserResource extends BaseResource 
+{
+    public ?DateTimeImmutable $createdAt = null;
+
+    public ?DateTimeImmutable $updatedAt = null;
+    
+    public ?UserResource $parent = null;
+}
+```
+Higher level -> deeper subresource filters  
+
 ### PHP CS Fixer
 > **IMPORTANT**: When running php-cs-fixer, make sure not to format files in `skeleton` folder. Otherwise maker
 > command will stop working.

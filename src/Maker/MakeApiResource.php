@@ -76,7 +76,7 @@ class MakeApiResource extends AbstractMaker
             ->addArgument('entity', InputArgument::OPTIONAL, 'The name of the entity class (e.g. <fg=yellow>User</>) for which to create resource')
             ->addOption('no-properties', null, InputOption::VALUE_NONE, 'Use this option to disable resource property generation')
             ->addOption('delete-if-exists', null, InputOption::VALUE_NONE, 'Use this option to delete existing ApiResource, DataProvider and DataProcessor before generation')
-            ->addOption('level', null, InputOption::VALUE_OPTIONAL, 'How deep generate filters', 0)
+            ->addOption('level', null, InputOption::VALUE_OPTIONAL, 'How deep generate filters', 1)
             ->setHelp('
 <info>php %command.full_name% User</info>
 
