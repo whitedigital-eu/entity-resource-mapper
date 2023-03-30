@@ -3,11 +3,13 @@
 namespace WhiteDigital\EntityResourceMapper\Maker;
 
 use BackedEnum;
+use DateTimeImmutable;
 use DateTimeInterface;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping\ManyToMany;
 use Doctrine\ORM\Mapping\OneToMany;
 use Exception;
+use InvalidArgumentException;
 use ReflectionClass;
 use ReflectionException;
 use Symfony\Bundle\MakerBundle\ConsoleStyle;
