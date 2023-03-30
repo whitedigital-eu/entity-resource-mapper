@@ -56,8 +56,6 @@ use const SORT_REGULAR;
 
 class MakeApiResource extends AbstractMaker
 {
-    private array $enums = [];
-
     public function __construct(private readonly ClassMapper $mapper, private readonly ParameterBagInterface $bag)
     {
     }
@@ -301,17 +299,17 @@ If the argument is missing, the command will ask for the entity class name inter
                 }
             }
         }
-        $full = $this->makeFilters($map);
+        $flattened = $this->flattenFilterMap($map);
 
         @unlink($this->fixPath($newResource->getFullName()));
         $resourceMapping = array_unique($resourceMapping);
 
         $json = [];
-        foreach ($full['array'] ?? [] as $item) {
+        foreach ($flattened['array'] ?? [] as $item) {
             $json[] = $item . "->>'order'";
         }
 
-        $order = array_merge($full['numeric'] ?? [], $full['search'] ?? [], $full['date'] ?? [], $json);
+        $order = array_merge($flattened['numeric'] ?? [], $flattened['search'] ?? [], $flattened['date'] ?? [], $json);
         $generator->generateClass(
             $newResource->getFullName(),
             dirname(__DIR__, 2) . '/skeleton/ApiResourceExtended.tpl.php',
@@ -324,7 +322,7 @@ If the argument is missing, the command will ask for the entity class name inter
                 'groups' => $groups,
                 'properties' => $properties,
                 'uses' => $resourceMapping,
-                'filters' => $full,
+                'filters' => $flattened,
                 'enums' => $enums,
                 'order' => $order,
             ],
@@ -391,7 +389,7 @@ If the argument is missing, the command will ask for the entity class name inter
         return $result;
     }
 
-    private function makeFilters(array $full): array
+    private function flattenFilterMap(array $full): array
     {
         foreach ($full as $item => $values) {
             if (str_contains($item, '.')) {
@@ -404,6 +402,14 @@ If the argument is missing, the command will ask for the entity class name inter
                     }
 
                     $full[$parts[2]][] = $parts[1] . '.' . $value;
+                }
+            } else {
+                foreach ($values as $id => $value) {
+                    if (is_array($value)) {
+                        $value = $value['name'];
+                    }
+
+                    $full[$item][$id] = $value;
                 }
             }
         }
