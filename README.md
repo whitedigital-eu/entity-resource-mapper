@@ -419,6 +419,21 @@ class UserResource extends BaseResource
 Higher level -> deeper subresource filters.  
 It is obvious that you probably do not need all generated filters, but it is easier to remove than it is to add.  
 
+If you want to exclude specific type of filters, you can pass `--exclude-<filter>` to skip generation of those filters.  
+```shell
+bin/console make:api-resource User --level 2 --exclude-array --exclude-numeric --exclude-range
+```
+Available filters are:  
++ `array`: `ResourceJsonFilter`
++ `bool`: `ResourceBooleanFilter`
++ `date`: `ResourceDateFilter`
++ `enum`: `ResourceEnumFilter`
++ `numeric`: `ResourceNumericFilter`
++ `range`: `ResourceRangeFilter`
++ `search`: `ResourceSearchFilter`
+
+`ResourceOrderFilter` is created from non-excluded `numeric`, `search`, `date` and `array` filters.  
+
 ### PHP CS Fixer
 > **IMPORTANT**: When running php-cs-fixer, make sure not to format files in `skeleton` folder. Otherwise maker
 > command will stop working.

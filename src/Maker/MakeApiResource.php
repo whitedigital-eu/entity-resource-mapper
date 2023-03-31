@@ -24,6 +24,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\PropertyInfo\Type;
+use Symfony\Component\Serializer\Annotation\Ignore;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\EntityResourceMapperBundle;
 use WhiteDigital\EntityResourceMapper\Mapper\ClassMapper;
@@ -56,6 +57,8 @@ use const SORT_REGULAR;
 
 class MakeApiResource extends AbstractMaker
 {
+    private const FILTER_TYPES = ['array', 'bool', 'date', 'enum', 'numeric', 'range', 'search', ];
+
     public function __construct(private readonly ClassMapper $mapper, private readonly ParameterBagInterface $bag)
     {
     }
@@ -82,6 +85,10 @@ class MakeApiResource extends AbstractMaker
 
 If the argument is missing, the command will ask for the entity class name interactively.
             ');
+
+        foreach (self::FILTER_TYPES as $type) {
+            $command->addOption(sprintf('exclude-%s', $type), null, InputOption::VALUE_NONE, sprintf('Exclude %s filters', $type));
+        }
     }
 
     public function configureDependencies(DependencyBuilder $dependencies): void
@@ -300,6 +307,12 @@ If the argument is missing, the command will ask for the entity class name inter
             }
         }
         $flattened = $this->flattenFilterMap($map);
+        $flattened['range'] = $flattened['numeric'] ?? [];
+        foreach (self::FILTER_TYPES as $type) {
+            if ($input->getOption(sprintf('exclude-%s', $type))) {
+                unset($flattened[$type]);
+            }
+        }
 
         @unlink($this->fixPath($newResource->getFullName()));
         $resourceMapping = array_unique($resourceMapping);
