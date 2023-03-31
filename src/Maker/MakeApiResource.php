@@ -344,6 +344,10 @@ If the argument is missing, the command will ask for the entity class name inter
 
         $result = [];
         foreach ($entityRef->getProperties() as $property) {
+            if ([] !== $property->getAttributes(Ignore::class)) {
+                continue;
+            }
+
             $name = $property->getName();
             $prop = $property->getType();
             if ($prop->isBuiltin()) {
