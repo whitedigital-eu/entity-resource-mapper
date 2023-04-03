@@ -33,4 +33,9 @@ class UTCDateTimeImmutable extends DateTimeImmutable
     {
         return parent::createFromFormat(format: $format, datetime: $datetime, timezone: $timezone ?? self::getUTCTimeZone());
     }
+
+    public static function convert(?DateTimeImmutable $dateTime): ?self
+    {
+        return null !== $dateTime ? self::createFromInterface($dateTime) : null;
+    }
 }
