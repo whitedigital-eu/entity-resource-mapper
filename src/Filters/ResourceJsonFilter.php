@@ -65,8 +65,8 @@ class ResourceJsonFilter extends AbstractFilter
             $searchSpecificKey = true;
             $keyName = key($value);
             $value = current($value);
+            $value = filter_var($value, FILTER_SANITIZE_ADD_SLASHES);
         }
-        $value = filter_var($value, FILTER_SANITIZE_ADD_SLASHES);
 
         if ($searchSpecificKey) {
             /*
@@ -84,7 +84,15 @@ class ResourceJsonFilter extends AbstractFilter
              * @ like_regex "authVar"   value contains 'authVar'
              * flag "i"                 case-insensitive flag
              */
-            $queryBuilder->andWhere(sprintf('JSONB_PATH_EXISTS(%s, \'$.** ? (@.type() == "string" && @ like_regex "%s" flag "i")\') = TRUE', $property, $value));
+            foreach ($value as $key => $item) {
+                if (is_numeric($item) || filter_var($item, FILTER_VALIDATE_BOOL)) {
+                    $queryBuilder->andWhere(sprintf('JSONB_PATH_EXISTS(%s, \'$.** ? (@.%s == %s)\') = TRUE', $property, $key, $item));
+                    continue;
+                }
+
+                $item = filter_var($item, FILTER_SANITIZE_ADD_SLASHES);
+                $queryBuilder->andWhere(sprintf('JSONB_PATH_EXISTS(%s, \'$.** ? (@.%s like_regex "%s" flag "i")\') = TRUE', $property, $key, $item));
+            }
         }
     }
 
