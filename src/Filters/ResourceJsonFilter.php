@@ -65,14 +65,15 @@ class ResourceJsonFilter extends AbstractFilter
             $searchSpecificKey = true;
             $keyName = key($value);
             $value = current($value);
-            $value = filter_var($value, FILTER_SANITIZE_ADD_SLASHES);
         }
 
         if ($searchSpecificKey) {
             /*
              * Will convert to: WHERE table.field->>'key' = 'searchValue'
              */
-            $queryBuilder->andWhere(sprintf("JSON_GET_TEXT(%s, '%s') = '%s' ", $property, $keyName, $value));
+            $queryBuilder->andWhere(sprintf("JSON_GET_TEXT(%s, '%s') = '%s' ", $property, $keyName, $this->sanitize($value)));
+        } elseif (!is_array($value)) {
+            $queryBuilder->andWhere(sprintf('JSONB_PATH_EXISTS(%s, \'$.** ? (@.type() == "string" && @ like_regex "%s" flag "i")\') = TRUE', $property, $this->sanitize($value)));
         } else {
             /*
              * Custom function registered at App\DBAL\Functions\JsonbPathExists
@@ -90,10 +91,14 @@ class ResourceJsonFilter extends AbstractFilter
                     continue;
                 }
 
-                $item = filter_var($item, FILTER_SANITIZE_ADD_SLASHES);
-                $queryBuilder->andWhere(sprintf('JSONB_PATH_EXISTS(%s, \'$.** ? (@.%s like_regex "%s" flag "i")\') = TRUE', $property, $key, $item));
+                $queryBuilder->andWhere(sprintf('JSONB_PATH_EXISTS(%s, \'$.** ? (@.%s like_regex "%s" flag "i")\') = TRUE', $property, $key, $this->sanitize($item)));
             }
         }
+    }
+
+    private function sanitize(string $value): string
+    {
+        return filter_var($value, FILTER_SANITIZE_ADD_SLASHES);
     }
 
     /**
