@@ -59,40 +59,38 @@ class ResourceJsonFilter extends AbstractFilter
             return;
         }
         $property = sprintf('%s.%s', $queryBuilder->getRootAliases()[0], $property);
-        $searchSpecificKey = false;
-        $keyName = '';
-        if (is_array($value) && 1 === count($value)) {
-            $searchSpecificKey = true;
-            $keyName = key($value);
-            $value = current($value);
+
+        if (!is_array($value)) {
+            $value = [$value];
         }
 
-        if ($searchSpecificKey) {
+        foreach ($value as $key => $item) {
+            if (!is_numeric($key)) {
+                $queryBuilder->andWhere(sprintf("JSON_GET_TEXT(%s, '%s') = '%s' ", $property, $key, $this->sanitize($item)));
+                continue;
+            }
+
+            $orStatements = $queryBuilder->expr()->orX();
+
+            if (is_numeric($item) || filter_var($item, FILTER_VALIDATE_BOOL)) {
+                $orStatements->add(
+                    $queryBuilder->expr()->orX(sprintf('JSONB_PATH_EXISTS(%s, \'$.** ? (@ == %s)\') = TRUE', $property, $item)),
+                );
+            }
+
             /*
-             * Will convert to: WHERE table.field->>'key' = 'searchValue'
-             */
-            $queryBuilder->andWhere(sprintf("JSON_GET_TEXT(%s, '%s') = '%s' ", $property, $keyName, $this->sanitize($value)));
-        } elseif (!is_array($value)) {
-            $queryBuilder->andWhere(sprintf('JSONB_PATH_EXISTS(%s, \'$.** ? (@.type() == "string" && @ like_regex "%s" flag "i")\') = TRUE', $property, $this->sanitize($value)));
-        } else {
-            /*
-             * Custom function registered at App\DBAL\Functions\JsonbPathExists
+             * Custom function registered at WhiteDigital\EntityResourceMapper\DBAL\Functions\JsonbPathExists
              * Query from https://stackoverflow.com/questions/45849494/how-do-i-search-for-a-specific-string-in-a-json-postgres-data-type-column
              * $.**                     find any value at any level (recursive processing)
              * ?                        where
-             * @.type() == "string"     value is string
-             * &&                       and
              * @ like_regex "authVar"   value contains 'authVar'
              * flag "i"                 case-insensitive flag
              */
-            foreach ($value as $key => $item) {
-                if (is_numeric($item) || filter_var($item, FILTER_VALIDATE_BOOL)) {
-                    $queryBuilder->andWhere(sprintf('JSONB_PATH_EXISTS(%s, \'$.** ? (@.%s == %s)\') = TRUE', $property, $key, $item));
-                    continue;
-                }
+            $orStatements->add(
+                $queryBuilder->expr()->orX(sprintf('JSONB_PATH_EXISTS(%s, \'$.** ? (@ like_regex "%s" flag "i")\') = TRUE', $property, $this->sanitize($item))),
+            );
 
-                $queryBuilder->andWhere(sprintf('JSONB_PATH_EXISTS(%s, \'$.** ? (@.%s like_regex "%s" flag "i")\') = TRUE', $property, $key, $this->sanitize($item)));
-            }
+            $queryBuilder->andWhere($orStatements);
         }
     }
 
