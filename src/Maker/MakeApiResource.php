@@ -55,9 +55,20 @@ use function unlink;
 use const SORT_ASC;
 use const SORT_REGULAR;
 
+/**
+ * @internal
+ */
 class MakeApiResource extends AbstractMaker
 {
-    private const FILTER_TYPES = ['array', 'bool', 'date', 'enum', 'numeric', 'range', 'search', ];
+    public const F_ARRAY = 'array';
+    public const F_BOOL = 'bool';
+    public const F_DATE = 'date';
+    public const F_ENUM = 'enum';
+    public const F_NUMERIC = 'numeric';
+    public const F_RANGE = 'range';
+    public const F_SEARCH = 'search';
+
+    private const FILTER_TYPES = [self::F_ARRAY, self::F_BOOL, self::F_DATE, self::F_ENUM, self::F_NUMERIC, self::F_RANGE, self::F_SEARCH, ];
 
     public function __construct(private readonly ClassMapper $mapper, private readonly ParameterBagInterface $bag)
     {
@@ -307,7 +318,7 @@ If the argument is missing, the command will ask for the entity class name inter
             }
         }
         $flattened = $this->flattenFilterMap($map);
-        $flattened['range'] = $flattened['numeric'] ?? [];
+        $flattened[self::F_RANGE] = $flattened[self::F_NUMERIC] ?? [];
         foreach (self::FILTER_TYPES as $type) {
             if ($input->getOption(sprintf('exclude-%s', $type))) {
                 unset($flattened[$type]);
@@ -318,11 +329,11 @@ If the argument is missing, the command will ask for the entity class name inter
         $resourceMapping = array_unique($resourceMapping);
 
         $json = [];
-        foreach ($flattened['array'] ?? [] as $item) {
+        foreach ($flattened[self::F_ARRAY] ?? [] as $item) {
             $json[] = $item . "->>'order'";
         }
 
-        $order = array_merge($flattened['numeric'] ?? [], $flattened['search'] ?? [], $flattened['date'] ?? [], $json);
+        $order = array_merge($flattened[self::F_NUMERIC] ?? [], $flattened[self::F_SEARCH] ?? [], $flattened[self::F_DATE] ?? [], $json);
         $generator->generateClass(
             $newResource->getFullName(),
             dirname(__DIR__, 2) . '/skeleton/ApiResourceExtended.tpl.php',
@@ -366,25 +377,25 @@ If the argument is missing, the command will ask for the entity class name inter
             if ($prop->isBuiltin()) {
                 $type = $prop->getName();
                 if ('mixed' === $type && 'id' === $property->getName()) {
-                    $type = 'int';
+                    $type = Type::BUILTIN_TYPE_INT;
                 }
 
                 match ($type) {
-                    'string', 'mixed' => $result['search'][] = $name,
-                    'int', 'float' => $result['numeric'][] = $name,
-                    'bool' => $result['bool'][] = $name,
-                    'array' => $result['array'][] = $name,
+                    Type::BUILTIN_TYPE_STRING, 'mixed' => $result[self::F_SEARCH][] = $name,
+                    Type::BUILTIN_TYPE_INT, Type::BUILTIN_TYPE_FLOAT => $result[self::F_NUMERIC][] = $name,
+                    Type::BUILTIN_TYPE_BOOL => $result[self::F_BOOL][] = $name,
+                    Type::BUILTIN_TYPE_ARRAY => $result[self::F_ARRAY][] = $name,
                     default => null,
                 };
             } else {
                 $ref = new ReflectionClass($prop->getName());
                 if (is_a($prop->getName(), DateTimeInterface::class, true)) {
-                    $result['date'][] = $name;
+                    $result[self::F_DATE][] = $name;
                     continue;
                 }
 
                 if ($ref->implementsInterface(BackedEnum::class)) {
-                    $result['enum'][] = ['name' => $name, 'type' => $ref->getName()];
+                    $result[self::F_ENUM][] = ['name' => $name, 'type' => $ref->getName()];
                     continue;
                 }
 

@@ -1,5 +1,7 @@
 <?php echo "<?php declare(strict_types = 1);\n"; ?>
 
+<?php use WhiteDigital\EntityResourceMapper\Maker\MakeApiResource; ?>
+
 namespace <?php echo $namespace; ?>;
 
 use ApiPlatform\Metadata\ApiFilter;
@@ -21,28 +23,28 @@ use <?php echo $provider->getFullName() . ";\n"; ?>
 use DateTimeImmutable;
 use Doctrine\Common\Collections\Criteria;
 use Symfony\Component\Serializer\Annotation\Groups;
-<?php if ($hasBool = ([] !== ($filters['bool'] ?? []))) { ?>
+<?php if ($hasBool = ([] !== ($filters[MakeApiResource::F_BOOL] ?? []))) { ?>
 use WhiteDigital\EntityResourceMapper\Filters\ResourceBooleanFilter;
 <?php } ?>
-<?php if ($hasDate = ([] !== ($filters['date'] ?? []))) { ?>
+<?php if ($hasDate = ([] !== ($filters[MakeApiResource::F_DATE] ?? []))) { ?>
 use WhiteDigital\EntityResourceMapper\Filters\ResourceDateFilter;
 <?php } ?>
-<?php if ($hasEnum = ([] !== ($filters['enum'] ?? []))) { ?>
+<?php if ($hasEnum = ([] !== ($filters[MakeApiResource::F_ENUM] ?? []))) { ?>
 use WhiteDigital\EntityResourceMapper\Filters\ResourceEnumFilter;
 <?php } ?>
-<?php if ($hasJson = ([] !== ($filters['array'] ?? []))) { ?>
+<?php if ($hasJson = ([] !== ($filters[MakeApiResource::F_ARRAY] ?? []))) { ?>
 use WhiteDigital\EntityResourceMapper\Filters\ResourceJsonFilter;
 <?php } ?>
-<?php if ($hasNumeric = ([] !== ($filters['numeric'] ?? []))) { ?>
+<?php if ($hasNumeric = ([] !== ($filters[MakeApiResource::F_NUMERIC] ?? []))) { ?>
 use WhiteDigital\EntityResourceMapper\Filters\ResourceNumericFilter;
 <?php } ?>
 <?php if ($hasOrder = ([] !== ($order ?? []))) { ?>
 use WhiteDigital\EntityResourceMapper\Filters\ResourceOrderFilter;
 <?php } ?>
-<?php if ($hasRange = ([] !== ($filters['range'] ?? []))) { ?>
+<?php if ($hasRange = ([] !== ($filters[MakeApiResource::F_RANGE] ?? []))) { ?>
 use WhiteDigital\EntityResourceMapper\Filters\ResourceRangeFilter;
 <?php } ?>
-<?php if ($hasSearch = ([] !== ($filters['search'] ?? []))) { ?>
+<?php if ($hasSearch = ([] !== ($filters[MakeApiResource::F_SEARCH] ?? []))) { ?>
 use WhiteDigital\EntityResourceMapper\Filters\ResourceSearchFilter;
 <?php } ?>
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
@@ -77,19 +79,19 @@ use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
     ),
     ApiFilter(GroupFilter::class, arguments: ['parameterName' => 'groups', 'overrideDefaultGroups' => false, ]),
     <?php if ($hasBool) { ?>
-    ApiFilter(ResourceBooleanFilter::class, properties: <?php echo json_encode($filters['bool']); ?>),
+    ApiFilter(ResourceBooleanFilter::class, properties: <?php echo json_encode($filters[MakeApiResource::F_BOOL]); ?>),
     <?php } ?>
     <?php if ($hasDate) { ?>
-    ApiFilter(ResourceDateFilter::class, properties: <?php echo json_encode($filters['date']); ?>),
+    ApiFilter(ResourceDateFilter::class, properties: <?php echo json_encode($filters[MakeApiResource::F_DATE]); ?>),
     <?php } ?>
     <?php if ($hasJson) { ?>
-    ApiFilter(ResourceJsonFilter::class, properties: <?php echo json_encode($filters['array']); ?>),
+    ApiFilter(ResourceJsonFilter::class, properties: <?php echo json_encode($filters[MakeApiResource::F_ARRAY]); ?>),
     <?php } ?>
     <?php if ($hasNumeric) { ?>
-    ApiFilter(ResourceNumericFilter::class, properties: <?php echo json_encode($filters['numeric']); ?>),
+    ApiFilter(ResourceNumericFilter::class, properties: <?php echo json_encode($filters[MakeApiResource::F_NUMERIC]); ?>),
     <?php } ?>
     <?php if ($hasRange) { ?>
-    ApiFilter(ResourceRangeFilter::class, properties: <?php echo json_encode($filters['numeric']); ?>),
+    ApiFilter(ResourceRangeFilter::class, properties: <?php echo json_encode($filters[MakeApiResource::F_RANGE]); ?>),
     <?php } ?>
     <?php if ($hasEnum) { ?>
     ApiFilter(ResourceEnumFilter::class, properties: [<?php
@@ -102,7 +104,7 @@ use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
     ApiFilter(ResourceOrderFilter::class, properties: <?php echo json_encode($order); ?>),
     <?php } ?>
     <?php if ($hasSearch) { ?>
-    ApiFilter(ResourceSearchFilter::class, properties: <?php echo json_encode($filters['search']); ?>),
+    ApiFilter(ResourceSearchFilter::class, properties: <?php echo json_encode($filters[MakeApiResource::F_SEARCH]); ?>),
     <?php } ?>
 ]
 class <?php echo $class_name; ?> extends BaseResource
