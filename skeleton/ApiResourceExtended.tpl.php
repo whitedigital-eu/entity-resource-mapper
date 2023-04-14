@@ -21,14 +21,30 @@ use <?php echo $provider->getFullName() . ";\n"; ?>
 use DateTimeImmutable;
 use Doctrine\Common\Collections\Criteria;
 use Symfony\Component\Serializer\Annotation\Groups;
+<?php if ($hasBool = ([] !== ($filters['bool'] ?? []))) { ?>
 use WhiteDigital\EntityResourceMapper\Filters\ResourceBooleanFilter;
+<?php } ?>
+<?php if ($hasDate = ([] !== ($filters['date'] ?? []))) { ?>
 use WhiteDigital\EntityResourceMapper\Filters\ResourceDateFilter;
+<?php } ?>
+<?php if ($hasEnum = ([] !== ($filters['enum'] ?? []))) { ?>
 use WhiteDigital\EntityResourceMapper\Filters\ResourceEnumFilter;
+<?php } ?>
+<?php if ($hasJson = ([] !== ($filters['array'] ?? []))) { ?>
 use WhiteDigital\EntityResourceMapper\Filters\ResourceJsonFilter;
+<?php } ?>
+<?php if ($hasNumeric = ([] !== ($filters['numeric'] ?? []))) { ?>
 use WhiteDigital\EntityResourceMapper\Filters\ResourceNumericFilter;
+<?php } ?>
+<?php if ($hasOrder = ([] !== ($order ?? []))) { ?>
 use WhiteDigital\EntityResourceMapper\Filters\ResourceOrderFilter;
+<?php } ?>
+<?php if ($hasRange = ([] !== ($filters['range'] ?? []))) { ?>
 use WhiteDigital\EntityResourceMapper\Filters\ResourceRangeFilter;
+<?php } ?>
+<?php if ($hasSearch = ([] !== ($filters['search'] ?? []))) { ?>
 use WhiteDigital\EntityResourceMapper\Filters\ResourceSearchFilter;
+<?php } ?>
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 
 #[
@@ -60,30 +76,32 @@ use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
         processor: <?php echo $processor->getShortName(); ?>::class,
     ),
     ApiFilter(GroupFilter::class, arguments: ['parameterName' => 'groups', 'overrideDefaultGroups' => false, ]),
-    <?php if ([] !== ($filters['bool'] ?? [])) { ?>
+    <?php if ($hasBool) { ?>
     ApiFilter(ResourceBooleanFilter::class, properties: <?php echo json_encode($filters['bool']); ?>),
     <?php } ?>
-    <?php if ([] !== ($filters['date'] ?? [])) { ?>
+    <?php if ($hasDate) { ?>
     ApiFilter(ResourceDateFilter::class, properties: <?php echo json_encode($filters['date']); ?>),
     <?php } ?>
-    <?php if ([] !== ($filters['array'] ?? [])) { ?>
+    <?php if ($hasJson) { ?>
     ApiFilter(ResourceJsonFilter::class, properties: <?php echo json_encode($filters['array']); ?>),
     <?php } ?>
-    <?php if ([] !== ($filters['numeric'] ?? [])) { ?>
+    <?php if ($hasNumeric) { ?>
     ApiFilter(ResourceNumericFilter::class, properties: <?php echo json_encode($filters['numeric']); ?>),
+    <?php } ?>
+    <?php if ($hasRange) { ?>
     ApiFilter(ResourceRangeFilter::class, properties: <?php echo json_encode($filters['numeric']); ?>),
     <?php } ?>
-    <?php if([] !== ($filters['enum'] ?? [])){ ?>
+    <?php if ($hasEnum) { ?>
     ApiFilter(ResourceEnumFilter::class, properties: [<?php
         foreach ($filters['enum'] as $enum) {
             echo "'" . $enum . "' => " . $enums[$enum] . ', ';
         }
     ?>]),
     <?php } ?>
-    <?php if ([] !== ($order ?? [])) { ?>
+    <?php if ($hasOrder) { ?>
     ApiFilter(ResourceOrderFilter::class, properties: <?php echo json_encode($order); ?>),
     <?php } ?>
-    <?php if ([] !== ($filters['search'] ?? [])) { ?>
+    <?php if ($hasSearch) { ?>
     ApiFilter(ResourceSearchFilter::class, properties: <?php echo json_encode($filters['search']); ?>),
     <?php } ?>
 ]
