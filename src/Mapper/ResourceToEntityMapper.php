@@ -5,7 +5,6 @@ declare(strict_types = 1);
 namespace WhiteDigital\EntityResourceMapper\Mapper;
 
 use Countable;
-use DateTimeImmutable;
 use DateTimeInterface;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -66,7 +65,7 @@ class ResourceToEntityMapper
                 $propertyValue = null;
             }
 
-            //  DateTimeInterface implementations are converted to DateTimeImmutable in entities
+            //  DateTimeInterface implementations are converted to UTCDateTimeImmutable in entities
             if (is_subclass_of($propertyType, DateTimeInterface::class)
                 && $propertyValue instanceof DateTimeInterface) {
                 $propertyValue = match (true) {
