@@ -11,33 +11,6 @@ use Doctrine\ORM\QueryBuilder;
 class ResourceMultiSearchFilter extends AbstractFilter
 {
     /**
-     * @param array<string, mixed>|null $context
-     */
-    protected function filterProperty(string $property, mixed $value, QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation $operation = null, ?array $context = null): void
-    {
-        if ('multisearch' !== $property) {
-            return;
-        }
-        $rootAlias = $queryBuilder->getRootAliases()[0];
-        foreach ($this->properties as $field => $v) {
-            if (str_contains($field, '.')) { // Handle nested relations
-                [$joinTable, $joinField] = explode('.', $field);
-                $queryBuilder->leftJoin("{$rootAlias}.{$joinTable}", $joinTable);
-                $rootAlias = $joinTable;
-                $field = $joinField;
-            }
-            $aliasedField = "{$rootAlias}.{$field}";
-            $valueParameter = ':' . $queryNameGenerator->generateParameterName($field);
-            $keyValueParameter = sprintf('%s_%s', $valueParameter, 0);
-            $queryBuilder->setParameter($keyValueParameter, $value);
-            $queryBuilder->orWhere($queryBuilder->expr()->like(
-                "LOWER({$aliasedField})",
-                sprintf('LOWER(%s)', $queryBuilder->expr()->concat("'%'", $keyValueParameter, "'%'")),
-            ));
-        }
-    }
-
-    /**
      * @return array<string, mixed>
      *
      * @throws Exception
@@ -63,5 +36,34 @@ class ResourceMultiSearchFilter extends AbstractFilter
                 'description' => "Search string value (with ILIKE) in multiple properties ({$propertyList}).",
             ],
         ];
+    }
+
+    /**
+     * @param array<string, mixed>|null $context
+     */
+    protected function filterProperty(string $property, mixed $value, QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation $operation = null, ?array $context = null): void
+    {
+        if ('multisearch' !== $property) {
+            return;
+        }
+        $rootAlias = $queryBuilder->getRootAliases()[0];
+        $expressions = [];
+        foreach ($this->properties as $field => $v) {
+            if (str_contains($field, '.')) { // Handle nested relations
+                [$joinTable, $joinField] = explode('.', $field);
+                $queryBuilder->leftJoin("{$rootAlias}.{$joinTable}", $joinTable);
+                $rootAlias = $joinTable;
+                $field = $joinField;
+            }
+            $aliasedField = "{$rootAlias}.{$field}";
+            $valueParameter = ':' . $queryNameGenerator->generateParameterName($field);
+            $keyValueParameter = sprintf('%s_%s', $valueParameter, 0);
+            $queryBuilder->setParameter($keyValueParameter, $value);
+            $expressions[] = $queryBuilder->expr()->like(
+                "LOWER({$aliasedField})",
+                sprintf('LOWER(%s)', $queryBuilder->expr()->concat("'%'", $keyValueParameter, "'%'")),
+            );
+        }
+        $queryBuilder->andWhere($queryBuilder->expr()->orX(...$expressions));
     }
 }
