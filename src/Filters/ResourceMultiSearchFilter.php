@@ -47,6 +47,7 @@ class ResourceMultiSearchFilter extends AbstractFilter
             return;
         }
         $rootAlias = $queryBuilder->getRootAliases()[0];
+        $expressions = [];
         foreach ($this->properties as $field => $v) {
             if (str_contains($field, '.')) { // Handle nested relations
                 [$joinTable, $joinField] = explode('.', $field);
@@ -58,10 +59,11 @@ class ResourceMultiSearchFilter extends AbstractFilter
             $valueParameter = ':' . $queryNameGenerator->generateParameterName($field);
             $keyValueParameter = sprintf('%s_%s', $valueParameter, 0);
             $queryBuilder->setParameter($keyValueParameter, $value);
-            $queryBuilder->orWhere($queryBuilder->expr()->like(
+            $expressions[] = $queryBuilder->expr()->like(
                 "LOWER({$aliasedField})",
                 sprintf('LOWER(%s)', $queryBuilder->expr()->concat("'%'", $keyValueParameter, "'%'")),
-            ));
+            );
         }
+        $queryBuilder->andWhere($queryBuilder->expr()->orX(...$expressions));
     }
 }
