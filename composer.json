@@ -61,7 +61,6 @@
     "require-dev": {
         "roave/security-advisories": "dev-latest",
         "phpunit/phpunit": "^10.0",
-        "symfony/test-pack": "dev-main",
         "whitedigital-eu/config-pack": "^2"
     },
     "extra": {
