@@ -152,16 +152,19 @@ final class AuthorizationService
         }
         if (GrantType::LIMITED === $highestGrantType) {
             $accessResolverConfigList = $this->retrieveAccessResolverConfigList($resourceClass);
+            $accessResolverApplied = false;
             if ($accessResolverConfigList) {
                 foreach ($accessResolverConfigList as $accessResolverConfig) {
                     $accessResolver = $this->accessResolverRepository->get($accessResolverConfig->getClassName());
                     if ($accessResolver instanceof AccessResolverInterface) {
                         $accessResolver->limitCollectionQuery($accessResolverConfig, $queryBuilder);
+                        $accessResolverApplied = true;
                     }
                 }
             }
-
-            $this->throwIfNoVisibilityAttributeSet($resourceClass);
+            if (!$accessResolverApplied) {
+                $this->throwIfNoVisibilityAttributeSet($resourceClass);
+            }
         }
 
         return $queryBuilder;
