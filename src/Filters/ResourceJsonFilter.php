@@ -70,9 +70,13 @@ class ResourceJsonFilter extends AbstractFilter
                 continue;
             }
 
+            /**
+             * If lookup value is null, number or boolean then like_regex function does not find any value. For this we should use exact lookup to look for specific value in JSONB
+             * and still use like_regex to check if value is in any string data.
+             */
             $orStatements = $queryBuilder->expr()->orX();
 
-            if (is_numeric($item) || filter_var($item, FILTER_VALIDATE_BOOL)) {
+            if ('null' === $item || is_numeric($item) || filter_var($item, FILTER_VALIDATE_BOOL)) {
                 $orStatements->add(
                     $queryBuilder->expr()->orX(sprintf('JSONB_PATH_EXISTS(%s, \'$.** ? (@ == %s)\') = TRUE', $property, $item)),
                 );

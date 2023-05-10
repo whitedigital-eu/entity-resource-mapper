@@ -57,7 +57,7 @@ return (new Config())
         'trailing_comma_in_multiline' => ['elements' => ['arrays', 'arguments', 'parameters', 'match', ], ],
         'types_spaces' => ['space' => 'none', ],
         'yoda_style' => true,
-    ], )
-    ->setRiskyAllowed(isRiskyAllowed: true, )
-    ->setCacheFile(cacheFile: getcwd() . '.php-cs-fixer.cache', )
+    ])
+    ->setRiskyAllowed(isRiskyAllowed: true)
+    ->setCacheFile(cacheFile: getcwd() . '.php-cs-fixer.cache')
     ->setFinder(finder: $finder);

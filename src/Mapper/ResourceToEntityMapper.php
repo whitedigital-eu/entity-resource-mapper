@@ -21,6 +21,7 @@ use Symfony\Component\PropertyInfo\Extractor\PhpDocExtractor;
 use Symfony\Component\PropertyInfo\Type;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
+use WhiteDigital\EntityResourceMapper\UTCDateTimeImmutable;
 
 class ResourceToEntityMapper
 {
@@ -68,7 +69,10 @@ class ResourceToEntityMapper
             //  DateTimeInterface implementations are converted to DateTimeImmutable in entities
             if (is_subclass_of($propertyType, DateTimeInterface::class)
                 && $propertyValue instanceof DateTimeInterface) {
-                $propertyValue = DateTimeImmutable::createFromInterface($propertyValue);
+                $propertyValue = match (true) {
+                    $propertyValue instanceof UTCDateTimeImmutable => $propertyValue,
+                    default => DateTimeImmutable::createFromInterface($propertyValue),
+                };
             }
 
             // For existing entities, lets not update anything, if value not changed
