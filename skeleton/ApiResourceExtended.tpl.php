@@ -20,7 +20,6 @@ foreach ($uses as $use) {
 ?>
 use <?php echo $processor->getFullName() . ";\n"; ?>
 use <?php echo $provider->getFullName() . ";\n"; ?>
-use DateTimeImmutable;
 use Doctrine\Common\Collections\Criteria;
 use Symfony\Component\Serializer\Annotation\Groups;
 <?php if ($hasBool = ([] !== ($filters[MakeApiResource::F_BOOL] ?? []))) { ?>
@@ -48,6 +47,7 @@ use WhiteDigital\EntityResourceMapper\Filters\ResourceRangeFilter;
 use WhiteDigital\EntityResourceMapper\Filters\ResourceSearchFilter;
 <?php } ?>
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
+use WhiteDigital\EntityResourceMapper\UTCDateTimeImmutable;
 
 #[
     ApiResource(
@@ -122,10 +122,10 @@ foreach ($groups as $group) {
     public mixed $id = null;
 
     #[Groups([self::READ, self::ITEM, ])]
-    public ?DateTimeImmutable $createdAt = null;
+    public ?UTCDateTimeImmutable $createdAt = null;
 
     #[Groups([self::READ, self::ITEM, ])]
-    public ?DateTimeImmutable $updatedAt = null;
+    public ?UTCDateTimeImmutable $updatedAt = null;
 
 <?php
 foreach ($properties as $property => $options) {

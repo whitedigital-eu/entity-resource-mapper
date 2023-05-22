@@ -275,7 +275,7 @@ If the argument is missing, the command will ask for the entity class name inter
                         }
 
                         $type = match (is_a($prop->getName(), UTCDateTimeImmutable::class, true)) {
-                            true => UTCDateTimeImmutable::class,
+                            true => (new ReflectionClass(UTCDateTimeImmutable::class))->getShortName(),
                             false => DateTimeImmutable::class,
                         };
                     } elseif (File::class === $prop->getName()) {
