@@ -172,8 +172,8 @@ $this->authorizationService->authorizeSingleObject($data, AuthorizationService::
 ])]
 ```
 
-```
 Same class must also set following property with correct normalization group:
+
 ```php
     #[Groups('deal_read')]
     #[ApiProperty(attributes: ["openapi_context" => ["description" => "If Authorization GrantType::OWN or GROUP is calculated, resource can be restricted."]])]
@@ -220,6 +220,37 @@ enum Roles: string
 }
 ```
 Now if you don't have ROLE_USER or ROLE_ADMIN grants configured for any resource operation you passed in `AuthorizationService->setServices()`, exception will be thrown.
+
+### Public resource access ###
+
+If it is required to access any resource without authorization (by default this is forbidden), you can use `AuthorizationServiceConfigurator` 
+to allow specific operations for `AuthenticatedVoter::PUBLIC_ACCESS`. To do so, configure needed operations using `GrantType::ALL`. Only
+`GrantType::ALL` is allowed to be used (no option for `GrantType::LIMITED`) and you do not need to set `GrantType::NONE` for public 
+access.
+Example:
+```php
+// src/Service/Configurator/AuthorizationServiceConfigurator.php
+
+use WhiteDigital\EntityResourceMapper\Security\AuthorizationServiceConfiguratorInterface;
+use WhiteDigital\EntityResourceMapper\Security\Enum\GrantType;
+use Symfony\Component\Security\Core\Authorization\Voter\AuthenticatedVoter;
+
+final class AuthorizationServiceConfigurator implements AuthorizationServiceConfiguratorInterface
+{
+    public function __invoke(AuthorizationService $service): void
+    {
+        $service->setResources([
+            ActivityResource::class => [
+                AuthorizationService::ALL => ['ROLE_SUPER_ADMIN' => GrantType::ALL, 'ROLE_KAM' => GrantType::ALL],
+                AuthorizationService::COL_GET => ['ROLE_JUNIOR_KAM' => GrantType::LIMITED],
+                AuthorizationService::ITEM_GET => [AuthenticatedVoter::PUBLIC_ACCESS => GrantType::ALL],
+                AuthorizationService::COL_POST => [],
+                AuthorizationService::ITEM_PATCH => [],
+                AuthorizationService::ITEM_DELETE => [],
+            ]]);
+    }
+}
+```
 
 ### Menu Builder ### 
 
