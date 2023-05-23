@@ -172,8 +172,8 @@ $this->authorizationService->authorizeSingleObject($data, AuthorizationService::
 ])]
 ```
 
-```
 Same class must also set following property with correct normalization group:
+
 ```php
     #[Groups('deal_read')]
     #[ApiProperty(attributes: ["openapi_context" => ["description" => "If Authorization GrantType::OWN or GROUP is calculated, resource can be restricted."]])]
@@ -220,6 +220,37 @@ enum Roles: string
 }
 ```
 Now if you don't have ROLE_USER or ROLE_ADMIN grants configured for any resource operation you passed in `AuthorizationService->setServices()`, exception will be thrown.
+
+### Public resource access ###
+
+If it is required to access any resource without authorization (by default this is forbidden), you can use `AuthorizationServiceConfigurator` 
+to allow specific operations for `AuthenticatedVoter::PUBLIC_ACCESS`. To do so, configure needed operations using `GrantType::ALL`. Only
+`GrantType::ALL` is allowed to be used (no option for `GrantType::LIMITED`) and you do not need to set `GrantType::NONE` for public 
+access.
+Example:
+```php
+// src/Service/Configurator/AuthorizationServiceConfigurator.php
+
+use WhiteDigital\EntityResourceMapper\Security\AuthorizationServiceConfiguratorInterface;
+use WhiteDigital\EntityResourceMapper\Security\Enum\GrantType;
+use Symfony\Component\Security\Core\Authorization\Voter\AuthenticatedVoter;
+
+final class AuthorizationServiceConfigurator implements AuthorizationServiceConfiguratorInterface
+{
+    public function __invoke(AuthorizationService $service): void
+    {
+        $service->setResources([
+            ActivityResource::class => [
+                AuthorizationService::ALL => ['ROLE_SUPER_ADMIN' => GrantType::ALL, 'ROLE_KAM' => GrantType::ALL],
+                AuthorizationService::COL_GET => ['ROLE_JUNIOR_KAM' => GrantType::LIMITED],
+                AuthorizationService::ITEM_GET => [AuthenticatedVoter::PUBLIC_ACCESS => GrantType::ALL],
+                AuthorizationService::COL_POST => [],
+                AuthorizationService::ITEM_PATCH => [],
+                AuthorizationService::ITEM_DELETE => [],
+            ]]);
+    }
+}
+```
 
 ### Menu Builder ### 
 
@@ -362,6 +393,77 @@ This option comes in handy on occasion when you have 2 entities, that have relat
 1. run `make:api-resource Entity1 --no-properties`  
 2. run `make:api-resource Entity2`  
 3. run `make:api-resource Entity1 --delete-if-exists`
+
+This command automatically generates ApiFilters for given entity. Default value is to generate them is for first level fields. Like this:
+
+```php
+use ApiPlatform\Metadata\ApiFilter;
+use ApiPlatform\Metadata\ApiResource;
+use WhiteDigital\EntityResourceMapper\Filters\ResourceDateFilter;
+use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
+
+#[
+    ApiResource (
+        shortName: 'User'
+    ),
+    ApiFilter(ResourceDateFilter::class, properties: ['createdAt', 'updatedAt', ]),
+]
+class UserResource extends BaseResource 
+{
+    public ?DateTimeImmutable $createdAt = null;
+
+    public ?DateTimeImmutable $updatedAt = null;
+    
+    public ?UserResource $parent = null;
+}
+```
+If you don't want to generate any filters, run command by passing `level 0`:  
+```shell
+bin/console make:api-resource User --level 0
+```
+
+If you want generate filters for more levels for subresources, like, parent.createdAt, pass higher level:  
+```shell
+bin/console make:api-resource User --level 2
+```
+```php
+use ApiPlatform\Metadata\ApiFilter;
+use ApiPlatform\Metadata\ApiResource;
+use WhiteDigital\EntityResourceMapper\Filters\ResourceDateFilter;
+use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
+
+#[
+    ApiResource (
+        shortName: 'User'
+    ),
+    ApiFilter(ResourceDateFilter::class, properties: ['createdAt', 'updatedAt', 'parent.createdAt', 'parent.updatedAt']),
+]
+class UserResource extends BaseResource 
+{
+    public ?DateTimeImmutable $createdAt = null;
+
+    public ?DateTimeImmutable $updatedAt = null;
+    
+    public ?UserResource $parent = null;
+}
+```
+Higher level -> deeper subresource filters.  
+It is obvious that you probably do not need all generated filters, but it is easier to remove than it is to add.  
+
+If you want to exclude specific type of filters, you can pass `--exclude-<filter>` to skip generation of those filters.  
+```shell
+bin/console make:api-resource User --level 2 --exclude-array --exclude-numeric --exclude-range
+```
+Available filters are:  
++ `array`: `ResourceJsonFilter`
++ `bool`: `ResourceBooleanFilter`
++ `date`: `ResourceDateFilter`
++ `enum`: `ResourceEnumFilter`
++ `numeric`: `ResourceNumericFilter`
++ `range`: `ResourceRangeFilter`
++ `search`: `ResourceSearchFilter`
+
+`ResourceOrderFilter` is created from non-excluded `numeric`, `search`, `date` and `array` filters.  
 
 ### PHP CS Fixer
 > **IMPORTANT**: When running php-cs-fixer, make sure not to format files in `skeleton` folder. Otherwise maker

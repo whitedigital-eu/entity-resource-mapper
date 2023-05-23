@@ -3,12 +3,15 @@
 namespace WhiteDigital\EntityResourceMapper\Maker;
 
 use BackedEnum;
+use DateTimeImmutable;
 use DateTimeInterface;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping\ManyToMany;
 use Doctrine\ORM\Mapping\OneToMany;
 use Exception;
+use InvalidArgumentException;
 use ReflectionClass;
+use ReflectionException;
 use Symfony\Bundle\MakerBundle\ConsoleStyle;
 use Symfony\Bundle\MakerBundle\DependencyBuilder;
 use Symfony\Bundle\MakerBundle\Generator;
@@ -21,11 +24,14 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\PropertyInfo\Type;
+use Symfony\Component\Serializer\Annotation\Ignore;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
+use WhiteDigital\EntityResourceMapper\EntityResourceMapperBundle;
 use WhiteDigital\EntityResourceMapper\Mapper\ClassMapper;
 use WhiteDigital\EntityResourceMapper\UTCDateTimeImmutable;
 
 use function array_column;
+use function array_merge;
 use function array_merge_recursive;
 use function array_multisort;
 use function array_unique;
@@ -36,10 +42,12 @@ use function explode;
 use function getcwd;
 use function in_array;
 use function is_a;
+use function is_array;
 use function is_subclass_of;
 use function preg_replace;
 use function sort;
 use function sprintf;
+use function str_contains;
 use function str_replace;
 use function strtolower;
 use function unlink;
@@ -47,8 +55,21 @@ use function unlink;
 use const SORT_ASC;
 use const SORT_REGULAR;
 
+/**
+ * @internal
+ */
 class MakeApiResource extends AbstractMaker
 {
+    public const F_ARRAY = 'array';
+    public const F_BOOL = 'bool';
+    public const F_DATE = 'date';
+    public const F_ENUM = 'enum';
+    public const F_NUMERIC = 'numeric';
+    public const F_RANGE = 'range';
+    public const F_SEARCH = 'search';
+
+    private const FILTER_TYPES = [self::F_ARRAY, self::F_BOOL, self::F_DATE, self::F_ENUM, self::F_NUMERIC, self::F_RANGE, self::F_SEARCH, ];
+
     public function __construct(private readonly ClassMapper $mapper, private readonly ParameterBagInterface $bag)
     {
     }
@@ -69,11 +90,16 @@ class MakeApiResource extends AbstractMaker
             ->addArgument('entity', InputArgument::OPTIONAL, 'The name of the entity class (e.g. <fg=yellow>User</>) for which to create resource')
             ->addOption('no-properties', null, InputOption::VALUE_NONE, 'Use this option to disable resource property generation')
             ->addOption('delete-if-exists', null, InputOption::VALUE_NONE, 'Use this option to delete existing ApiResource, DataProvider and DataProcessor before generation')
+            ->addOption('level', null, InputOption::VALUE_OPTIONAL, 'How deep generate filters', 1)
             ->setHelp('
 <info>php %command.full_name% User</info>
 
 If the argument is missing, the command will ask for the entity class name interactively.
             ');
+
+        foreach (self::FILTER_TYPES as $type) {
+            $command->addOption(sprintf('exclude-%s', $type), null, InputOption::VALUE_NONE, sprintf('Exclude %s filters', $type));
+        }
     }
 
     public function configureDependencies(DependencyBuilder $dependencies): void
@@ -249,7 +275,7 @@ If the argument is missing, the command will ask for the entity class name inter
                         }
 
                         $type = match (is_a($prop->getName(), UTCDateTimeImmutable::class, true)) {
-                            true => UTCDateTimeImmutable::class,
+                            true => (new ReflectionClass(UTCDateTimeImmutable::class))->getShortName(),
                             false => DateTimeImmutable::class,
                         };
                     } elseif (File::class === $prop->getName()) {
@@ -279,9 +305,35 @@ If the argument is missing, the command will ask for the entity class name inter
 
         $newResource = $generator->createClassNameDetails($entityName, $this->bag->get($wd . '.namespaces.api_resource') . $ns, $this->bag->get($wd . '.defaults.api_resource_suffix'));
 
+        $enums = [];
+        $filters = $this->getFilters($entityRef, (int) $input->getOption('level'));
+        $map = EntityResourceMapperBundle::makeOneDimension($filters, onlyLast: true);
+        foreach ($map as $item => $values) {
+            foreach ($values as $value) {
+                if (is_array($value)) {
+                    $ref = new ReflectionClass($value['type']);
+                    $enums[strtr($item, ['enum' => $value['name']])] = $ref->getShortName() . '::class';
+                    $resourceMapping[] = $value['type'];
+                }
+            }
+        }
+        $flattened = $this->flattenFilterMap($map);
+        $flattened[self::F_RANGE] = $flattened[self::F_NUMERIC] ?? [];
+        foreach (self::FILTER_TYPES as $type) {
+            if ($input->getOption(sprintf('exclude-%s', $type))) {
+                unset($flattened[$type]);
+            }
+        }
+
         @unlink($this->fixPath($newResource->getFullName()));
         $resourceMapping = array_unique($resourceMapping);
 
+        $json = [];
+        foreach ($flattened[self::F_ARRAY] ?? [] as $item) {
+            $json[] = $item . "->>'order'";
+        }
+
+        $order = array_merge($flattened[self::F_NUMERIC] ?? [], $flattened[self::F_SEARCH] ?? [], $flattened[self::F_DATE] ?? [], $json);
         $generator->generateClass(
             $newResource->getFullName(),
             dirname(__DIR__, 2) . '/skeleton/ApiResourceExtended.tpl.php',
@@ -294,12 +346,103 @@ If the argument is missing, the command will ask for the entity class name inter
                 'groups' => $groups,
                 'properties' => $properties,
                 'uses' => $resourceMapping,
+                'filters' => $flattened,
+                'enums' => $enums,
+                'order' => $order,
             ],
         );
 
         $generator->writeChanges();
 
         $this->writeSuccessMessage($io);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    private function getFilters(ReflectionClass $entityRef, int $level = 0): array
+    {
+        if (0 === $level) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($entityRef->getProperties() as $property) {
+            if ([] !== $property->getAttributes(Ignore::class)) {
+                continue;
+            }
+
+            $name = $property->getName();
+            $prop = $property->getType();
+            if ($prop->isBuiltin()) {
+                $type = $prop->getName();
+                if ('mixed' === $type && 'id' === $property->getName()) {
+                    $type = Type::BUILTIN_TYPE_INT;
+                }
+
+                match ($type) {
+                    Type::BUILTIN_TYPE_STRING, 'mixed' => $result[self::F_SEARCH][] = $name,
+                    Type::BUILTIN_TYPE_INT, Type::BUILTIN_TYPE_FLOAT => $result[self::F_NUMERIC][] = $name,
+                    Type::BUILTIN_TYPE_BOOL => $result[self::F_BOOL][] = $name,
+                    Type::BUILTIN_TYPE_ARRAY => $result[self::F_ARRAY][] = $name,
+                    default => null,
+                };
+            } else {
+                $ref = new ReflectionClass($prop->getName());
+                if (is_a($prop->getName(), DateTimeInterface::class, true)) {
+                    $result[self::F_DATE][] = $name;
+                    continue;
+                }
+
+                if ($ref->implementsInterface(BackedEnum::class)) {
+                    $result[self::F_ENUM][] = ['name' => $name, 'type' => $ref->getName()];
+                    continue;
+                }
+
+                if (Collection::class === $prop->getName()) {
+                    $orm = array_merge_recursive($property->getAttributes(ManyToMany::class), $property->getAttributes(OneToMany::class));
+                    if ([] !== $orm && 0 < $level - 1) {
+                        $colRef = new ReflectionClass($this->mapper->byEntity($orm[0]->getArguments()['targetEntity']));
+                        $result[$property->getName()] = $this->getFilters($colRef, $level - 1);
+                    }
+                    continue;
+                }
+
+                if (0 < $level - 1) {
+                    $result[$property->getName()] = $this->getFilters($ref, $level - 1);
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    private function flattenFilterMap(array $full): array
+    {
+        foreach ($full as $item => $values) {
+            if (str_contains($item, '.')) {
+                $parts = [];
+                preg_match("/(^.*)\.(.*?)$/", $item, $parts);
+                unset($full[$item]);
+                foreach ($values as $value) {
+                    if (is_array($value)) {
+                        $value = $value['name'];
+                    }
+
+                    $full[$parts[2]][] = $parts[1] . '.' . $value;
+                }
+            } else {
+                foreach ($values as $id => $value) {
+                    if (is_array($value)) {
+                        $value = $value['name'];
+                    }
+
+                    $full[$item][$id] = $value;
+                }
+            }
+        }
+
+        return $full;
     }
 
     private function fixPath(string $className): string

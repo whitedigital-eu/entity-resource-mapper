@@ -13,10 +13,10 @@ use ApiPlatform\Metadata\Post;
 use ApiPlatform\Serializer\Filter\GroupFilter;
 use <?php echo $processor->getFullName() . ";\n"; ?>
 use <?php echo $provider->getFullName() . ";\n"; ?>
-use DateTimeImmutable;
 use Doctrine\Common\Collections\Criteria;
 use Symfony\Component\Serializer\Annotation\Groups;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
+use WhiteDigital\EntityResourceMapper\UTCDateTimeImmutable;
 
 #[
     ApiResource(
@@ -53,7 +53,7 @@ class <?php echo $class_name; ?> extends BaseResource
     public const PREFIX = '<?php echo $prefix . $separator; ?>';
 
 <?php
-foreach($groups as $group){
+foreach ($groups as $group) {
     echo '    private const ' . strtoupper($group) . " = self::PREFIX . '$group'; // $prefix$separator$group\n";
 }
 ?>
@@ -63,8 +63,8 @@ foreach($groups as $group){
     public mixed $id = null;
 
     #[Groups([self::READ, self::ITEM, ])]
-    public ?DateTimeImmutable $createdAt = null;
+    public ?UTCDateTimeImmutable $createdAt = null;
 
     #[Groups([self::READ, self::ITEM, ])]
-    public ?DateTimeImmutable $updatedAt = null;
+    public ?UTCDateTimeImmutable $updatedAt = null;
 }
