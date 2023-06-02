@@ -90,9 +90,8 @@ class ResourceToEntityMapper
                     continue;
                 }
                 $targetClass = $this->classMapper->byResource(get_class($propertyValue[0]), $object::class); // assume equal data types in array
-                $i = -1;
+                $collection = new ArrayCollection();
                 foreach ($propertyValue as $value) {
-                    $i++;
                     if (isset($value->id)) { // entity already exists, lets fetch it from DB
                         $repository = $this->entityManager->getRepository($targetClass);
                         $entity = $repository->find($value->id);
@@ -100,16 +99,14 @@ class ResourceToEntityMapper
                             throw new RuntimeException("$targetClass entity with id $value->id not found!");
                         }
 
-                        // This simulates output->addProperty as PropertyAccess decides if it is an add or set by itself, and to access one collection item,
-                        // it must be done like this => $propertyName[0], $propertyName[1], etc
-                        $this->accessor->setValue($output, $propertyName . "[$i]", $entity);
+                        $collection->add($entity);
                         continue;
                     }
 
-                    // This simulates output->addProperty as PropertyAccess decides if it is an add or set by itself, and to access one collection item,
-                    // it must be done like this => $propertyName[0], $propertyName[1], etc
-                    $this->accessor->setValue($output, $propertyName . "[$i]", $this->map($value, $context));
+                    $collection->add($this->map($value, $context));
                 }
+                
+                $this->accessor->setValue($output, $propertyName, $collection);
                 continue;
             }
 
