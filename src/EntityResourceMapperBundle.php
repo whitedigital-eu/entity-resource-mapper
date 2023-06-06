@@ -70,7 +70,7 @@ class EntityResourceMapperBundle extends AbstractBundle
         }
 
         if ([] === $builder->getParameterBag()->get('whitedigital.entity_resource_mapper.maker.groups')) {
-            $builder->setParameter('whitedigital.entity_resource_mapper.maker.groups', ['item', 'read', 'patch', 'write', ]);
+            $builder->setParameter('whitedigital.entity_resource_mapper.maker.groups', ['read', 'write', ]);
         }
 
         $builder->setParameter('whitedigital.entity_resource_mapper.roles', $roles);
