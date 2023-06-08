@@ -17,6 +17,7 @@ use Symfony\Bundle\MakerBundle\DependencyBuilder;
 use Symfony\Bundle\MakerBundle\Generator;
 use Symfony\Bundle\MakerBundle\InputConfiguration;
 use Symfony\Bundle\MakerBundle\Maker\AbstractMaker;
+use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -27,6 +28,7 @@ use Symfony\Component\PropertyInfo\Type;
 use Symfony\Component\Serializer\Annotation\Ignore;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\EntityResourceMapperBundle;
+use WhiteDigital\EntityResourceMapper\Exception\ClassMapperNotConfiguredException;
 use WhiteDigital\EntityResourceMapper\Mapper\ClassMapper;
 use WhiteDigital\EntityResourceMapper\UTCDateTimeImmutable;
 
@@ -264,7 +266,7 @@ If the argument is missing, the command will ask for the entity class name inter
                         $type = Type::BUILTIN_TYPE_ARRAY;
                         $orm = array_merge_recursive($property->getAttributes(ManyToMany::class), $property->getAttributes(OneToMany::class));
                         if ([] !== $orm) {
-                            $header = $this->mapper->byEntity($orm[0]->getArguments()['targetEntity']);
+                            $header = $this->byEntity($orm[0]->getArguments()['targetEntity']);
                             $resourceMapping[] = $header;
                             $parts = explode('\\', $header);
                             $header = end($parts);
@@ -289,7 +291,7 @@ If the argument is missing, the command will ask for the entity class name inter
                         $parts = explode('\\', $type);
                         $type = end($parts);
                     } else {
-                        $type = $this->mapper->byEntity($prop->getName());
+                        $type = $this->byEntity($prop->getName());
                         $resourceMapping[] = $type;
                         $parts = explode('\\', $type);
                         $type = end($parts);
@@ -402,7 +404,7 @@ If the argument is missing, the command will ask for the entity class name inter
                 if (Collection::class === $prop->getName()) {
                     $orm = array_merge_recursive($property->getAttributes(ManyToMany::class), $property->getAttributes(OneToMany::class));
                     if ([] !== $orm && 0 < $level - 1) {
-                        $colRef = new ReflectionClass($this->mapper->byEntity($orm[0]->getArguments()['targetEntity']));
+                        $colRef = new ReflectionClass($this->byEntity($orm[0]->getArguments()['targetEntity']));
                         $result[$property->getName()] = $this->getFilters($colRef, $level - 1);
                     }
                     continue;
@@ -461,5 +463,14 @@ If the argument is missing, the command will ask for the entity class name inter
         ], replacement: '\1_\2', subject: $string);
 
         return strtolower(string: str_replace(search: '-', replace: $space, subject: (string) $string));
+    }
+
+    private function byEntity(string $class): string
+    {
+        try {
+            return $this->mapper->byEntity($class);
+        } catch (ClassMapperNotConfiguredException $exception) {
+            throw new InvalidConfigurationException(sprintf('Unable to find mapped resource for class "%s"', $class), previous: $exception);
+        }
     }
 }

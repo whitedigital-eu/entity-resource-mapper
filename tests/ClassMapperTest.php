@@ -4,6 +4,7 @@ namespace WhiteDigital\Tests;
 
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
+use WhiteDigital\EntityResourceMapper\Exception\ClassMapperNotConfiguredException;
 use WhiteDigital\EntityResourceMapper\Mapper\ClassMapper;
 use WhiteDigital\Tests\Fixtures\EntityClass;
 use WhiteDigital\Tests\Fixtures\EntityClass2;
@@ -40,7 +41,7 @@ class ClassMapperTest extends TestCase
     {
         $classMapper = new ClassMapper();
         $classMapper->registerMapping(ResourceClass::class, EntityClass::class);
-        $this->expectException(RuntimeException::class);
+        $this->expectException(ClassMapperNotConfiguredException::class);
         $classMapper->byEntity('AnyClass');
     }
 
