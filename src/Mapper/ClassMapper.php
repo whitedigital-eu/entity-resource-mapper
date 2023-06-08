@@ -11,6 +11,7 @@ use RuntimeException;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use WhiteDigital\EntityResourceMapper\Attribute\Mapping;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
+use WhiteDigital\EntityResourceMapper\Exception\ClassMapperNotConfiguredException;
 use WhiteDigital\EntityResourceMapper\Exception\MappingNotFoundException;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 
@@ -69,7 +70,7 @@ class ClassMapper
                 return $result;
             }
 
-            throw new RuntimeException(sprintf('%s not configured for Entity mapping. Please set up Configurator service or map classes manually.', __CLASS__));
+            throw new ClassMapperNotConfiguredException(sprintf('%s not configured for Entity mapping. Please set up Configurator service or map classes manually.', __CLASS__));
         }
     }
 
