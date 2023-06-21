@@ -469,6 +469,86 @@ Available filters are:
 > **IMPORTANT**: When running php-cs-fixer, make sure not to format files in `skeleton` folder. Otherwise maker
 > command will stop working.
 
+### Validators
+This library contains validators for Classifiers. These will only work if Entity/Resource have following structure (not less than this):
+Entity:
+
+```php
+use Doctrine\ORM\Mapping\Entity;
+
+#[Entity]
+class Classifier
+{
+    private ?int $id = null;
+    private ?string $value = null;
+    private ?array $data = [];
+    private ?ClassifierType $type = null;
+}
+```
+Resource:
+```php
+use ApiPlatform\Metadata\ApiResource;
+
+#[ApiResource]
+class ClassifierResource
+{
+    public mixed $id = null;
+    public ?string $value = null;
+    public ?array $data = [];
+    public ?ClassifierType $type = null;
+}
+```
+As seen in these examples, you need to have a Backed enum (here called `ClassifierType`) that you need to validate against.  
+Example of `ClassifierType` is something like this:
+```php
+enum ClassifierType: string
+{
+    case ONE = 'ONE';
+    case TWO = 'TWO';
+}
+```
+Now you can use either `CorrectClassifierType` or `ClassifierRequiredDataIsSet` validator:  
+
+---
+
+`CorrectClassifierType`:
+CorrectClassifierType checks if in related resource Classifier is given with correct type:
+
+```php
+use ApiPlatform\Metadata\ApiResource;
+use WhiteDigital\EntityResourceMapper\Validator\Constraints as WDAssert;
+
+#[ApiResource]
+class TestResource
+{
+    #[WDAssert\CorrectClassifierType(ClassifierType::ONE)]
+    public ?ClassifierResource $one = null;
+}
+```
+Now if you pass resource that has any other type (like `ClassifierType::TWO` for example) to this resource, error will be thrown.  
+
+---
+
+`ClassifierRequiredDataIsSet`:
+Sometimes you may need extra data in Classifier and may be mandatory. For this ClassifierRequiredDataIsSet can be used to check if this 
+data is passed. This is used on `ClassifierResource`:
+
+```php
+use ApiPlatform\Metadata\ApiResource;
+use WhiteDigital\EntityResourceMapper\Validator\Constraints as WDAssert;
+
+#[ApiResource]
+#[WDAssert\ClassifierRequiredDataIsSet(ClassifierType::ONE, ['test1'])]
+class ClassifierResource
+{
+    public mixed $id = null;
+    public ?string $value = null;
+    public ?array $data = [];
+    public ?ClassifierType $type = null;
+}
+```
+And now when creating a new Classifier with type `ONE`, an error will be thrown if data does not contain value with key `test1`
+
 ## Tests
 
 Run tests by:
