@@ -29,6 +29,7 @@ class ResourceOrderFilter implements FilterInterface
         private readonly ?LoggerInterface $logger = null,
         private readonly ?array $properties = null,
         private readonly ?NameConverterInterface $nameConverter = null,
+        private readonly ?string $orderNullsComparison = null,
     ) {
     }
 
@@ -56,6 +57,7 @@ class ResourceOrderFilter implements FilterInterface
             $this->logger,
             $this->properties,
             $this->nameConverter,
+            $this->orderNullsComparison,
         );
         $orderFilter->apply($queryBuilder, $queryNameGenerator, $resourceClass, $operation, $context);
     }
