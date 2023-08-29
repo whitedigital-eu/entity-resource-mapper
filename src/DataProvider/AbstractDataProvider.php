@@ -39,7 +39,6 @@ use function strtolower;
 
 abstract class AbstractDataProvider implements ProviderInterface
 {
-    /** @noinspection PhpInapplicableAttributeTargetDeclarationInspection */
     public function __construct(
         protected readonly EntityManagerInterface $entityManager,
         protected readonly ManagerRegistry $doctrine,

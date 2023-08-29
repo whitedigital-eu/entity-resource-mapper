@@ -68,7 +68,6 @@ final class AuthorizationService
 
     private array $requiredRoles;
 
-    /** @noinspection PhpInapplicableAttributeTargetDeclarationInspection */
     public function __construct(
         private readonly Security $security,
         private readonly ClassMapper $classMapper,
