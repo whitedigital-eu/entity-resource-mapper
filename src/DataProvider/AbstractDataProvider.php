@@ -70,7 +70,7 @@ abstract class AbstractDataProvider implements ProviderInterface
     protected function getCollection(Operation $operation, array $context = []): array|object
     {
         $queryBuilder = $this->entityManager->createQueryBuilder();
-        $queryBuilder->select('e')->from($this->getEntityClass($operation), 'e');
+        $queryBuilder->select('e')->from($this->getEntityClass($operation, $context), 'e');
 
         $this->authorizationService->setAuthorizationOverride(fn () => $this->override(AuthorizationService::COL_GET, $operation->getClass()));
         $this->authorizationService->limitGetCollection($operation->getClass(), $queryBuilder);
@@ -115,7 +115,7 @@ abstract class AbstractDataProvider implements ProviderInterface
      */
     protected function getItem(Operation $operation, mixed $id, array $context): object
     {
-        $entity = $this->entityManager->getRepository($entityClass = $this->getEntityClass($operation))->find($id);
+        $entity = $this->entityManager->getRepository($entityClass = $this->getEntityClass($operation, $context))->find($id);
 
         $this->throwErrorIfNotExists($entity, strtolower((new ReflectionClass($entityClass))->getShortName()), $id);
         $this->authorizationService->setAuthorizationOverride(fn () => $this->override(AuthorizationService::ITEM_GET, $operation->getClass()));
