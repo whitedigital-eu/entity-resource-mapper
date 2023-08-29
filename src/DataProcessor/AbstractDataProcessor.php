@@ -54,7 +54,7 @@ abstract class AbstractDataProcessor implements ProcessorInterface
             return $this->createResource($entity, $context);
         }
 
-        $this->remove($data, $operation);
+        $this->remove($data, $operation, $context);
 
         return null;
     }
@@ -62,7 +62,7 @@ abstract class AbstractDataProcessor implements ProcessorInterface
     protected function patch(mixed $data, Operation $operation, array $context = []): ?BaseEntity
     {
         $this->authorizationService->setAuthorizationOverride(fn () => $this->override(AuthorizationService::ITEM_PATCH, $operation->getClass()));
-        $this->authorizationService->authorizeSingleObject($data, AuthorizationService::ITEM_PATCH);
+        $this->authorizationService->authorizeSingleObject($data, AuthorizationService::ITEM_PATCH, context: $context);
         $existingEntity = $this->findById($this->getEntityClass(), $data->id);
 
         return $this->createEntity($data, $context, $existingEntity);
@@ -71,7 +71,7 @@ abstract class AbstractDataProcessor implements ProcessorInterface
     protected function post(mixed $data, Operation $operation, array $context = []): ?BaseEntity
     {
         $this->authorizationService->setAuthorizationOverride(fn () => $this->override(AuthorizationService::COL_POST, $operation->getClass()));
-        $this->authorizationService->authorizeSingleObject($data, AuthorizationService::COL_POST);
+        $this->authorizationService->authorizeSingleObject($data, AuthorizationService::COL_POST, context: $context);
 
         return $this->createEntity($data, $context);
     }
@@ -127,10 +127,10 @@ abstract class AbstractDataProcessor implements ProcessorInterface
         return false;
     }
 
-    protected function remove(BaseResource $resource, Operation $operation): void
+    protected function remove(BaseResource $resource, Operation $operation, array $context = []): void
     {
         $this->authorizationService->setAuthorizationOverride(fn () => $this->override(AuthorizationService::ITEM_DELETE, $operation->getClass()));
-        $this->authorizationService->authorizeSingleObject($resource, AuthorizationService::ITEM_DELETE);
+        $this->authorizationService->authorizeSingleObject($resource, AuthorizationService::ITEM_DELETE, context: $context);
         $entity = $this->findById($this->getEntityClass(), $resource->id);
         if (null !== $entity) {
             $this->removeWithFkCheck($entity);

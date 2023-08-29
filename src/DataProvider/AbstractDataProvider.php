@@ -79,9 +79,9 @@ abstract class AbstractDataProvider implements ProviderInterface
         return $this->applyFilterExtensionsToCollection($queryBuilder, new QueryNameGenerator(), $operation, $context);
     }
 
-    protected function getEntityClass(Operation $operation): string
+    protected function getEntityClass(Operation $operation, array $context = []): string
     {
-        return $this->classMapper->byResource($operation->getClass());
+        return $this->classMapper->byResource($operation->getClass(), context: $context);
     }
 
     protected function applyFilterExtensionsToCollection(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, Operation $operation, array $context = []): array|object
@@ -120,7 +120,7 @@ abstract class AbstractDataProvider implements ProviderInterface
 
         $this->throwErrorIfNotExists($entity, strtolower((new ReflectionClass($entityClass))->getShortName()), $id);
         $this->authorizationService->setAuthorizationOverride(fn () => $this->override(AuthorizationService::ITEM_GET, $operation->getClass()));
-        $this->authorizationService->authorizeSingleObject($entity, AuthorizationService::ITEM_GET);
+        $this->authorizationService->authorizeSingleObject($entity, AuthorizationService::ITEM_GET, context: $context);
 
         return $this->createResource($entity, $context);
     }

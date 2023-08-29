@@ -109,12 +109,13 @@ final class AuthorizationService
         string $operation,
         bool $throwException = true,
         ?GrantType $forcedGrantType = null,
+        array $context = [],
     ): bool {
         if (null !== $this->authorizationOverride && ($this->authorizationOverride)()) {
             return true;
         }
         $accessDecision = false;
-        $resourceClass = $this->getAuthorizableObjectResourceClassname($object);
+        $resourceClass = $this->getAuthorizableObjectResourceClassname($object, $context);
         $highestGrantType = $forcedGrantType ?? $this->calculateFinalGrantType($resourceClass, $operation);
         if (GrantType::ALL === $highestGrantType) {
             return true;
@@ -243,7 +244,7 @@ final class AuthorizationService
         }
     }
 
-    private function getAuthorizableObjectResourceClassname(BaseResource|BaseEntity $object): string
+    private function getAuthorizableObjectResourceClassname(BaseResource|BaseEntity $object, array $context = []): string
     {
         if ($object instanceof BaseEntity) {
             $reflection = new ReflectionClass($object);
@@ -251,7 +252,7 @@ final class AuthorizationService
                 $reflection = $reflection->getParentClass();
             }
 
-            return $this->classMapper->byEntity($reflection->getName());
+            return $this->classMapper->byEntity($reflection->getName(), context: $context);
         }
 
         return $object::class;

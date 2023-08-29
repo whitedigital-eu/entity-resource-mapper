@@ -34,7 +34,7 @@ final class ResourceNumericFilter implements FilterInterface
     /**
      * @param array<string, mixed>|null $context
      */
-    public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation $operation = null, ?array $context = null): void
+    public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation|null $operation = null, array $context = []): void
     {
         foreach ($context['filters'] as $property => $value) {
             if (!array_key_exists($property, $this->properties)) {
@@ -53,14 +53,14 @@ final class ResourceNumericFilter implements FilterInterface
                 }
             }
         }
-        $resourceClass = $this->classMapper->byResource($resourceClass);
+        $entityClass = $this->classMapper->byResource($resourceClass, context: $context);
         $numericFilter = new NumericFilter(
             $this->managerRegistry,
             $this->logger,
             $this->properties,
             $this->nameConverter,
         );
-        $numericFilter->apply($queryBuilder, $queryNameGenerator, $resourceClass, $operation, $context);
+        $numericFilter->apply($queryBuilder, $queryNameGenerator, $entityClass, $operation, $context);
     }
 
     /**

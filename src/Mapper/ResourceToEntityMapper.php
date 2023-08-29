@@ -44,7 +44,7 @@ class ResourceToEntityMapper
     public function map(BaseResource $object, array $context, ?BaseEntity $existingEntity = null): BaseEntity
     {
         $reflection = new ReflectionClass($object);
-        $targetEntityClass = $this->classMapper->byResource($reflection->getName(), $context[self::CONDITION_CONTEXT] ?? null);
+        $targetEntityClass = $this->classMapper->byResource($reflection->getName(), $context[self::CONDITION_CONTEXT] ?? null, context: $context);
 
         $properties = $reflection->getProperties();
         $output = $existingEntity ?? new $targetEntityClass();
@@ -77,7 +77,7 @@ class ResourceToEntityMapper
 
             // For existing entities, lets not update anything, if value not changed
             $values = $this->accessor->getValue($output, $propertyName);
-            if (null !== $existingEntity && $this->compareValues($values, $propertyValue)) {
+            if (null !== $existingEntity && $this->compareValues($values, $propertyValue, $context)) {
                 continue;
             }
 
@@ -89,7 +89,7 @@ class ResourceToEntityMapper
                 if (null === $propertyValue || 0 === count($propertyValue)) {
                     continue;
                 }
-                $targetClass = $this->classMapper->byResource(get_class($propertyValue[0]), $object::class); // assume equal data types in array
+                $targetClass = $this->classMapper->byResource(get_class($propertyValue[0]), $object::class, context: $context); // assume equal data types in array
                 $collection = new ArrayCollection();
                 foreach ($propertyValue as $value) {
                     if (isset($value->id)) { // entity already exists, lets fetch it from DB
@@ -113,12 +113,12 @@ class ResourceToEntityMapper
             // 1B. Normalize relations for BaseResource properties
             /* @var BaseResource $propertyValue */
             if ($this->isPropertyBaseDto($propertyType)) {
-                $target_class = $this->classMapper->byResource($propertyType);
+                $targetClass = $this->classMapper->byResource($propertyType, context: $context);
                 if (isset($propertyValue->id)) { // entity already exists, lets fetch it from DB
-                    $repository = $this->entityManager->getRepository($target_class);
+                    $repository = $this->entityManager->getRepository($targetClass);
                     $entity = $repository->find($propertyValue->id);
                     if (null === $entity) {
-                        throw new RuntimeException("$target_class entity with id $propertyValue->id not found!");
+                        throw new RuntimeException("$targetClass entity with id $propertyValue->id not found!");
                     }
 
                     $this->accessor->setValue($output, $propertyName, $entity);
@@ -194,7 +194,7 @@ class ResourceToEntityMapper
         $object->{$method}($value);
     }
 
-    private function compareValues(mixed $value1, mixed $value2): bool
+    private function compareValues(mixed $value1, mixed $value2, array $context = []): bool
     {
         // Scalar types
         if ($value1 === $value2) {
@@ -219,7 +219,7 @@ class ResourceToEntityMapper
             $secondSet = $value2;
             $equal = true;
             for ($i = 0, $iMax = count($firstSet); $i < $iMax; $i++) {
-                $classesAreEqual = get_class($firstSet[$i]) === $this->classMapper->byResource(get_class($secondSet[$i]), get_class($firstSet[$i]));
+                $classesAreEqual = get_class($firstSet[$i]) === $this->classMapper->byResource(get_class($secondSet[$i]), get_class($firstSet[$i]), context: $context);
                 $idsAreEqual = $firstSet[$i]->getId() === $secondSet[$i]->id;
                 $equal = $classesAreEqual && $idsAreEqual;
                 if (!$equal) {

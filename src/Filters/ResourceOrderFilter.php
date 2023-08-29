@@ -36,12 +36,12 @@ class ResourceOrderFilter implements FilterInterface
     /**
      * @param array<string, mixed> $context
      */
-    public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation $operation = null, array $context = []): void
+    public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation|null $operation = null, array $context = []): void
     {
         if (!array_key_exists('order', $context['filters'])) {
             return;
         }
-        $resourceClass = $this->classMapper->byResource($resourceClass);
+        $entityClass = $this->classMapper->byResource($resourceClass, context: $context);
         $property = key($context['filters']['order']);
         $direction = current($context['filters']['order']);
         if (str_contains($property, '->>')) { // Order by json field, for example data->>'created'
@@ -59,7 +59,7 @@ class ResourceOrderFilter implements FilterInterface
             $this->nameConverter,
             $this->orderNullsComparison,
         );
-        $orderFilter->apply($queryBuilder, $queryNameGenerator, $resourceClass, $operation, $context);
+        $orderFilter->apply($queryBuilder, $queryNameGenerator, $entityClass, $operation, $context);
     }
 
     /**
