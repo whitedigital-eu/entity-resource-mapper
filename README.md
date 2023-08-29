@@ -39,6 +39,17 @@ class ClassMapperConfigurator implements ClassMapperConfiguratorInterface
     public function __invoke(ClassMapper $classMapper)
     {
         $classMapper->registerMapping(CustomerResource::class, Customer::class);
+        // with Callback - must return true for mapping to be active
+        $classMapper->registerMapping(PublicHtmlResource::class, Html::class, callback: static fn (array $context) => !self::isAdmin($context));
+        $classMapper->registerMapping(AdminHtmlResource::class, Html::class, callback: static fn (array $context) => self::isAdmin($context));
+    }
+    
+    /**
+     * IsAdmin or else IsPublic.
+     */
+    private static function isAdmin(array $context): bool
+    {
+        return array_key_exists('request_uri', $context) && str_starts_with($context['request_uri'], '/api/admin');
     }
 }
 
