@@ -1,9 +1,8 @@
-<?php
-
-declare(strict_types = 1);
+<?php declare(strict_types = 1);
 
 namespace WhiteDigital\EntityResourceMapper\Mapper;
 
+use Closure;
 use InvalidArgumentException;
 use ReflectionClass;
 use ReflectionException;
@@ -23,17 +22,19 @@ class ClassMapper
     }
 
     /**
-     * @param string $dtoClass    Resource resource class
-     * @param string $entityClass Entity class
+     * If callback closure is provided it must return TRUE in order to use the mapping.
+     * @param string $resourceClass Resource resource class
+     * @param string $entityClass   Entity class
      */
-    public function registerMapping(string $dtoClass, string $entityClass, ?string $condition = null): void
+    public function registerMapping(string $resourceClass, string $entityClass, ?string $condition = null, ?Closure $callback = null): void
     {
-        $this->validate($dtoClass, $entityClass);
+        $this->validate($resourceClass, $entityClass);
 
         $this->map[] = [
-            'dto' => $dtoClass,
+            'resource' => $resourceClass,
             'entity' => $entityClass,
             'condition' => $condition,
+            'callback' => $callback,
         ];
     }
 
@@ -45,10 +46,10 @@ class ClassMapper
     /**
      * @return class-string<BaseEntity>
      */
-    public function byResource(string $resourceClass, ?string $condition = null): string
+    public function byResource(string $resourceClass, ?string $condition = null, array $context = []): string
     {
         try {
-            return $this->lookup($resourceClass, 'dto', 'entity', $condition);
+            return $this->lookup($resourceClass, 'resource', 'entity', $condition, $context);
         } catch (MappingNotFoundException) {
             if (null !== $result = $this->mapFromAttribute($resourceClass, $condition)) {
                 return $result;
@@ -61,10 +62,10 @@ class ClassMapper
     /**
      * @return class-string<BaseResource>
      */
-    public function byEntity(string $entityClass, ?string $condition = null): string
+    public function byEntity(string $entityClass, ?string $condition = null, array $context = []): string
     {
         try {
-            return $this->lookup($entityClass, 'entity', 'dto', $condition);
+            return $this->lookup($entityClass, 'entity', 'resource', $condition, $context);
         } catch (MappingNotFoundException) {
             if (null !== $result = $this->mapFromAttribute($entityClass, $condition)) {
                 return $result;
@@ -74,10 +75,10 @@ class ClassMapper
         }
     }
 
-    private function validate(string $dtoClass, string $entityClass): void
+    private function validate(string $resourceClass, string $entityClass): void
     {
-        if (!is_subclass_of($dtoClass, BaseResource::class)) {
-            throw new InvalidArgumentException(sprintf('%s must extend %s', $dtoClass, BaseResource::class));
+        if (!is_subclass_of($resourceClass, BaseResource::class)) {
+            throw new InvalidArgumentException(sprintf('%s must extend %s', $resourceClass, BaseResource::class));
         }
 
         if (!is_subclass_of($entityClass, BaseEntity::class)) {
@@ -85,11 +86,14 @@ class ClassMapper
         }
     }
 
-    private function lookup(string $className, string $searchKey, string $returnKey, ?string $condition): string
+    private function lookup(string $className, string $searchKey, string $returnKey, ?string $condition, ?array $context = []): string
     {
         $potentialMatches = [];
         foreach ($this->map as $mapping) {
             if ($mapping[$searchKey] === $className) {
+                if (null !== $mapping['callback'] && true !== $mapping['callback']($context)) {
+                    continue;
+                }
                 $potentialMatches[] = $mapping;
             }
         }

@@ -40,7 +40,7 @@ class ResourceDateFilter implements FilterInterface, DateFilterInterface
      *
      * @throws \Exception
      */
-    public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation $operation = null, ?array $context = null): void
+    public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation|null $operation = null, array $context = []): void
     {
         $timeZone = new DateTimeZone(date_default_timezone_get());
 
@@ -62,9 +62,9 @@ class ResourceDateFilter implements FilterInterface, DateFilterInterface
             $this->properties,
             $this->nameConverter,
         );
-        $resourceClass = $this->classMapper->byResource($resourceClass);
+        $entityClass = $this->classMapper->byResource($resourceClass, context: $context);
 
-        $dateFilter->apply($queryBuilder, $queryNameGenerator, $resourceClass, $operation, $context);
+        $dateFilter->apply($queryBuilder, $queryNameGenerator, $entityClass, $operation, $context);
     }
 
     /**

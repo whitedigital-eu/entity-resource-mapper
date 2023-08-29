@@ -63,9 +63,9 @@ final class ResourceSearchFilter implements SearchFilterInterface, FilterInterfa
     }
 
     /**
-     * @param array<string, mixed>|null $context
+     * @param array<string, mixed> $context
      */
-    public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation $operation = null, ?array $context = null): void
+    public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation|null $operation = null, array $context = []): void
     {
         foreach ($context['filters'] as $property => $filter) {
             if (!array_key_exists($property, $this->properties)) {
@@ -80,7 +80,7 @@ final class ResourceSearchFilter implements SearchFilterInterface, FilterInterfa
             return;
         }
 
-        $resourceClass = $this->classMapper->byResource($resourceClass, $resourceClass);
+        $entityClass = $this->classMapper->byResource($resourceClass, $resourceClass, context: $context);
 
         $searchFilter = new SearchFilter(
             $this->managerRegistry,
@@ -90,7 +90,7 @@ final class ResourceSearchFilter implements SearchFilterInterface, FilterInterfa
             $this->properties,
             $this->identifiersExtractor,
             $this->nameConverter, );
-        $searchFilter->apply($queryBuilder, $queryNameGenerator, $resourceClass, $operation, $context);
+        $searchFilter->apply($queryBuilder, $queryNameGenerator, $entityClass, $operation, $context);
     }
 
     /**

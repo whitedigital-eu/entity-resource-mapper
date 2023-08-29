@@ -41,7 +41,7 @@ final class ResourceEnumFilter implements SearchFilterInterface, FilterInterface
     /**
      * @param array<string, mixed>|null $context
      */
-    public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation $operationName = null, ?array $context = null): void
+    public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation|null $operation = null, array $context = []): void
     {
         foreach ($context['filters'] as $property => $filter) {
             if (!array_key_exists($property, $this->properties)) {
@@ -55,7 +55,7 @@ final class ResourceEnumFilter implements SearchFilterInterface, FilterInterface
             return;
         }
 
-        $resourceClass = $this->classMapper->byResource($resourceClass, $resourceClass);
+        $entityClass = $this->classMapper->byResource($resourceClass, $resourceClass, context: $context);
 
         $searchFilter = new SearchFilter(
             $this->managerRegistry,
@@ -65,7 +65,7 @@ final class ResourceEnumFilter implements SearchFilterInterface, FilterInterface
             $this->properties,
             $this->identifiersExtractor,
             $this->nameConverter, );
-        $searchFilter->apply($queryBuilder, $queryNameGenerator, $resourceClass, $operationName, $context);
+        $searchFilter->apply($queryBuilder, $queryNameGenerator, $entityClass, $operation, $context);
     }
 
     /**

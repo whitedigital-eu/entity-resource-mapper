@@ -61,7 +61,7 @@ class EntityToResourceMapper
         }
         $reflection = $this->loadReflection($object);
 
-        $targetResourceClass = $this->classMapper->byEntity($reflection->getName());
+        $targetResourceClass = $this->classMapper->byEntity($reflection->getName(), context: $context);
 
         $this->addElementIfNotExists($context[self::PARENT_CLASSES], $targetResourceClass);
 
@@ -75,7 +75,7 @@ class EntityToResourceMapper
         if (!empty($authorize = $resourceReflection->getAttributes(VisibleProperty::class))) {
             $ownerProperty = $authorize[0]->getArguments()['ownerProperty'];
             if (!$this->isOwner($object, $ownerProperty)) {
-                if (!$this->authorizationService->authorizeSingleObject($object, AuthorizationService::ITEM_GET, false)) {
+                if (!$this->authorizationService->authorizeSingleObject($object, AuthorizationService::ITEM_GET, false, context: $context)) {
                     $visibleProperties = $authorize[0]->getArguments()['properties'] ?? [];
                     $this->setResourceProperty($output, 'id', $object->getId());
                     $this->setResourceProperty($output, 'isRestricted', true);
@@ -122,7 +122,7 @@ class EntityToResourceMapper
                 // Do not initialize lazy relation (with $propertyValue->getValues()) if not needed
                 /** @var PersistentCollection $propertyValue */
                 $collectionElementType = $propertyValue->getTypeClass()->getName();
-                $targetClass = $this->classMapper->byEntity($collectionElementType);
+                $targetClass = $this->classMapper->byEntity($collectionElementType, context: $context);
                 $targetNormalizationGroups = $this->getNormalizationGroups($targetClass);
                 $propertyNormalizationGroup = $this->getResourcePropertyNormalizationGroups($resourceReflection, $propertyName);
                 if (array_key_exists('groups', $context)
@@ -143,7 +143,7 @@ class EntityToResourceMapper
 
             // 2B. Normalize relations for Entity property
             if ($this->isPropertyBaseEntity($propertyType)) {
-                $targetClass = $this->classMapper->byEntity($propertyType);
+                $targetClass = $this->classMapper->byEntity($propertyType, context: $context);
                 $targetNormalizationGroups = $this->getNormalizationGroups($targetClass);
                 $propertyNormalizationGroup = $this->getResourcePropertyNormalizationGroups($resourceReflection, $propertyName);
                 if (array_key_exists('groups', $context)

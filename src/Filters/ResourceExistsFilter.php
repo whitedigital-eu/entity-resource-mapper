@@ -33,9 +33,9 @@ final class ResourceExistsFilter implements ExistsFilterInterface, FilterInterfa
     }
 
     /**
-     * @param array<string, mixed>|null $context
+     * @param array<string, mixed> $context
      */
-    public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation $operation = null, ?array $context = null): void
+    public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation|null $operation = null, array $context = []): void
     {
         if (!array_key_exists('exists', $context['filters'])) {
             return;
@@ -45,7 +45,7 @@ final class ResourceExistsFilter implements ExistsFilterInterface, FilterInterfa
                 unset($context['filters']['exists'][$property]);
             }
         }
-        $resourceClass = $this->classMapper->byResource($resourceClass);
+        $entityClass = $this->classMapper->byResource($resourceClass, context: $context);
         $existsFilter = new ExistsFilter(
             $this->managerRegistry,
             $this->logger,
@@ -53,7 +53,7 @@ final class ResourceExistsFilter implements ExistsFilterInterface, FilterInterfa
             $this->existsParameterName,
             $this->nameConverter,
         );
-        $existsFilter->apply($queryBuilder, $queryNameGenerator, $resourceClass, $operation, $context);
+        $existsFilter->apply($queryBuilder, $queryNameGenerator, $entityClass, $operation, $context);
     }
 
     /**

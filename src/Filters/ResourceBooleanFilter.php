@@ -33,21 +33,21 @@ final class ResourceBooleanFilter implements FilterInterface
     /**
      * @param array<string, mixed>|null $context
      */
-    public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation $operation = null, ?array $context = null): void
+    public function apply(QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation|null $operation = null, array $context = []): void
     {
         foreach ($context['filters'] as $property => $filter) {
             if (!array_key_exists($property, $this->properties)) {
                 unset($context['filters'][$property]);
             }
         }
-        $resourceClass = $this->classMapper->byResource($resourceClass);
+        $entityClass = $this->classMapper->byResource($resourceClass, context: $context);
         $booleanFilter = new BooleanFilter(
             $this->managerRegistry,
             $this->logger,
             $this->properties,
             $this->nameConverter,
         );
-        $booleanFilter->apply($queryBuilder, $queryNameGenerator, $resourceClass, $operation, $context);
+        $booleanFilter->apply($queryBuilder, $queryNameGenerator, $entityClass, $operation, $context);
     }
 
     /**
