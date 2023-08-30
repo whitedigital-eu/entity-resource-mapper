@@ -207,8 +207,9 @@ If the argument is missing, the command will ask for the entity class name inter
 
             $mapping[] = [
                 'entity' => ($e = $generator->createClassNameDetails($ns . $map['entity'], ''))->getShortName() . '::class',
-                'dto' => ($d = $generator->createClassNameDetails($ns . $map['dto'], ''))->getShortName() . '::class',
+                'resource' => ($d = $generator->createClassNameDetails($ns . $map['resource'], ''))->getShortName() . '::class',
                 'condition' => $condition,
+                'callback' => $map['callback'],
             ];
             $uses[] = $e->getFullName();
             $uses[] = $d->getFullName();
@@ -219,14 +220,15 @@ If the argument is missing, the command will ask for the entity class name inter
 
         $mapping[] = [
             'entity' => $entity->getShortName() . '::class',
-            'dto' => $resource->getShortName() . '::class',
+            'resource' => $resource->getShortName() . '::class',
             'condition' => null,
+            'callback' => null,
         ];
 
         $mapping = array_unique($mapping, SORT_REGULAR);
         $uses = array_unique($uses, SORT_REGULAR);
         sort($uses);
-        array_multisort(array_column($mapping, 'dto'), SORT_ASC, $mapping);
+        array_multisort(array_column($mapping, 'resource'), SORT_ASC, $mapping);
 
         $configurator = $generator->createClassNameDetails('ClassMapperConfigurator', $this->bag->get($wd . '.namespaces.class_map_configurator'));
         if (class_exists($configurator->getFullName())) {
