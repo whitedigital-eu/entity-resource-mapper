@@ -16,7 +16,7 @@ final class ClassMapperConfigurator implements ClassMapperConfiguratorInterface
     {
 <?php
 foreach ($mapping as $map) {
-    echo '        $classMapper->registerMapping(' . $map['dto'] . ', ' . $map['entity'] . ($map['condition'] ? ', ' . $map['condition'] : '') . ');' . "\n";
+    echo '        $classMapper->registerMapping(' . $map['resource'] . ', ' . $map['entity'] . ($map['condition'] ? ', ' . $map['condition'] : '') . ($map['callback'] ? ', ' . $map['callback'] : '') . ');' . "\n";
 }
 ?>
     }
