@@ -27,14 +27,14 @@ use WhiteDigital\EntityResourceMapper\UTCDateTimeImmutable;
             ),
             new Get(
                 requirements: ['id' => '\d+', ],
-                normalizationContext: ['groups' => [self::ITEM, ], ],
+                normalizationContext: ['groups' => [self::READ, ], ],
             ),
             new GetCollection(
                 normalizationContext: ['groups' => [self::READ, ], ],
             ),
             new Patch(
                 requirements: ['id' => '\d+', ],
-                denormalizationContext: ['groups' => [self::PATCH, ], ],
+                denormalizationContext: ['groups' => [self::WRITE, ], ],
             ),
             new Post(
                 denormalizationContext: ['groups' => [self::WRITE, ], ],
@@ -59,12 +59,12 @@ foreach ($groups as $group) {
 ?>
 
     #[ApiProperty(identifier: true)]
-    #[Groups([self::READ, self::ITEM, ])]
+    #[Groups([self::READ, ])]
     public mixed $id = null;
 
-    #[Groups([self::READ, self::ITEM, ])]
+    #[Groups([self::READ, ])]
     public ?UTCDateTimeImmutable $createdAt = null;
 
-    #[Groups([self::READ, self::ITEM, ])]
+    #[Groups([self::READ, ])]
     public ?UTCDateTimeImmutable $updatedAt = null;
 }
