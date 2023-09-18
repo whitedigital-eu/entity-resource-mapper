@@ -123,13 +123,14 @@ AuthorizationService Configurator must be implemented.
 ```php
 // src/Service/Configurator/AuthorizationServiceConfigurator.php
 
-use WhiteDigital\EntityResourceMapper\Resource\BaseResource;use WhiteDigital\EntityResourceMapper\Security\AuthorizationServiceConfiguratorInterface;
+use WhiteDigital\EntityResourceMapper\Resource\BaseResource;  
+use WhiteDigital\EntityResourceMapper\Security\AuthorizationServiceConfiguratorInterface;  
 
 final class AuthorizationServiceConfigurator implements AuthorizationServiceConfiguratorInterface
 {
     public function __invoke(AuthorizationService $service): void
     {
-        $service->setAuthorizationOverride(static fn (BaseEntity|BaseResource $object) => 'cli' === strtolower(PHP_SAPI) && 'test' !== $_ENV['APP_ENV']);
+        $service->setAuthorizationOverride(static fn (BaseEntity|BaseResource|null $object = null) => 'cli' === strtolower(PHP_SAPI) && 'test' !== $_ENV['APP_ENV']);
 
         $service->setResources([
             ActivityResource::class => [
