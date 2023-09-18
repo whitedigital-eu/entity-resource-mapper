@@ -110,7 +110,7 @@ final class AuthorizationService
         ?GrantType $forcedGrantType = null,
         array $context = [],
     ): bool {
-        if (null !== $this->authorizationOverride && ($this->authorizationOverride)()) {
+        if (null !== $this->authorizationOverride && ($this->authorizationOverride)($object)) {
             return true;
         }
         $accessDecision = false;

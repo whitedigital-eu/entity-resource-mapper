@@ -118,17 +118,19 @@ Available grant types:
 - `GrantType::LIMITED` resource is available with limitations
 - `GrantType::NONE` resource not available
 
-AuthorizationService Configurator must be implemented. 
+AuthorizationService Configurator must be implemented.
 
 ```php
 // src/Service/Configurator/AuthorizationServiceConfigurator.php
 
-use WhiteDigital\EntityResourceMapper\Security\AuthorizationServiceConfiguratorInterface;
+use WhiteDigital\EntityResourceMapper\Resource\BaseResource;use WhiteDigital\EntityResourceMapper\Security\AuthorizationServiceConfiguratorInterface;
 
 final class AuthorizationServiceConfigurator implements AuthorizationServiceConfiguratorInterface
 {
     public function __invoke(AuthorizationService $service): void
     {
+        $service->setAuthorizationOverride(static fn (BaseEntity|BaseResource $object) => 'cli' === strtolower(PHP_SAPI) && 'test' !== $_ENV['APP_ENV']);
+
         $service->setResources([
             ActivityResource::class => [
                 AuthorizationService::ALL => ['ROLE_SUPER_ADMIN' => GrantType::ALL, 'ROLE_KAM' => GrantType::ALL],
@@ -157,6 +159,8 @@ register it as service:
 WhiteDigital\EntityResourceMapper\Security\AuthorizationServiceConfiguratorInterface:
     class: AuthorizationServiceConfigurator
 ```
+If `setAuthorizationOverride` closure is set, it will be called with current object (resource or entity) and if it returns true, authorization will be skipped.
+ 
 Use following methods:  
 - In DataProvider, getCollection:
 ```php
