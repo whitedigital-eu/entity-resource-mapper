@@ -55,4 +55,12 @@ class EntityNormalizer implements NormalizerInterface, NormalizerAwareInterface
 
         return $this->normalizer->normalize($apiResource, $format, $context);
     }
+
+    /**
+     * @return array<string, bool>
+     */
+    public function getSupportedTypes(?string $format = null): array
+    {
+        return [BaseEntity::class => true];
+    }
 }

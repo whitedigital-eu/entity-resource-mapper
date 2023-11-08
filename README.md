@@ -12,7 +12,7 @@
 ## Requirements
 
 PHP 8.1+  
-Symfony 6.2+
+Symfony 6.3+
 
 ## Installation
 The recommended way to install is via Composer:
