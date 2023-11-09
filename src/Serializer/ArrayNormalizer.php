@@ -83,4 +83,12 @@ class ArrayNormalizer implements NormalizerInterface, NormalizerAwareInterface
     {
         return count(array_filter(array_keys($array), 'is_string')) > 0;
     }
+
+    /**
+     * @return array<string, bool>
+     */
+    public function getSupportedTypes(?string $format = null): array
+    {
+        return ['array' => true];
+    }
 }
