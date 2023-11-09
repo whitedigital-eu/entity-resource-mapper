@@ -16,7 +16,6 @@ use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Mapper\EntityToResourceMapper;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
-use WhiteDigital\EntityResourceMapper\UTCDateTimeImmutable;
 
 /**
  * When custom select fields are added to QueryBuilder object, array is returned instead of pure BaseEntity object.
