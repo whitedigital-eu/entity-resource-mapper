@@ -89,6 +89,6 @@ class ArrayNormalizer implements NormalizerInterface, NormalizerAwareInterface
      */
     public function getSupportedTypes(?string $format = null): array
     {
-        return ['array' => true];
+        return ['*' => false]; // array would narrow scope but not working under api-platform 3.2.6
     }
 }
