@@ -6,7 +6,9 @@ namespace WhiteDigital\EntityResourceMapper\Serializer;
 
 use ApiPlatform\Exception\ResourceClassNotFoundException;
 use ArrayObject;
+use DateTimeImmutable;
 use ReflectionException;
+use ReflectionProperty;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
 use Symfony\Component\Serializer\Exception\RuntimeException;
@@ -16,6 +18,7 @@ use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Mapper\EntityToResourceMapper;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
+use WhiteDigital\EntityResourceMapper\UTCDateTimeImmutable;
 
 /**
  * When custom select fields are added to QueryBuilder object, array is returned instead of pure BaseEntity object.
@@ -53,7 +56,11 @@ class ArrayNormalizer implements NormalizerInterface, NormalizerAwareInterface
             if (!property_exists($apiResource, $key)) {
                 throw new RuntimeException("Custom SQL property $key does not exist on " . $apiResource::class);
             }
-            $apiResource->{$key} = $value;
+            $reflectionType = (new ReflectionProperty($apiResource, $key))->getType()?->getName();
+            $apiResource->{$key} = match ($reflectionType) {
+                DateTimeImmutable::class => new UTCDateTimeImmutable($value),
+                default => $value,
+            };
         }
 
         return $this->normalizer->normalize($apiResource, $format, $context);
@@ -75,6 +82,14 @@ class ArrayNormalizer implements NormalizerInterface, NormalizerAwareInterface
     }
 
     /**
+     * @return array<string, bool>
+     */
+    public function getSupportedTypes(?string $format = null): array
+    {
+        return ['*' => false]; // array would narrow scope but not working under api-platform 3.2.6
+    }
+
+    /**
      * Checks if array has string keys, to detected custom queryBuilder fields.
      *
      * @param array<int|string, mixed> $array
@@ -82,13 +97,5 @@ class ArrayNormalizer implements NormalizerInterface, NormalizerAwareInterface
     private function hasStringKeys(array $array): bool
     {
         return count(array_filter(array_keys($array), 'is_string')) > 0;
-    }
-
-    /**
-     * @return array<string, bool>
-     */
-    public function getSupportedTypes(?string $format = null): array
-    {
-        return ['*' => false]; // array would narrow scope but not working under api-platform 3.2.6
     }
 }
