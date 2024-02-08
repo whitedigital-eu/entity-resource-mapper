@@ -136,7 +136,8 @@ class EntityToResourceMapper
                     continue;
                 }
                 foreach ($propertyValue->getValues() as $value) { // Doctrine lazy loading happens here
-                    $this->setResourceProperty($output, $propertyName, $this->map($value, $context), true);
+                    $contextWithClearedGroups = $this->unsetNormalizationGroups($context, $targetNormalizationGroups);
+                    $this->setResourceProperty($output, $propertyName, $this->map($value, $contextWithClearedGroups), true);
                 }
                 continue;
             }
@@ -156,7 +157,8 @@ class EntityToResourceMapper
                 if ($this->isCircularReference($targetClass, $context, $resourceReflection, $propertyName)) {
                     continue;
                 }
-                $this->setResourceProperty($output, $propertyName, $this->map($propertyValue, $context));
+                $contextWithClearedGroups = $this->unsetNormalizationGroups($context, $targetNormalizationGroups);
+                $this->setResourceProperty($output, $propertyName, $this->map($propertyValue, $contextWithClearedGroups));
                 continue;
             }
 
@@ -176,7 +178,7 @@ class EntityToResourceMapper
     {
         $user = $this->security->getUser();
         if ($this->isPropertyNested($ownerProperty)) {
-            [$ownerObject, $ownerProperty, ] = explode('.', $ownerProperty, 2);
+            [$ownerObject, $ownerProperty,] = explode('.', $ownerProperty, 2);
 
             return $this->isOwner = $object->{$this->getter($ownerObject)}()->{$this->getter($ownerProperty)}() === $user->{$this->getter($ownerProperty)}();
         }
@@ -211,19 +213,7 @@ class EntityToResourceMapper
      */
     private function isPropertyBaseEntity(string $class): bool
     {
-        // TODO Can we use is_subclass_of instead?
-        try {
-            $reflection = new ReflectionClass($class);
-        } catch (ReflectionException) {
-            return false; // Property is not a (known) class
-        }
-        while ($reflection = $reflection->getParentClass()) {
-            if (BaseEntity::class === $reflection->getName()) {
-                return true;
-            }
-        }
-
-        return false;
+        return is_subclass_of($class, BaseEntity::class);
     }
 
     /**
@@ -348,5 +338,30 @@ class EntityToResourceMapper
     private function getter(string $variable): string
     {
         return sprintf('get%s', ucfirst($variable));
+    }
+
+    /**
+     * Remove groups from context, if they are not present in target normalization groups.
+     * So that mapper does not do unnecessary work.
+     *
+     * @param array<string, mixed> $context
+     * @param array<string, mixed> $targetNormalizationGroups
+     *
+     * @return array<string, mixed>
+     */
+    private function unsetNormalizationGroups(array $context, array $targetNormalizationGroups): array
+    {
+        if (!array_key_exists('groups', $context)) {
+            return $context;
+        }
+        $targetGroups = [];
+        foreach ($context['groups'] as $group) {
+            if (in_array($group, $targetNormalizationGroups, true)) {
+                $targetGroups[] = $group;
+            }
+        }
+        $context['groups'] = $targetGroups;
+
+        return $context;
     }
 }
