@@ -15,7 +15,7 @@ use ReflectionException;
 use RuntimeException;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Security\Core\User\UserInterface;
-use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Serializer;
 use Symfony\Component\Serializer\Annotation\Ignore;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
 use WhiteDigital\EntityResourceMapper\Attribute\SkipCircularReferenceCheck;
@@ -315,7 +315,16 @@ class EntityToResourceMapper
     private function getResourcePropertyNormalizationGroups(ReflectionClass $reflection, string $propertyName): array
     {
         $property = $reflection->getProperty($propertyName);
-        $groupAttributes = $property->getAttributes(Groups::class);
+        $groupAttributes = [];
+
+        if (class_exists(Serializer\Annotation\Groups::class)) {
+            $groupAttributes = array_merge($groupAttributes, $property->getAttributes(Serializer\Annotation\Groups::class));
+        }
+
+        if (class_exists(Serializer\Attribute\Groups::class)) {
+            $groupAttributes = array_merge($groupAttributes, $property->getAttributes(Serializer\Attribute\Groups::class));
+        }
+
         if (1 === count($groupAttributes)) {
             return $groupAttributes[0]->getArguments()[0];
         }
