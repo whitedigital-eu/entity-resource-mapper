@@ -3,7 +3,7 @@
   "description": "Bundle to map Doctrine entity object to and from API resource object.",
   "type": "symfony-bundle",
   "license": "MIT",
-  "version": "0.16.7",
+  "version": "0.16.8",
   "authors": [
     {
       "name": "Raitis Rasmanis",
@@ -31,10 +31,10 @@
     "doctrine/annotations": "^1.0",
     "doctrine/orm": "^2.10",
     "symfony/serializer": "^6.1",
-    "symfony/security-http": "6.1.*",
-    "symfony/validator": "6.1.*",
-    "symfony/dependency-injection": "6.1.x",
-    "symfony/config": "6.1.x"
+    "symfony/security-http": "^6.1",
+    "symfony/validator": "^6.1",
+    "symfony/dependency-injection": "^6.1",
+    "symfony/config": "^6.1"
   },
   "require-dev": {
     "roave/security-advisories": "dev-latest",
