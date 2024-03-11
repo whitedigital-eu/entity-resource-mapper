@@ -5,6 +5,7 @@ namespace WhiteDigital\EntityResourceMapper\Entity\Traits;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\IdGenerator\UuidGenerator;
 use Symfony\Bridge\Doctrine\Types\UuidType;
+use Symfony\Component\Uid;
 
 trait Uuid
 {
@@ -12,9 +13,9 @@ trait Uuid
     #[ORM\Column(type: UuidType::NAME, unique: true)]
     #[ORM\GeneratedValue(strategy: 'CUSTOM')]
     #[ORM\CustomIdGenerator(class: UuidGenerator::class)]
-    protected ?string $id = null;
+    protected ?Uid\Uuid $id = null;
 
-    public function getId(): ?string
+    public function getId(): ?Uid\Uuid
     {
         return $this->id;
     }
