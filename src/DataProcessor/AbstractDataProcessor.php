@@ -78,7 +78,7 @@ abstract class AbstractDataProcessor implements ProcessorInterface
 
     abstract protected function createEntity(BaseResource $resource, array $context, ?BaseEntity $existingEntity = null);
 
-    protected function findById(string $class, int|string $id): ?BaseEntity
+    protected function findById(string $class, mixed $id): ?BaseEntity
     {
         return $this->entityManager->getRepository($class)->find($id);
     }
