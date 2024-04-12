@@ -78,7 +78,7 @@ abstract class AbstractPropertyBasedAccessResolver implements AccessResolverInte
 
     abstract protected function retrievePropertyPathFromConfig(?array $config);
 
-    abstract protected function getAuthorizedValueId(mixed $topElement): null|int|object;
+    abstract protected function getAuthorizedValueId(mixed $topElement): int|object|null;
 
     protected function isPropertyNested(string $property): bool
     {

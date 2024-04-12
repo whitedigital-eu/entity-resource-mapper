@@ -44,7 +44,7 @@ class ResourceOrderCustomFilter extends AbstractFilter
         return $description;
     }
 
-    protected function filterProperty(string $property, mixed $value, QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation $operation = null, ?array $context = null): void
+    protected function filterProperty(string $property, mixed $value, QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation|null $operation = null, ?array $context = null): void
     {
         if (!is_array($value)) {
             return;

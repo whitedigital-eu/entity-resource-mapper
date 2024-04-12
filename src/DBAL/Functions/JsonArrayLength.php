@@ -17,7 +17,7 @@ use Doctrine\ORM\Query\SqlWalker;
  */
 class JsonArrayLength extends FunctionNode
 {
-    public Node|null $leftHandSide = null;
+    public ?Node $leftHandSide = null;
 
     /**
      * @throws ASTException

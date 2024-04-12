@@ -12,8 +12,8 @@ use Doctrine\ORM\Query\SqlWalker;
 
 class JsonGetText extends FunctionNode
 {
-    public Node|null $leftHandSide = null;
-    public Node|null $rightHandSide = null;
+    public ?Node $leftHandSide = null;
+    public ?Node $rightHandSide = null;
 
     /**
      * @throws ASTException

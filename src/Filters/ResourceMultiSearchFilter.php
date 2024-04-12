@@ -41,7 +41,7 @@ class ResourceMultiSearchFilter extends AbstractFilter
     /**
      * @param array<string, mixed>|null $context
      */
-    protected function filterProperty(string $property, mixed $value, QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation $operation = null, ?array $context = null): void
+    protected function filterProperty(string $property, mixed $value, QueryBuilder $queryBuilder, QueryNameGeneratorInterface $queryNameGenerator, string $resourceClass, string|Operation|null $operation = null, ?array $context = null): void
     {
         if ('multisearch' !== $property) {
             return;
