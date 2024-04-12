@@ -16,8 +16,6 @@ use WhiteDigital\EntityResourceMapper\DBAL\Functions\JsonContains;
 use WhiteDigital\EntityResourceMapper\DBAL\Functions\JsonGetText;
 use WhiteDigital\EntityResourceMapper\DBAL\Types\UTCDateImmutableType;
 use WhiteDigital\EntityResourceMapper\DBAL\Types\UTCDateTimeImmutableType;
-use WhiteDigital\EntityResourceMapper\DBAL\Types\UTCDateTimeType;
-use WhiteDigital\EntityResourceMapper\DBAL\Types\UTCDateType;
 use WhiteDigital\EntityResourceMapper\DependencyInjection\Traits\DefineOrmMappings;
 
 use function array_is_list;
@@ -110,6 +108,9 @@ class EntityResourceMapperBundle extends AbstractBundle
                         ->end()
                     ->end()
                 ->end()
+                ->arrayNode('allow_datetime')
+                    ->scalarPrototype()->end()
+                ->end()
             ->end();
     }
 
@@ -136,8 +137,6 @@ class EntityResourceMapperBundle extends AbstractBundle
             ],
             'dbal' => [
                 'types' => [
-                    'date' => UTCDateType::class,
-                    'datetime' => UTCDateTimeType::class,
                     'date_immutable' => UTCDateImmutableType::class,
                     'datetime_immutable' => UTCDateTimeImmutableType::class,
                 ],
