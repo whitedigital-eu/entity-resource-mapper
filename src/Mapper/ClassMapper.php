@@ -23,6 +23,7 @@ class ClassMapper
 
     /**
      * If callback closure is provided it must return TRUE in order to use the mapping.
+     *
      * @param string $resourceClass Resource resource class
      * @param string $entityClass   Entity class
      */

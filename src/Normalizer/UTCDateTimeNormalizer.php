@@ -2,6 +2,8 @@
 
 namespace WhiteDigital\EntityResourceMapper\Normalizer;
 
+use DateTimeInterface;
+use Exception;
 use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 use WhiteDigital\EntityResourceMapper\UTCDateTimeImmutable;
@@ -11,7 +13,7 @@ class UTCDateTimeNormalizer implements NormalizerInterface, DenormalizerInterfac
     /**
      * @param array<string, mixed> $context
      *
-     * @throws \Exception
+     * @throws Exception
      */
     public function denormalize(mixed $data, string $type, ?string $format = null, array $context = []): ?UTCDateTimeImmutable
     {
@@ -31,7 +33,7 @@ class UTCDateTimeNormalizer implements NormalizerInterface, DenormalizerInterfac
      */
     public function normalize(mixed $object, ?string $format = null, array $context = []): string
     {
-        return $object->format($context['datetime_format'] ?? \DateTimeInterface::RFC3339);
+        return $object->format($context['datetime_format'] ?? DateTimeInterface::RFC3339);
     }
 
     /**

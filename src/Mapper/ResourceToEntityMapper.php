@@ -105,7 +105,7 @@ class ResourceToEntityMapper
 
                     $collection->add($this->map($value, $context));
                 }
-                
+
                 $this->accessor->setValue($output, $propertyName, $collection);
                 continue;
             }
