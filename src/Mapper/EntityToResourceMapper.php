@@ -16,7 +16,6 @@ use RuntimeException;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Serializer;
-use Symfony\Component\Serializer\Annotation\Ignore;
 use Symfony\Component\Serializer\Exception\ExceptionInterface;
 use WhiteDigital\EntityResourceMapper\Attribute\SkipCircularReferenceCheck;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
@@ -111,8 +110,15 @@ class EntityToResourceMapper
                 continue;
             }
 
+            $ignores = [];
+            if (class_exists(Serializer\Annotation\Ignore::class)) {
+                $ignores = array_merge($ignores, $property->getAttributes(Serializer\Annotation\Ignore::class));
+            }
+            if (class_exists(Serializer\Attribute\Ignore::class)) {
+                $ignores = array_merge($ignores, $property->getAttributes(Serializer\Attribute\Ignore::class));
+            }
             // 1. Ignore Entity property, if it has #[Ignore] attribute
-            if (!empty($property->getAttributes(Ignore::class))) {
+            if ([] !== $ignores) {
                 continue;
             }
 
