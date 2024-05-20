@@ -56,7 +56,7 @@ class ClassMapper
                 return $result;
             }
 
-            throw new RuntimeException(sprintf('%s not configured for Resource mapping. Please set up Configurator service or map classes manually.', __CLASS__));
+            throw new RuntimeException(sprintf('%s not configured for Resource mapping. Please set up Configurator service or map classes manually.', $resourceClass));
         }
     }
 
@@ -72,7 +72,7 @@ class ClassMapper
                 return $result;
             }
 
-            throw new ClassMapperNotConfiguredException(sprintf('%s not configured for Entity mapping. Please set up Configurator service or map classes manually.', __CLASS__));
+            throw new ClassMapperNotConfiguredException(sprintf('%s not configured for Entity mapping. Please set up Configurator service or map classes manually.', $entityClass));
         }
     }
 
