@@ -1,4 +1,4 @@
-<?php declare(strict_types = 1);
+<?php declare(strict_types=1);
 
 namespace WhiteDigital\EntityResourceMapper;
 
@@ -24,13 +24,25 @@ class UTCDateTimeImmutable extends DateTimeImmutable
         return new DateTimeZone(timezone: self::UTC);
     }
 
-    public static function createFromInterface(DateTimeInterface $object): DateTimeImmutable
+    /**
+     * @throws Exception
+     */
+    public static function createFromInterface(DateTimeInterface $object): static
     {
-        return parent::createFromInterface(object: $object)->setTimezone(timezone: self::getUTCTimeZone());
+        $utcTime = $object->setTimezone(self::getUTCTimeZone());
+        return new static($utcTime->format('Y-m-d H:i:s.u'));
     }
 
-    public static function createFromFormat(string $format, string $datetime, ?DateTimeZone $timezone = null): DateTimeImmutable|false
+    /**
+     * @throws Exception
+     */
+    public static function createFromFormat(string $format, string $datetime, ?DateTimeZone $timezone = null): static|false
     {
-        return parent::createFromFormat(format: $format, datetime: $datetime, timezone: $timezone ?? self::getUTCTimeZone());
+        $object = parent::createFromFormat(format: $format, datetime: $datetime, timezone: $timezone ?? self::getUTCTimeZone());
+
+        if (false !== $object) {
+            return self::createFromInterface($object);
+        }
+        return false;
     }
 }
