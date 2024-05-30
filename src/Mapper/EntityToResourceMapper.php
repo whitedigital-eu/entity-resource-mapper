@@ -367,6 +367,8 @@ class EntityToResourceMapper
     private function unsetNormalizationGroups(array $context, array $targetNormalizationGroups): array
     {
         if (!array_key_exists('groups', $context)) {
+            $context['groups'] = [];
+
             return $context;
         }
         $targetGroups = [];
