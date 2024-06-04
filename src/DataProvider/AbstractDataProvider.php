@@ -7,7 +7,7 @@ use ApiPlatform\Doctrine\Orm\Extension\OrderExtension;
 use ApiPlatform\Doctrine\Orm\Extension\QueryResultCollectionExtensionInterface;
 use ApiPlatform\Doctrine\Orm\Util\QueryNameGenerator;
 use ApiPlatform\Doctrine\Orm\Util\QueryNameGeneratorInterface;
-use ApiPlatform\Metadata\CollectionOperationInterface;
+use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -16,29 +16,25 @@ use Doctrine\Persistence\ManagerRegistry;
 use ReflectionClass;
 use ReflectionException;
 use Symfony\Bundle\SecurityBundle\Security;
-use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\Attribute\TaggedIterator;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
-use Symfony\Component\Security\Core\Authorization\Voter\AuthenticatedVoter;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Mapper\ClassMapper;
 use WhiteDigital\EntityResourceMapper\Mapper\EntityToResourceMapper;
 use WhiteDigital\EntityResourceMapper\Mapper\ResourceToEntityMapper;
 use WhiteDigital\EntityResourceMapper\Security\AuthorizationService;
-use WhiteDigital\EntityResourceMapper\Security\Enum\GrantType;
+use WhiteDigital\EntityResourceMapper\Traits\Override;
 
-use function array_key_exists;
-use function array_merge;
-use function count;
-use function is_array;
 use function sprintf;
 use function strtolower;
 
 abstract class AbstractDataProvider implements ProviderInterface
 {
+    use Override;
+
     public function __construct(
         protected readonly EntityManagerInterface $entityManager,
         protected readonly ManagerRegistry $doctrine,
@@ -60,7 +56,7 @@ abstract class AbstractDataProvider implements ProviderInterface
      */
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): object|array|null
     {
-        if ($operation instanceof CollectionOperationInterface) {
+        if ($operation instanceof GetCollection) {
             return $this->getCollection($operation, $context);
         }
 
@@ -93,7 +89,7 @@ abstract class AbstractDataProvider implements ProviderInterface
 
             if ($extension instanceof OrderExtension) {
                 $orderByDqlPart = $queryBuilder->getDQLPart('orderBy');
-                if (is_array($orderByDqlPart) && count($orderByDqlPart) > 0) {
+                if ([] !== $orderByDqlPart) {
                     continue;
                 }
 
@@ -115,46 +111,12 @@ abstract class AbstractDataProvider implements ProviderInterface
      */
     protected function getItem(Operation $operation, mixed $id, array $context): object
     {
-        $entity = $this->entityManager->getRepository($entityClass = $this->getEntityClass($operation, $context))->find($id);
+        $entity = $this->findByIdOrThrowException($operation, $id, $context);
 
-        $this->throwErrorIfNotExists($entity, strtolower((new ReflectionClass($entityClass))->getShortName()), $id);
         $this->authorizationService->setAuthorizationOverride(fn () => $this->override(AuthorizationService::ITEM_GET, $operation->getClass()));
         $this->authorizationService->authorizeSingleObject($entity, AuthorizationService::ITEM_GET, context: $context);
 
         return $this->createResource($entity, $context);
-    }
-
-    protected function override(string $operation, string $class): bool
-    {
-        try {
-            $property = (new ReflectionClass($this->authorizationService))->getProperty('resources')->getValue($this->authorizationService);
-        } catch (ReflectionException) {
-            return false;
-        }
-
-        if (isset($property[$class])) {
-            $attributes = $property[$class];
-        } else {
-            return false;
-        }
-
-        $allowed = array_merge($attributes[AuthorizationService::ALL] ?? [], $attributes[$operation] ?? []);
-        if ([] !== $allowed && array_key_exists(AuthenticatedVoter::PUBLIC_ACCESS, $allowed)) {
-            if (GrantType::ALL === $allowed[AuthenticatedVoter::PUBLIC_ACCESS]) {
-                return true;
-            }
-
-            throw new InvalidConfigurationException('Public access only allowed with "all" grant type');
-        }
-
-        return false;
-    }
-
-    protected function throwErrorIfNotExists(mixed $result, string $rootAlias, mixed $id): void
-    {
-        if (null === $result) {
-            throw new NotFoundHttpException($this->translator->trans('named_resource_not_found', ['%resource%' => $rootAlias, '%id%' => $id], domain: 'EntityResourceMapper'));
-        }
     }
 
     abstract protected function createResource(BaseEntity $entity, array $context);
@@ -166,5 +128,28 @@ abstract class AbstractDataProvider implements ProviderInterface
         $this->throwErrorIfNotExists($entity, $queryBuilder->getRootAliases()[0], $queryBuilder->getParameter('id')?->getValue());
 
         return $entity;
+    }
+
+    protected function findById(string $class, mixed $id): ?BaseEntity
+    {
+        return $this->entityManager->getRepository($class)->find($id);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    protected function findByIdOrThrowException(Operation $operation, mixed $id, array $context): BaseEntity
+    {
+        $entity = $this->entityManager->getRepository($entityClass = $this->getEntityClass($operation, $context))->find($id);
+        $this->throwErrorIfNotExists($entity, strtolower((new ReflectionClass($entityClass))->getShortName()), $id);
+
+        return $entity;
+    }
+
+    protected function throwErrorIfNotExists(mixed $result, string $rootAlias, mixed $id): void
+    {
+        if (null === $result) {
+            throw new NotFoundHttpException($this->translator->trans('named_resource_not_found', ['%resource%' => $rootAlias, '%id%' => $id], domain: 'EntityResourceMapper'));
+        }
     }
 }
