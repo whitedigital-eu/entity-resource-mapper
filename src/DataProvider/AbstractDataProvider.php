@@ -13,6 +13,8 @@ use ApiPlatform\State\ProviderInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
+use Psr\Container\ContainerExceptionInterface;
+use Psr\Container\NotFoundExceptionInterface;
 use ReflectionClass;
 use ReflectionException;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -52,6 +54,8 @@ abstract class AbstractDataProvider implements ProviderInterface
     }
 
     /**
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
      * @throws ReflectionException
      */
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): object|array|null
@@ -63,6 +67,10 @@ abstract class AbstractDataProvider implements ProviderInterface
         return $this->getItem($operation, $uriVariables['id'], $context);
     }
 
+    /**
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     */
     protected function getCollection(Operation $operation, array $context = []): array|object
     {
         $queryBuilder = $this->entityManager->createQueryBuilder();
@@ -108,6 +116,8 @@ abstract class AbstractDataProvider implements ProviderInterface
 
     /**
      * @throws ReflectionException
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
      */
     protected function getItem(Operation $operation, mixed $id, array $context): object
     {

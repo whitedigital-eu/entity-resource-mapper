@@ -8,6 +8,8 @@ use Closure;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\Proxy;
 use InvalidArgumentException;
+use Psr\Container\ContainerExceptionInterface;
+use Psr\Container\NotFoundExceptionInterface;
 use ReflectionClass;
 use ReflectionException;
 use RuntimeException;
@@ -103,6 +105,10 @@ final class AuthorizationService
         $this->authorizationOverride = $closure;
     }
 
+    /**
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     */
     public function authorizeSingleObject(
         BaseEntity|BaseResource $object,
         string $operation,
@@ -134,6 +140,9 @@ final class AuthorizationService
 
     /**
      * @param class-string $resourceClass
+     *
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
      */
     public function limitGetCollection(
         string $resourceClass,
@@ -257,6 +266,10 @@ final class AuthorizationService
         return $object::class;
     }
 
+    /**
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     */
     private function isObjectAuthorizedForUser(string $resourceClass, object $object): bool
     {
         $accessResolverConfigList = $this->retrieveAccessResolverConfigList($resourceClass);

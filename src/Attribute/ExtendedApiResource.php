@@ -33,8 +33,7 @@ class ExtendedApiResource extends ApiResource
         $attributes = null;
 
         try {
-            $caller = new ReflectionClass(objectOrClass: $callerClass);
-            $parent = $caller->getParentClass();
+            $parent = (new ReflectionClass(objectOrClass: $callerClass))->getParentClass();
 
             if (false === $parent) {
                 throw new InvalidArgumentException(sprintf('%s must only be used with parent class, no parent found on %s', __CLASS__, $callerClass));

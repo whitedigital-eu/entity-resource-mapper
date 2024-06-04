@@ -52,8 +52,7 @@ class ResourceDateFilter implements FilterInterface, DateFilterInterface
             foreach ($filter as $condition => $value) {
                 // Try to instantiate DateTime object to validate filter value, otherwise it gets ignored later.
                 // Also set default timezone if data is stored without TZ information in the database.
-                $validDateTime = new DateTime($value);
-                $context['filters'][$property][$condition] = $validDateTime->setTimezone($timeZone)->format(DateTimeInterface::ATOM);
+                $context['filters'][$property][$condition] = (new DateTime($value))->setTimezone($timeZone)->format(DateTimeInterface::ATOM);
             }
         }
         $dateFilter = new DateFilter(

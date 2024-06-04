@@ -35,6 +35,8 @@ abstract class BaseEntity
 
     /**
      * Can be used for data migrations where original created date is in the past.
+     *
+     * @throws Exception
      */
     public function setCreatedAt(?DateTimeInterface $date): static
     {

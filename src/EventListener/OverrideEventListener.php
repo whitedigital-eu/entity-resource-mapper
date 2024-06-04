@@ -12,20 +12,19 @@ use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use WhiteDigital\EntityResourceMapper\UTCDateTimeImmutable;
 
 #[AsDoctrineListener(Events::prePersist, connection: 'default')]
-final readonly class OverrideEventListener
+final class OverrideEventListener
 {
-    public function __construct(private ParameterBagInterface $bag)
+    public function __construct(private readonly ParameterBagInterface $bag)
     {
     }
 
     public function __invoke(PrePersistEventArgs $args): void
     {
         if (!in_array($args->getObject()::class, $this->bag->get('whitedigital.entity_resource_mapper.allow_datetime'), true)) {
-            $ref = new ReflectionClass($args->getObject());
-            foreach ($ref->getProperties() as $property) {
+            foreach ((new ReflectionClass($args->getObject()))->getProperties() as $property) {
                 $type = $property->getType();
                 if ($type && DateTime::class === $type->getName()) {
-                    throw new InvalidConfigurationException(sprintf('%s is deprecataed, use %s instead in %s::%s', $property->getType()->getName(), UTCDateTimeImmutable::class, $args->getObject()::class, $property->getName()));
+                    throw new InvalidConfigurationException(sprintf('%s is deprecataed, use %s instead in %s::%s', $property->getType()?->getName(), UTCDateTimeImmutable::class, $args->getObject()::class, $property->getName()));
                 }
             }
         }

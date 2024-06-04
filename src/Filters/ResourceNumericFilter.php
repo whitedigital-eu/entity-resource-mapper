@@ -74,8 +74,7 @@ final class ResourceNumericFilter implements FilterInterface
                 $property = $options['display_name'];
             }
             $propertyName = $this->normalizePropertyName($property);
-            $filterParameterNames = [$propertyName, $propertyName . '[]'];
-            foreach ($filterParameterNames as $filterParameterName) {
+            foreach ([$propertyName, $propertyName . '[]'] as $filterParameterName) {
                 $description[$filterParameterName] = [
                     'property' => $propertyName,
                     'type' => 'int', // TODO can be float?

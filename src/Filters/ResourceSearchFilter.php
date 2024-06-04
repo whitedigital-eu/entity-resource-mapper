@@ -76,7 +76,7 @@ final class ResourceSearchFilter implements SearchFilterInterface, FilterInterfa
             $context['filters'][$property] = current($filter);
         }
 
-        if ([] === $context['filters'] ?? []) {
+        if ([] === ($context['filters'] ?? [])) {
             return;
         }
 

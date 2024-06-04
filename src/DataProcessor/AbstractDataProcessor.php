@@ -9,6 +9,8 @@ use ApiPlatform\State\ProcessorInterface;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Exception;
+use Psr\Container\ContainerExceptionInterface;
+use Psr\Container\NotFoundExceptionInterface;
 use ReflectionClass;
 use ReflectionException;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
@@ -40,6 +42,10 @@ abstract class AbstractDataProcessor implements ProcessorInterface
     ) {
     }
 
+    /**
+     * @throws NotFoundExceptionInterface
+     * @throws ContainerExceptionInterface
+     */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): ?object
     {
         if (!$operation instanceof Delete) {
@@ -59,6 +65,10 @@ abstract class AbstractDataProcessor implements ProcessorInterface
         return null;
     }
 
+    /**
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     */
     protected function patch(mixed $data, Operation $operation, array $context = []): ?BaseEntity
     {
         $this->authorizationService->setAuthorizationOverride(fn () => $this->override(AuthorizationService::ITEM_PATCH, $operation->getClass()));
@@ -68,6 +78,10 @@ abstract class AbstractDataProcessor implements ProcessorInterface
         return $this->createEntity($data, $context, $existingEntity);
     }
 
+    /**
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     */
     protected function post(mixed $data, Operation $operation, array $context = []): ?BaseEntity
     {
         $this->authorizationService->setAuthorizationOverride(fn () => $this->override(AuthorizationService::COL_POST, $operation->getClass()));
@@ -96,6 +110,10 @@ abstract class AbstractDataProcessor implements ProcessorInterface
 
     abstract protected function createResource(BaseEntity $entity, array $context);
 
+    /**
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     */
     protected function remove(BaseResource $resource, Operation $operation, array $context = []): void
     {
         $this->authorizationService->setAuthorizationOverride(fn () => $this->override(AuthorizationService::ITEM_DELETE, $operation->getClass()));

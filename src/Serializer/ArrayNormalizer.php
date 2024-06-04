@@ -7,6 +7,7 @@ namespace WhiteDigital\EntityResourceMapper\Serializer;
 use ApiPlatform\Exception\ResourceClassNotFoundException;
 use ArrayObject;
 use DateTimeImmutable;
+use Exception;
 use ReflectionException;
 use ReflectionProperty;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
@@ -43,6 +44,7 @@ class ArrayNormalizer implements NormalizerInterface, NormalizerAwareInterface
      * @throws ReflectionException
      * @throws ResourceClassNotFoundException
      * @throws ExceptionInterface
+     * @throws Exception
      */
     public function normalize(mixed $object, ?string $format = null, array $context = []): float|array|ArrayObject|bool|int|string|null
     {
