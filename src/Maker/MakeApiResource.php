@@ -228,7 +228,8 @@ If the argument is missing, the command will ask for the entity class name inter
         $mapping = array_unique($mapping, SORT_REGULAR);
         $uses = array_unique($uses, SORT_REGULAR);
         sort($uses);
-        array_multisort(array_column($mapping, 'resource'), SORT_ASC, $mapping);
+        $resources = array_column($mapping, 'resource');
+        array_multisort($resources, SORT_ASC, $mapping);
 
         $configurator = $generator->createClassNameDetails('ClassMapperConfigurator', $this->bag->get($wd . '.namespaces.class_map_configurator'));
         if (class_exists($configurator->getFullName())) {
@@ -260,11 +261,11 @@ If the argument is missing, the command will ask for the entity class name inter
             if (!in_array($property->getName(), $excluded, true)) {
                 $prop = $property->getType();
                 $header = null;
-                if ($prop->isBuiltin()) {
-                    $type = $prop->getName();
+                if ($prop?->isBuiltin()) {
+                    $type = $prop?->getName();
                 } else {
-                    $ref = new ReflectionClass($prop->getName());
-                    if (Collection::class === $prop->getName()) {
+                    $ref = new ReflectionClass($prop?->getName());
+                    if (Collection::class === $prop?->getName()) {
                         $type = Type::BUILTIN_TYPE_ARRAY;
                         $orm = array_merge_recursive($property->getAttributes(ManyToMany::class), $property->getAttributes(OneToMany::class));
                         if ([] !== $orm) {
@@ -273,27 +274,27 @@ If the argument is missing, the command will ask for the entity class name inter
                             $parts = explode('\\', $header);
                             $header = end($parts);
                         }
-                    } elseif (is_a($prop->getName(), DateTimeInterface::class, true)) {
-                        if (!is_a($prop->getName(), DateTimeImmutable::class, true)) {
+                    } elseif (is_a($prop?->getName(), DateTimeInterface::class, true)) {
+                        if (!is_a($prop?->getName(), DateTimeImmutable::class, true)) {
                             throw new InvalidArgumentException(sprintf('Date/DateTime properties must be %s, property "%s" is not', DateTimeImmutable::class, $property->getName()));
                         }
 
-                        $type = match (is_a($prop->getName(), UTCDateTimeImmutable::class, true)) {
+                        $type = match (is_a($prop?->getName(), UTCDateTimeImmutable::class, true)) {
                             true => (new ReflectionClass(UTCDateTimeImmutable::class))->getShortName(),
                             false => DateTimeImmutable::class,
                         };
-                    } elseif (File::class === $prop->getName()) {
+                    } elseif (File::class === $prop?->getName()) {
                         $type = File::class;
                         $resourceMapping[] = File::class;
                         $parts = explode('\\', $type);
                         $type = end($parts);
                     } elseif ($ref->implementsInterface(BackedEnum::class)) {
-                        $type = $prop->getName();
-                        $resourceMapping[] = $prop->getName();
+                        $type = $prop?->getName();
+                        $resourceMapping[] = $prop?->getName();
                         $parts = explode('\\', $type);
                         $type = end($parts);
                     } else {
-                        $type = $this->byEntity($prop->getName());
+                        $type = $this->byEntity($prop?->getName());
                         $resourceMapping[] = $type;
                         $parts = explode('\\', $type);
                         $type = end($parts);
@@ -378,8 +379,8 @@ If the argument is missing, the command will ask for the entity class name inter
 
             $name = $property->getName();
             $prop = $property->getType();
-            if ($prop->isBuiltin()) {
-                $type = $prop->getName();
+            if ($prop?->isBuiltin()) {
+                $type = $prop?->getName();
                 if ('mixed' === $type && 'id' === $property->getName()) {
                     $type = Type::BUILTIN_TYPE_INT;
                 }
@@ -392,8 +393,8 @@ If the argument is missing, the command will ask for the entity class name inter
                     default => null,
                 };
             } else {
-                $ref = new ReflectionClass($prop->getName());
-                if (is_a($prop->getName(), DateTimeInterface::class, true)) {
+                $ref = new ReflectionClass($prop?->getName());
+                if (is_a($prop?->getName(), DateTimeInterface::class, true)) {
                     $result[self::F_DATE][] = $name;
                     continue;
                 }
@@ -403,7 +404,7 @@ If the argument is missing, the command will ask for the entity class name inter
                     continue;
                 }
 
-                if (Collection::class === $prop->getName()) {
+                if (Collection::class === $prop?->getName()) {
                     $orm = array_merge_recursive($property->getAttributes(ManyToMany::class), $property->getAttributes(OneToMany::class));
                     if ([] !== $orm && 0 < $level - 1) {
                         $colRef = new ReflectionClass($this->byEntity($orm[0]->getArguments()['targetEntity']));

@@ -35,7 +35,7 @@
         "doctrine/collections": "*",
         "doctrine/common": "^3.4",
         "doctrine/dbal": "^3.7",
-        "doctrine/orm": "^2.16",
+        "doctrine/orm": "^2.19",
         "doctrine/persistence": "*",
         "phpdocumentor/reflection-docblock": "*",
         "psr/log": "*",

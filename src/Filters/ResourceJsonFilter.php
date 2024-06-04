@@ -36,10 +36,9 @@ class ResourceJsonFilter extends AbstractFilter
 
         foreach ($properties as $property => $nullManagement) {
             if (!str_contains($property, '.')) {
-                $property_reflection = $reflection->getProperty($property);
-                $type = $property_reflection->getType();
+                $type = $reflection->getProperty($property)->getType();
                 /* @phpstan-ignore-next-line */
-                if (DateTimeInterface::class === $type->getName()) {
+                if (DateTimeInterface::class === $type?->getName()) {
                     continue;
                 }
             }

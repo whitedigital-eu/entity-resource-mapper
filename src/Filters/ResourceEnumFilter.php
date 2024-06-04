@@ -15,6 +15,8 @@ use BackedEnum;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LoggerInterface;
+use ReflectionClass;
+use ReflectionException;
 use Symfony\Component\PropertyAccess\PropertyAccessorInterface;
 use Symfony\Component\PropertyInfo\Type;
 use Symfony\Component\Serializer\NameConverter\NameConverterInterface;
@@ -51,7 +53,7 @@ final class ResourceEnumFilter implements SearchFilterInterface, FilterInterface
             $this->properties[$property] = self::STRATEGY_EXACT;
         }
 
-        if ([] === $context['filters'] ?? []) {
+        if ([] === ($context['filters'] ?? [])) {
             return;
         }
 
@@ -64,7 +66,8 @@ final class ResourceEnumFilter implements SearchFilterInterface, FilterInterface
             $this->logger,
             $this->properties,
             $this->identifiersExtractor,
-            $this->nameConverter, );
+            $this->nameConverter,
+        );
         $searchFilter->apply($queryBuilder, $queryNameGenerator, $entityClass, $operation, $context);
     }
 
@@ -80,7 +83,14 @@ final class ResourceEnumFilter implements SearchFilterInterface, FilterInterface
         $description = [];
         foreach ($this->properties as $property => $enumValues) {
             if (!is_array($enumValues)) {
-                if (class_exists($enumValues)) {
+                if (null === $enumValues) {
+                    try {
+                        $enumValues = (new ReflectionClass($resourceClass))->getProperty($property)->getType()?->getName();
+                    } catch (ReflectionException) {
+                        $enumValues = null;
+                    }
+                }
+                if (null !== $enumValues && class_exists($enumValues)) {
                     $implements = class_implements($enumValues);
                 } else {
                     $implements = [];

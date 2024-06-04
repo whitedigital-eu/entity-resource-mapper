@@ -2,34 +2,36 @@
 
 namespace WhiteDigital\EntityResourceMapper\DataProcessor;
 
-use ApiPlatform\Metadata\DeleteOperationInterface;
+use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\State\ProcessorInterface;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Exception;
+use Psr\Container\ContainerExceptionInterface;
+use Psr\Container\NotFoundExceptionInterface;
 use ReflectionClass;
 use ReflectionException;
-use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\PreconditionFailedHttpException;
-use Symfony\Component\Security\Core\Authorization\Voter\AuthenticatedVoter;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Mapper\EntityToResourceMapper;
 use WhiteDigital\EntityResourceMapper\Mapper\ResourceToEntityMapper;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 use WhiteDigital\EntityResourceMapper\Security\AuthorizationService;
-use WhiteDigital\EntityResourceMapper\Security\Enum\GrantType;
+use WhiteDigital\EntityResourceMapper\Traits\Override;
 
-use function array_key_exists;
-use function array_merge;
 use function preg_match;
+use function strtolower;
 
 abstract class AbstractDataProcessor implements ProcessorInterface
 {
+    use Override;
+
     public function __construct(
         protected readonly EntityManagerInterface $entityManager,
         protected readonly ResourceToEntityMapper $resourceToEntityMapper,
@@ -40,9 +42,13 @@ abstract class AbstractDataProcessor implements ProcessorInterface
     ) {
     }
 
+    /**
+     * @throws NotFoundExceptionInterface
+     * @throws ContainerExceptionInterface
+     */
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): ?object
     {
-        if (!$operation instanceof DeleteOperationInterface) {
+        if (!$operation instanceof Delete) {
             if ($operation instanceof Patch) {
                 $entity = $this->patch($data, $operation, $context);
             } else {
@@ -59,6 +65,10 @@ abstract class AbstractDataProcessor implements ProcessorInterface
         return null;
     }
 
+    /**
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     */
     protected function patch(mixed $data, Operation $operation, array $context = []): ?BaseEntity
     {
         $this->authorizationService->setAuthorizationOverride(fn () => $this->override(AuthorizationService::ITEM_PATCH, $operation->getClass()));
@@ -68,6 +78,10 @@ abstract class AbstractDataProcessor implements ProcessorInterface
         return $this->createEntity($data, $context, $existingEntity);
     }
 
+    /**
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     */
     protected function post(mixed $data, Operation $operation, array $context = []): ?BaseEntity
     {
         $this->authorizationService->setAuthorizationOverride(fn () => $this->override(AuthorizationService::COL_POST, $operation->getClass()));
@@ -77,11 +91,6 @@ abstract class AbstractDataProcessor implements ProcessorInterface
     }
 
     abstract protected function createEntity(BaseResource $resource, array $context, ?BaseEntity $existingEntity = null);
-
-    protected function findById(string $class, mixed $id): ?BaseEntity
-    {
-        return $this->entityManager->getRepository($class)->find($id);
-    }
 
     abstract protected function getEntityClass(): string;
 
@@ -101,32 +110,10 @@ abstract class AbstractDataProcessor implements ProcessorInterface
 
     abstract protected function createResource(BaseEntity $entity, array $context);
 
-    protected function override(string $operation, string $class): bool
-    {
-        try {
-            $property = (new ReflectionClass($this->authorizationService))->getProperty('resources')->getValue($this->authorizationService);
-        } catch (ReflectionException) {
-            return false;
-        }
-
-        if (isset($property[$class])) {
-            $attributes = $property[$class];
-        } else {
-            return false;
-        }
-
-        $allowed = array_merge($attributes[AuthorizationService::ALL] ?? [], $attributes[$operation] ?? []);
-        if ([] !== $allowed && array_key_exists(AuthenticatedVoter::PUBLIC_ACCESS, $allowed)) {
-            if (GrantType::ALL === $allowed[AuthenticatedVoter::PUBLIC_ACCESS]) {
-                return true;
-            }
-
-            throw new InvalidConfigurationException('Public access only allowed with "all" grant type');
-        }
-
-        return false;
-    }
-
+    /**
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     */
     protected function remove(BaseResource $resource, Operation $operation, array $context = []): void
     {
         $this->authorizationService->setAuthorizationOverride(fn () => $this->override(AuthorizationService::ITEM_DELETE, $operation->getClass()));
@@ -146,6 +133,29 @@ abstract class AbstractDataProcessor implements ProcessorInterface
         } catch (Exception $exception) {
             preg_match('/DETAIL: (.*)/', $exception->getMessage(), $matches);
             throw new AccessDeniedHttpException($this->translator->trans('unable_to_delete_record', ['%detail%' => $matches[1]], domain: 'EntityResourceMapper'), $exception);
+        }
+    }
+
+    protected function findById(string $class, mixed $id): ?BaseEntity
+    {
+        return $this->entityManager->getRepository($class)->find($id);
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    protected function findByIdOrThrowException(string $class, mixed $id): BaseEntity
+    {
+        $entity = $this->entityManager->getRepository($class)->find($id);
+        $this->throwErrorIfNotExists($entity, strtolower((new ReflectionClass($this->getEntityClass()))->getShortName()), $id);
+
+        return $entity;
+    }
+
+    protected function throwErrorIfNotExists(mixed $result, string $rootAlias, mixed $id): void
+    {
+        if (null === $result) {
+            throw new NotFoundHttpException($this->translator->trans('named_resource_not_found', ['%resource%' => $rootAlias, '%id%' => $id], domain: 'EntityResourceMapper'));
         }
     }
 }

@@ -163,8 +163,7 @@ class ResourceToEntityMapper
      */
     private function isRelationProperty(BaseResource $object, string $propertyName): bool
     {
-        $phpDocExtractor = new PhpDocExtractor();
-        $types = $phpDocExtractor->getTypes($object::class, $propertyName);
+        $types = (new PhpDocExtractor())->getTypes($object::class, $propertyName);
         if (null === $types) {
             return false;
         }
@@ -181,7 +180,7 @@ class ResourceToEntityMapper
     private function resetValue(BaseEntity $object, string $property): void
     {
         try {
-            $type = (new ReflectionClass($object))->getMethod($method = 'set' . ucfirst($property))->getParameters()[0]->getType()->getName();
+            $type = (new ReflectionClass($object))->getMethod($method = 'set' . ucfirst($property))->getParameters()[0]->getType()?->getName();
         } catch (ReflectionException) {
             return;
         }

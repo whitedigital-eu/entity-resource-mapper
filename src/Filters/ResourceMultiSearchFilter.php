@@ -8,6 +8,8 @@ use ApiPlatform\Metadata\Operation;
 use Doctrine\DBAL\Exception;
 use Doctrine\ORM\QueryBuilder;
 
+use function array_keys;
+
 class ResourceMultiSearchFilter extends AbstractFilter
 {
     /**
@@ -22,10 +24,7 @@ class ResourceMultiSearchFilter extends AbstractFilter
             throw new Exception(sprintf('Please explicitly mark properties for %s class', self::class));
         }
 
-        $propertyDescriptor = [];
-        foreach ($properties as $property => $value) {
-            $propertyDescriptor[] = $property;
-        }
+        $propertyDescriptor = array_keys($properties);
         $propertyList = implode(',', $propertyDescriptor);
 
         return [
@@ -33,7 +32,7 @@ class ResourceMultiSearchFilter extends AbstractFilter
                 'property' => $propertyList,
                 'type' => 'string',
                 'required' => false,
-                'description' => "Search string value (with ILIKE) in multiple properties ({$propertyList}).",
+                'description' => "Search string value (with ILIKE) in multiple properties ($propertyList).",
             ],
         ];
     }
@@ -51,16 +50,16 @@ class ResourceMultiSearchFilter extends AbstractFilter
         foreach ($this->properties as $field => $v) {
             if (str_contains($field, '.')) { // Handle nested relations
                 [$joinTable, $joinField] = explode('.', $field);
-                $queryBuilder->leftJoin("{$rootAlias}.{$joinTable}", $joinTable);
+                $queryBuilder->leftJoin("$rootAlias.$joinTable", $joinTable);
                 $rootAlias = $joinTable;
                 $field = $joinField;
             }
-            $aliasedField = "{$rootAlias}.{$field}";
+            $aliasedField = "$rootAlias.$field";
             $valueParameter = ':' . $queryNameGenerator->generateParameterName($field);
             $keyValueParameter = sprintf('%s_%s', $valueParameter, 0);
             $queryBuilder->setParameter($keyValueParameter, $value);
             $expressions[] = $queryBuilder->expr()->like(
-                "LOWER({$aliasedField})",
+                "LOWER($aliasedField)",
                 sprintf('LOWER(%s)', $queryBuilder->expr()->concat("'%'", $keyValueParameter, "'%'")),
             );
         }

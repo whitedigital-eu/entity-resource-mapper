@@ -10,6 +10,8 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\PersistentCollection;
 use Doctrine\Persistence\Proxy;
 use Error;
+use Psr\Container\ContainerExceptionInterface;
+use Psr\Container\NotFoundExceptionInterface;
 use ReflectionClass;
 use ReflectionException;
 use RuntimeException;
@@ -22,6 +24,9 @@ use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 use WhiteDigital\EntityResourceMapper\Security\Attribute\VisibleProperty;
 use WhiteDigital\EntityResourceMapper\Security\AuthorizationService;
+
+use function array_merge;
+use function class_exists;
 
 class EntityToResourceMapper
 {
@@ -49,7 +54,10 @@ class EntityToResourceMapper
      * @param array<string, mixed> $context
      *
      * @throws ExceptionInterface
-     * @throws ResourceClassNotFoundException|ReflectionException
+     * @throws ReflectionException
+     * @throws ResourceClassNotFoundException
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
      */
     public function map(BaseEntity $object, array $context = []): BaseResource
     {
@@ -90,7 +98,7 @@ class EntityToResourceMapper
         foreach ($properties as $property) {
             $propertyName = $property->getName();
 
-            if (!empty($visibleProperties) && !in_array($propertyName, $visibleProperties, true) && false === $this->isOwner) {
+            if (!empty($visibleProperties) && false === $this->isOwner && !in_array($propertyName, $visibleProperties, true)) {
                 continue;
             }
 
@@ -111,12 +119,15 @@ class EntityToResourceMapper
             }
 
             $ignores = [];
-            if (class_exists(Serializer\Annotation\Ignore::class)) {
-                $ignores = array_merge($ignores, $property->getAttributes(Serializer\Annotation\Ignore::class));
-            }
             if (class_exists(Serializer\Attribute\Ignore::class)) {
-                $ignores = array_merge($ignores, $property->getAttributes(Serializer\Attribute\Ignore::class));
+                $ignores[] = $property->getAttributes(Serializer\Attribute\Ignore::class);
             }
+            if (class_exists(Serializer\Annotation\Ignore::class)) {
+                $ignores[] = $property->getAttributes(Serializer\Annotation\Ignore::class);
+            }
+
+            $ignores = array_merge(...$ignores);
+
             // 1. Ignore Entity property, if it has #[Ignore] attribute
             if ([] !== $ignores) {
                 continue;
@@ -186,12 +197,12 @@ class EntityToResourceMapper
         if ($this->isPropertyNested($ownerProperty)) {
             [$ownerObject, $ownerProperty,] = explode('.', $ownerProperty, 2);
 
-            return $this->isOwner = $object->{$this->getter($ownerObject)}()->{$this->getter($ownerProperty)}() === $user->{$this->getter($ownerProperty)}();
+            return $this->isOwner = $object->{$this->getter($ownerObject)}()->{$this->getter($ownerProperty)}() === $user?->{$this->getter($ownerProperty)}();
         }
 
         $property = $object->{$this->getter($ownerProperty)}();
         if (!$property instanceof UserInterface) {
-            return $this->isOwner = $user->{$this->getter($ownerProperty)}() === $property;
+            return $this->isOwner = $user?->{$this->getter($ownerProperty)}() === $property;
         }
 
         return $this->isOwner = $property === $user;
