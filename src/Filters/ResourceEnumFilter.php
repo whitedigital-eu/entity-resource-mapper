@@ -105,7 +105,6 @@ final class ResourceEnumFilter implements SearchFilterInterface, FilterInterface
                 'required' => false,
                 'description' => 'Filter by enum value',
                 'schema' => [
-                    'name' => 'Enum Filter',
                     'type' => 'string',
                     'enum' => $enumValues,
                 ],
