@@ -27,6 +27,7 @@ use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Mapper\ClassMapper;
 use WhiteDigital\EntityResourceMapper\Mapper\EntityToResourceMapper;
 use WhiteDigital\EntityResourceMapper\Mapper\ResourceToEntityMapper;
+use WhiteDigital\EntityResourceMapper\Mapper\Traits\FindById;
 use WhiteDigital\EntityResourceMapper\Security\AuthorizationService;
 use WhiteDigital\EntityResourceMapper\Traits\Override;
 
@@ -35,6 +36,7 @@ use function strtolower;
 
 abstract class AbstractDataProvider implements ProviderInterface
 {
+    use FindById;
     use Override;
 
     public function __construct(
@@ -140,17 +142,12 @@ abstract class AbstractDataProvider implements ProviderInterface
         return $entity;
     }
 
-    protected function findById(string $class, mixed $id): ?BaseEntity
-    {
-        return $this->entityManager->getRepository($class)->find($id);
-    }
-
     /**
      * @throws ReflectionException
      */
     protected function findByIdOrThrowException(Operation $operation, mixed $id, array $context): BaseEntity
     {
-        $entity = $this->entityManager->getRepository($entityClass = $this->getEntityClass($operation, $context))->find($id);
+        $entity = $this->findById($entityClass = $this->getEntityClass($operation, $context), $id);
         $this->throwErrorIfNotExists($entity, strtolower((new ReflectionClass($entityClass))->getShortName()), $id);
 
         return $entity;

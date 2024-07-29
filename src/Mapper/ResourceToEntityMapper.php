@@ -20,11 +20,14 @@ use Symfony\Component\PropertyAccess\PropertyAccessor;
 use Symfony\Component\PropertyInfo\Extractor\PhpDocExtractor;
 use Symfony\Component\PropertyInfo\Type;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
+use WhiteDigital\EntityResourceMapper\Mapper\Traits\FindById;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 use WhiteDigital\EntityResourceMapper\UTCDateTimeImmutable;
 
 class ResourceToEntityMapper
 {
+    use FindById;
+
     public const CONDITION_CONTEXT = 'condition_context';
     private readonly PropertyAccessor $accessor;
 
@@ -93,8 +96,7 @@ class ResourceToEntityMapper
                 $collection = new ArrayCollection();
                 foreach ($propertyValue as $value) {
                     if (isset($value->id)) { // entity already exists, lets fetch it from DB
-                        $repository = $this->entityManager->getRepository($targetClass);
-                        $entity = $repository->find($value->id);
+                        $entity = $this->findById($targetClass, $value->id); // Do not need to load all fields, reference is enough
                         if (null === $entity) {
                             throw new RuntimeException("$targetClass entity with id $value->id not found!");
                         }
@@ -115,8 +117,7 @@ class ResourceToEntityMapper
             if ($this->isPropertyBaseDto($propertyType)) {
                 $targetClass = $this->classMapper->byResource($propertyType, context: $context);
                 if (isset($propertyValue->id)) { // entity already exists, lets fetch it from DB
-                    $repository = $this->entityManager->getRepository($targetClass);
-                    $entity = $repository->find($propertyValue->id);
+                    $entity = $this->findById($targetClass, $propertyValue->id); // Do not need to load all fields, reference is enough
                     if (null === $entity) {
                         throw new RuntimeException("$targetClass entity with id $propertyValue->id not found!");
                     }

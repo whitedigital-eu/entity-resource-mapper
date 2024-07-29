@@ -21,6 +21,7 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 use WhiteDigital\EntityResourceMapper\Entity\BaseEntity;
 use WhiteDigital\EntityResourceMapper\Mapper\EntityToResourceMapper;
 use WhiteDigital\EntityResourceMapper\Mapper\ResourceToEntityMapper;
+use WhiteDigital\EntityResourceMapper\Mapper\Traits\FindById;
 use WhiteDigital\EntityResourceMapper\Resource\BaseResource;
 use WhiteDigital\EntityResourceMapper\Security\AuthorizationService;
 use WhiteDigital\EntityResourceMapper\Traits\Override;
@@ -30,6 +31,7 @@ use function strtolower;
 
 abstract class AbstractDataProcessor implements ProcessorInterface
 {
+    use FindById;
     use Override;
 
     public function __construct(
@@ -136,17 +138,12 @@ abstract class AbstractDataProcessor implements ProcessorInterface
         }
     }
 
-    protected function findById(string $class, mixed $id): ?BaseEntity
-    {
-        return $this->entityManager->getRepository($class)->find($id);
-    }
-
     /**
      * @throws ReflectionException
      */
     protected function findByIdOrThrowException(string $class, mixed $id): BaseEntity
     {
-        $entity = $this->entityManager->getRepository($class)->find($id);
+        $entity = $this->findById($class, $id);
         $this->throwErrorIfNotExists($entity, strtolower((new ReflectionClass($this->getEntityClass()))->getShortName()), $id);
 
         return $entity;
